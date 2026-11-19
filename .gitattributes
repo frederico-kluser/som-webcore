@@ -1,0 +1,8 @@
+# GitHub linguist: o repositório é documentação nesta fase.
+# A memória CoALA vendorizada e os textos de pesquisa não devem dominar a
+# estatística de linguagens (o `coala.py` tem ~317 KB de Python stdlib).
+.agents/**            linguist-vendored
+research/**           linguist-documentation
+docs/**               linguist-documentation
+scripts/check-docs.py linguist-documentation
+*.md                  linguist-documentation

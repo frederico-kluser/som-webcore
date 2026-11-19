@@ -43,6 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   foram marcadas como “fonte não identificada no relatório”, sem inventar links.
 - Adicionados apêndices de **quantização** (Q8_0/Q4_0/Q4_K), **classes de dispositivo**,
   **Tabela 3 — de onde copiar kernels** e **cooperative matrix** (SPIR-V/MSL).
+- **Release Please desativado** nesta fase (`gh workflow disable`): não há runtime/pacote e o
+  GitHub Actions não pode criar PRs; o motivo e o procedimento de reativação estão no cabeçalho
+  do workflow.
+- **`.gitattributes`** marca a memória CoALA como vendorizada e os textos de pesquisa/figuras
+  como documentação, para que a estatística de linguagens do GitHub reflita o estado real
+  (repositório de documentação, não projeto Python).
 
 ### Fixed
 

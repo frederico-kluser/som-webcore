@@ -1,8 +1,17 @@
 # =============================================================================
 # Release Please — som-webcore (frederico-kluser/som-webcore)
 #
+# ESTADO: DESATIVADO nesta fase de documentação (2026-11-19) via
+#   gh workflow disable "Release Please"
+# Motivo: o repositório não tem runtime/pacote para lançar e o GitHub Actions
+# não pode criar PRs (`can_approve_pull_request_reviews` = false). Para reativar:
+#   1. habilite "Allow GitHub Actions to create and approve pull requests" ou use
+#      um PAT com `contents: write` + `pull-requests: write` em Environment;
+#   2. `gh workflow enable "Release Please"`;
+#   3. garanta que o job `build` do CI continua verde no PR de release.
+#
 # NOTA (para o agente): fixe as actions por SHA com `bash scripts/oss-pin-actions.sh`
-# antes do primeiro push (owner/repo@<PIN_SHA> # vX.Y.Z).
+# antes do primeiro push (owner/repo@commit-sha # vX.Y.Z).
 #
 # NOTA sobre tokens e environments: a PUBLICAÇÃO (npm/PyPI/etc.) nunca deve usar
 # secrets ao nível do repositório. Se existir um job de publicação, coloque-o num
