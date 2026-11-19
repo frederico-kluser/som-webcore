@@ -1,0 +1,9 @@
+# CODEOWNERS — som-webcore
+#
+# Mantenedor único: todas as áreas pertencem ao dono do repositório.
+# O ruleset de `main` exige PR, mas não exige revisão de code owner
+# (adaptação para um projeto solo; ver .github/rulesets/README.md).
+#
+# A última regra que corresponde ganha.
+
+*       @frederico-kluser

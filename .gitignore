@@ -1,0 +1,36 @@
+# Fontes de pesquisa locais (não redistribuir os PDFs originais)
+*.pdf
+
+# Artefatos de modelo e binários grandes
+*.sombin
+*.safetensors
+*.bin
+*.onnx
+*.gguf
+*.pt
+*.pth
+
+# Memória CoALA: banco binário e WAL não são versionados
+.agents/**/memory/*.sqlite
+.agents/**/memory/*.sqlite-*
+.agents/**/memory/backups/
+
+# Backups e temporários
+*.bak
+*.bak-*
+*.pre-coala.bak
+*.tmp
+*.log
+
+# Build e dependências
+target/
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
+
+# Sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,15 @@
+SOM WebCore
+Copyright 2026 Frederico Kluser
+
+This product includes documentation, diagrams, and figures derived from two
+research reports on single-pass WebGPU/Wasm32 inference for System One Models
+(SOM), supplied by the project author. The infographic pages reproduced in
+docs/figures/ are attributions to those reports; the consolidated text in
+research/ is a local extraction used as project memory.
+
+No third-party source code is bundled in this repository. References to
+third-party projects, models, and specifications are provided for
+interoperability and attribution; all trademarks and licenses remain with
+their respective owners.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
