@@ -1,0 +1,74 @@
+# =============================================================================
+# CI — som-webcore (frederico-kluser/som-webcore)
+#
+# Este repositório é, nesta fase, documentação + memória. O job `build` é o
+# status check exigido pelo ruleset de `main`; ele valida:
+#   1. o contrato de documentação (links, âncoras, tabelas, figuras, placeholders);
+#   2. as mensagens de commit (Conventional Commits) — o mecanismo portátil que
+#      substitui a regra de metadata `commit_message_pattern` (Enterprise-only).
+#
+# Actions fixadas por SHA. Se atualizar uma action, troque o SHA e o comentário.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+# Privilégio mínimo: o CI só precisa de ler o repositório.
+permissions:
+  contents: read
+
+# Evita corridas duplicadas no mesmo PR/ramo.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 25
+
+      - name: Documentation contract
+        run: python3 scripts/check-docs.py
+
+      - name: Conventional commits (last 25)
+        run: |
+          python3 - <<'PY'
+          import re
+          import subprocess
+          import sys
+
+          header = re.compile(
+              r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
+              r"(\([^)]*\))?!?: .+"
+          )
+          skip = re.compile(r'^(Merge |Revert "|Reapply "|fixup!|squash!)')
+          out = subprocess.run(
+              ["git", "log", "--pretty=tformat:%s", "-n", "25", "HEAD"],
+              capture_output=True,
+              text=True,
+              check=False,
+          ).stdout
+          bad = 0
+          for subject in out.splitlines():
+              subject = subject.strip()
+              if not subject or skip.match(subject):
+                  continue
+              normalized = re.sub(r"\s+\(#\d+\)$", "", subject)
+              if not header.match(normalized) or len(normalized) > 72:
+                  print("ERRO: mensagem fora de Conventional Commits:", subject)
+                  bad = 1
+              else:
+                  print("OK  :", subject)
+          sys.exit(bad)
+          PY

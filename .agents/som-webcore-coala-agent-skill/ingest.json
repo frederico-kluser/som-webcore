@@ -1,0 +1,94 @@
+{
+  "_doc": "Fontes do material do projeto para `coala.py sync`. rules: mode markdown|text|whole|pdf · type episodic|semantic|procedural · origin owner|agent|untrusted|system · tags aceitam {stem} {name} {dir} {rule}; a primeira regra que apanha um ficheiro ganha. code: o catálogo de código (símbolos por ficheiro) é automático — `include`/`exclude` são globs, `enabled: false` desliga. Ver references/instalar.md da coala-agent-skill.",
+  "version": 2,
+  "key_prefix": "som",
+  "path_prefix": "",
+  "exclude": [
+    "docs/figures/**",
+    ".github/**",
+    ".agents/**",
+    "*.pdf"
+  ],
+  "rules": [
+    {
+      "name": "readme",
+      "include": [
+        "README.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,readme,manifesto,jev,arquitetura"
+    },
+    {
+      "name": "pesquisa-arquitetura",
+      "include": [
+        "research/01-*.txt"
+      ],
+      "mode": "text",
+      "type": "semantic",
+      "origin": "untrusted",
+      "tags": "research,webgpu,wasm32,arquitetura,pdf-fonte,{stem}"
+    },
+    {
+      "name": "pesquisa-runtime",
+      "include": [
+        "research/02-*.txt"
+      ],
+      "mode": "text",
+      "type": "semantic",
+      "origin": "untrusted",
+      "tags": "research,wgpu,wgsl,runtime,sombin,pdf-fonte,{stem}"
+    },
+    {
+      "name": "governanca",
+      "include": [
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "CHANGELOG.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,governanca,{stem}"
+    }
+  ],
+  "code": {
+    "enabled": true,
+    "include": [],
+    "exclude": []
+  },
+  "graph": {
+    "entities": [
+      { "name": "SOM WebCore", "kind": "sistema" },
+      { "name": "WebGPU", "kind": "tecnologia" },
+      { "name": "WGSL", "kind": "linguagem" },
+      { "name": "Rust", "kind": "linguagem" },
+      { "name": "Wasm32", "kind": "tecnologia" },
+      { "name": "wgpu", "kind": "biblioteca" },
+      { "name": "OPFS", "kind": "tecnologia" },
+      { "name": ".sombin", "kind": "formato" },
+      { "name": "JEV", "kind": "conceito" },
+      { "name": "SOM", "kind": "conceito" },
+      { "name": "Ettin-150M", "kind": "modelo" },
+      { "name": "Laya-Multilingual", "kind": "modelo" },
+      { "name": "d1-omni-600M", "kind": "modelo" },
+      { "name": "Von-1.3", "kind": "modelo" }
+    ],
+    "edges": [
+      ["SOM WebCore", "executa", "WebGPU"],
+      ["SOM WebCore", "compila", "Wasm32"],
+      ["SOM WebCore", "usa", "wgpu"],
+      ["SOM WebCore", "implementa", "WGSL"],
+      ["SOM WebCore", "distribui", ".sombin"],
+      ["SOM WebCore", "cacheia", "OPFS"],
+      ["SOM WebCore", "oferece", "JEV"],
+      ["SOM WebCore", "executa", "SOM"],
+      ["SOM WebCore", "suporta", "Ettin-150M"],
+      ["SOM WebCore", "suporta", "Laya-Multilingual"],
+      ["SOM WebCore", "suporta", "d1-omni-600M"],
+      ["SOM WebCore", "descontinuou", "Von-1.3"]
+    ]
+  }
+}

@@ -1,0 +1,1133 @@
+
+
+===== PAGE 1 =====
+Validação Arquitetural e Blueprint de
+Engenharia para Motor de Inferência
+WebGPU de Modelos System One (SOM)
+A arquitetura proposta para o vosso motor de inferência e SDK open-source em Rust
+(wasm32-unknown-unknown) + WebGPU (wgpu + WGSL) posiciona-se na fronteira do
+estado da arte de 2026 para inteligência artificial executada diretamente no dispositivo1. A
+decisão de abandonar o paradigma auto-regressivo (geração sequencial token a token e
+gestão de KV-Cache) em favor de System One Models (SOMs) de passada única com
+In-Shader Calibration e Micro-Readback (64 a 256 bytes) elimina o principal gargalo de
+sincronização CPU↔GPU que penaliza motores generativos no navegador4. Adicionalmente, a
+escolha do OPFS (Origin Private File System) com streaming em blocos de 8 MiB contorna o
+limite silencioso de ~200 MB da Cache API do Chromium e a barreira estrutural de 2 GB do
+formato Protobuf/ONNX3.
+Contudo, a validação cruzada da vossa arquitetura contra a física de execução em GPUs
+móveis e as implementações reais dos motores WebGPU dos navegadores em novembro de
+2026 (Dawn no Chromium, WebGPU.framework/Metal no Safari 26 e wgpu-core/Naga no
+Firefox) revela quatro premissas de alto risco que, se não forem corrigidas, impedirão o
+cumprimento do SLA sub-50ms ou causarão falhas críticas (device.lost, resets de driver e
+OOM kills) em produção6:
+  1.  Inversão do Regime Físico (De Memory-Bound para Compute-Bound): A inferência
+      SOM de passada única sobre uma sequência de S = 128 a 1.024 tokens (estado +
+      perguntas + opções) não é uma operação vetor-matriz (GEMV, batch=1) limitada por
+      banda de memória como o decode de LLMs; trata-se de uma operação matriz-matriz
+      densa (Prefill / GEMM) com intensidade aritmética estimada entre 192 e 1.581
+      FLOPs/byte11. Em SoCs móveis (onde o ponto de inflexão roofline ronda ~35
+      FLOPs/byte), a execução é estritamente limitada por computação (ALU/FMA)11. Como
+      consequência, a desquantização complexa de super-blocos Q4_K em tempo de
+      execução degrada a performance de prefill (com quedas reportadas de 21% a 51% em
+      motores WebGPU baseados em llama.cpp) devido à sobrecarga de instruções bit-a-bit
+      na ALU13, além de aumentar o risco de degradação do Expected Calibration Error (ECE)
+      nas cabeças de decisão5.
+  2.  Perigos do ComputePass e queue.submit() Monolíticos: Submeter todas as 20 a 28
+      camadas de um modelo (~150 a 250 dispatches) num único queue.submit() provoca três
+      falhas documentadas em 2025/2026: perda de dispositivo (device.lost) no backend Metal
+      da Apple e em arquiteturas de memória unificada (UMA) durante passes de prefill
+      largos6; travamento de driver (DXGI_ERROR_DEVICE_HUNG) no backend D3D12 em
+      GPUs NVIDIA Lovelace (RTX 4050/4070) quando kernels com arrays privados/locais
+      acima do limiar por thread precedem outro dispatch no mesmo submit9; e inanição do
+
+===== PAGE 2 =====
+       compositor gráfico do navegador (compositor starvation), elevando o pior tempo de
+       frame da página hospedeira de 9,40 ms para 166,60 ms mesmo quando a submissão
+       ocorre fora da thread principal8.
+  3.   Heterogeneidade Arquitetural Oculta nos Modelos-Alvo: Os quatro modelos
+       elencados não partilham uma topologia uniforme de atenção densa bidirecional. O
+       ModernBERT-base / Ettin-150M e o Von-1.3 utilizam um padrão alternado
+       Global-Local-Local (G-L-L) onde dois terços das camadas operam com janela
+       deslizante restrita (W = 128)17. O Laya-Multilingual (322M) utiliza o codificador
+       mmBERT-base com um vocabulário de 256.000 tokens (Gemma 2) cuja tabela de
+       embeddings consome 61,1% de todos os parâmetros do modelo (196,61M vs. 125,39M
+       no backbone e cabeça de decisão)11. Mais importante, o tronco do LiquidAI
+       d1-omni-600M (380,73M) não é um Transformer puro, mas uma arquitetura híbrida
+       (LFM2Bidirectional) onde a maioria dos blocos não são camadas de atenção padrão,
+       intercalando camadas de convolução 1D curta bidirecional (LFM2BiShortConv) com
+       camadas de Grouped-Query Attention (GQA, 8 cabeças KV) no tronco e 2 blocos de
+       decisão11. Por fim, o projeto Von-1.3 foi oficialmente descontinuado pelo seu autor em
+       favor do d1-omni-600M22.
+  4.   Duplicação de Memória na Ponte Wasm32 (OOM no iOS Safari): Se os blocos de 8
+       MiB do ficheiro .sombin passarem pela memória linear do WebAssembly (wasm32) antes
+       do queue.writeBuffer(), o heap do Wasm (que não devolve páginas alocadas ao sistema
+       operativo) soma-se aos buffers de staging e aos buffers Metal/Vulkan, acionando o
+       daemon Jetsam no iOS Safari ao cruzar o limiar real de ~1,0 GB a 2,0 GB por aba3.
+1. Diagnóstico Crítico da Arquitetura Atual
+1.1. Pontos Fortes Validados
+A conceção base do vosso motor acerta nos pilares essenciais da engenharia de sistemas para
+WebGPU. Em primeiro lugar, a combinação de execução em passada única com In-Shader
+Calibration e Micro-Readback ataca diretamente a maior fonte de latência oculta na web. Em
+motores de inferência no navegador, a leitura de dados da GPU para a CPU via
+GPUBuffer.mapAsync(GPUMapMode.READ) exige uma transição de estado assíncrona através
+da fronteira de processos IPC do navegador (Renderer Process ↔ GPU Process), impondo uma
+latência de sincronização de cerca de 2 ms por leitura no Chrome (e até ~11 ms de sobrecarga
+de sincronização por passo em pipelines não otimizados)10. Ao executar a pontuação dos
+marcadores de opção ([MASK] ou pointer readouts), o escalonamento de temperatura e o
+Softmax/Argmax diretamente em WGSL, transferindo para a CPU apenas 64 a 256 bytes uma
+única vez no final do passe, o vosso motor elimina mais de 99,9% do tráfego de leitura face à
+transferência de tensores de logits completos (que exigiriam cerca de 1 MB por passo, como
+observado na engenharia do motor WebGPU Pooled.run, que reduziu o readback para 16
+bytes)6.
+Em segundo lugar, a adoção do OPFS (Origin Private File System) via
+navigator.storage.getDirectory() em vez da Cache API ou do IndexedDB é decisiva para a
+fiabilidade em produção7. Relatos de implementação de 2026 com transformers.js e ONNX
+
+===== PAGE 3 =====
+demonstram que a Cache API integrada do Chrome aplica um limite silencioso de
+aproximadamente 200 MB, fazendo com que pesos em cache sejam reportados como vazios
+durante arranques a frio7. O OPFS escreve fluxos binários sem limite por entrada (restrito
+apenas à quota global da origem, tipicamente ≥1 GB em discos saudáveis), sobrevive a reinícios
+do navegador sem depender de cabeçalhos HTTP Cache-Control e disponibiliza acesso
+síncrono de baixa latência dentro de Web Workers através de FileSystemSyncAccessHandle7.
+Em terceiro lugar, o desenho de um formato binário .sombin zero-parse com alinhamento
+estático evita os gargalos dos formatos legados da indústria. Especificamente, o formato .onnx
+serializa modelos em Protobuf usando offsets int32 com sinal, o que impõe um teto rígido na
+especificação de 2.147.483.647 bytes (2 GB) por ModelProto3. Ao alinhar diretamente os
+tensores em múltiplos de 256 bytes no .sombin, o vosso motor cumpre nativamente os
+requisitos minUniformBufferOffsetAlignment = 256 bytes e minStorageBufferOffsetAlignment
+= 256 bytes da especificação W3C WebGPU28, viabilizando o carregamento por streaming
+direto para GPUBuffer sem sobrecarga de deserialização na CPU3.
+1.2. Radiografia Arquitetural dos Modelos-Alvo e a Armadilha dos
+Embeddings
+Uma análise quantitativa detalhada dos quatro modelos-alvo demonstra que o motor não pode
+tratá-los como meras variações de escala de um codificador BERT clássico11. Separando os
+
+parâmetros da tabela de vocabulário (                                 ) dos parâmetros ativos de
+backbone e cabeça de decisão, e aplicando os fatores exatos de armazenamento da
+especificação GGUF v3 — onde BlockQ4K ocupa 144 bytes por super-bloco de 256 pesos
+(4,50 bits/peso) e BlockQ8_0 ocupa 34 bytes por bloco de 32 pesos (8,50 bits/peso)11 —
+emerge uma assimetria estrutural profunda entre os modelos.
+
+===== PAGE 4 =====
+
+
+===== PAGE 5 =====
+Conforme sintetizado na tabela seguinte, cada arquitetura impõe requisitos específicos ao
+compilador de shaders e ao carregador de pesos:
+
+  Modelo SOM             Parâmetros            Arquitetura            Mecanismo              Status no
+  Alvo                   Totais (Emb.          do Backbone            da Cabeça de           Ecossistema e
+                         vs. Backbone)         e Atenção              Decisão e              Riscos
+                                                                      Calibração             Específicos
+
+
+  ModernBERT-            150,0M                22 camadas, H          Cabeça de              Ativo e
+  base /                 (38,68M Emb. /        = 768, I = 1.152       decisão tipada         Recomendad
+  Ettin-150M11           111,32M               (GeGLU), 12            (TS-Ettin-150M         o (Apache-2.0
+                         Backbone)             cabeças (d_h =         ou reranker)           / MIT). Família
+                                               64), RoPE (θ =         sobre                  Ettin dispõe de
+                                               160.000),              pooled/span            variantes
+                                               vocabulário            outputs para           menores (17M,
+                                               50.368. Padrão         choice, noul e         32M, 68M)
+                                               G-L-L: 8               score.                 ideais para
+                                               camadas                Contexto até           cold-start ou
+                                               Globais (0, 3, 6,      8.192 tokens.          fallback CPU18.
+                                               9, 12, 15, 18, 21)
+                                               e 14 camadas
+                                               Locais (W =
+                                               128).
+
+  Laya-Multiling         322,0M                22 camadas             Marcadores             Armadilha de
+  ual                    (196,61M Emb.         mmBERT-base            [MASK] por             Vocabulário e
+  (mmBERT-base           / 125,39M             (H = 768, I =          opção ([CLS]           Calibração:
+  )11                    Backbone +            1.152, padrão          question [SEP]         61,1% dos
+                         Head)                 G-L-L 8                [MASK] opt1 ...        pesos são
+                                               Globais / 14           [SEP] state            embeddings. A
+                                               Locais W = 128)        [SEP]).                temperatura
+                                               + 2 camadas            Particiona             do bucket
+                                               Transformer            janela de 1.024        choice:11+ vem
+                                               de decisão,            tokens em              como 0.1006
+                                               vocabulário            head_max_len           (exige clamp
+                                               256.000                = 256 e                para [0.5, 5.0])
+                                               (Gemma 2).             documento no           e
+                                                                      restante.              act_probability
+                                                                                             está saturada
+                                                                                             em 1,0 (issue
+                                                                                             #185; AUROC
+
+===== PAGE 6 =====
+                                                                                           0,30)19.
+
+Von-1.3               395,0M                 28 camadas, H          Arquitetura            Descontinuad
+(ModernBERT-l         (51,58M Emb. /         = 1.024, I =           Option-Marker          o
+arge)11               343,42M                2.624 (GeGLU),         ([MASK] antes          (Deprecated):
+                      Backbone)              16 cabeças             de cada                O repositório
+                                             (d_h = 64),            opção)                 oficial
+                                             vocabulário            treinada com           (wfzyx/von)
+                                             50.368,                perda dual             arquivou os
+                                             contexto               RLCD e                 pesos e
+                                             padrão 512             temperature            recomenda
+                                             tokens. Padrão         scaling                migrar para
+                                             G-L-L: 10              pós-treino32.          LiquidAI/d1-om
+                                             camadas                                       ni-600M22.
+                                             Globais e 18                                  Sofre de
+                                             camadas                                       colapso de
+                                             Locais (W =                                   modo em
+                                             128).                                         domínios fora
+                                                                                           da
+                                                                                           distribuição5.
+
+LiquidAI              380,73M no             LFM2.5-Encod           2 blocos               Ativo (Estado
+d1-omni-600           Tronco (67,11M         er-350M (18            dedicados              da Arte
+M (Tronco)20          Emb. / 313,62M         blocos) + 2            (lfm2.decision.        Multimodal):
+                      Backbone;              blocos de              block_count =          Licença LFM
+                      587M c/                decisão (H =           2), 0 tokens           Open License
+                      Visão+Áudio)           1.024, SwiGLU,         gerados.               v1.020. Não
+                                             vocab 65.536).         Temperaturas           suporta
+                                             Híbrido                por formato            bfloat16 em
+                                             LFM2Bidirecti          embutidas no           GPU (altera
+                                             onal: intercala        GGUF (choice:          respostas de
+                                             camadas                1,7465 a 1,1751;       topo em 0,8%
+                                             LFM2BiShortC           noul: 1,6663;          texto / 1,7%
+                                             onv                    score: 1,7301 /        áudio; exige
+                                             (convolução 1D         1,0)20.                float16 ou
+                                             depthwise                                     float32)20.
+                                             simétrica com
+                                             gating, 0
+                                             cabeças KV)
+                                             com camadas
+                                             GQA (8
+                                             cabeças KV,
+
+===== PAGE 7 =====
+                                              qNorm/kNorm
+                                              RMSNorm).
+
+A constatação de que 61,1% dos parâmetros do Laya-Multilingual (256.000 tokens × 768
+dimensões = 196,61 milhões de pesos) residem exclusivamente na tabela de token
+embeddings altera profundamente a estratégia de memória do vosso SDK11. Num modelo SOM
+de passada única sem geração auto-regressiva de texto, não existe camada de projeção de
+saída (LM Head / unembedding) sobre todo o vocabulário — a tabela de embeddings é
+consultada apenas uma única vez antes da camada 0 para converter os IDs dos S tokens de
+entrada (S ≤ 1.024) em vetores de dimensão H19. Manter 256.000 vetores na VRAM da GPU
+desperdiça cerca de 200 MB de memória gráfica para ler apenas algumas centenas de linhas
+por inferência.
+1.3. Fragilidades e Premissas Arriscadas na Arquitetura Proposta
+A primeira fragilidade estrutural reside na premissa de que a inferência SOM no navegador é
+limitada pela largura de banda de memória (25–50 GB/s em SoCs móveis), tal como ocorre nos
+LLMs. No processamento auto-regressivo de um LLM (decode), cada passo processa apenas 1
+token (S = 1), obrigando a GPU a ler todos os pesos do modelo para realizar apenas 2 ×
+N_params operações em ponto flutuante (uma intensidade aritmética de ~4,4 FLOPs/byte em
+Q4_K). Em contrapartida, num modelo SOM onde o estado, as perguntas e as opções são
+concatenados num único prompt de S = 256 tokens, cada bloco de pesos carregado para a
+memória partilhada (var<workgroup>) é reutilizado 256 vezes numa multiplicação de matrizes
+densa (GEMM)6. Modelando os FLOPs do backbone (                                           para projeções
+
+lineares mais                      nas camadas de atenção global e
+                                       nas camadas locais)11, uma passada única em S = 256 no
+Ettin-150M exige 60,02 GFLOPs (57,00 GFLOPs lineares e 3,02 GFLOPs na atenção G-L-L),
+resultando numa intensidade aritmética de 524,1 FLOPs/byte em Q4_K e 352,7 FLOPs/byte
+em Q8_011. Para o Von-1.3 em S = 256, são 180,93 GFLOPs (643,3 FLOPs/byte), e para o tronco
+do d1-omni-600M são 162,75 GFLOPs (680,0 FLOPs/byte)11. Como uma GPU móvel
+intermediária entrega ~35 GB/s de banda efetiva e ~1,2 TFLOPS de computação efetiva em
+shaders WGSL (ponto de equilíbrio roofline de ~34 FLOPs/byte), a inferência SOM em S ≥ 64 é
+severamente limitada pela capacidade aritmética (ALU) da GPU, e não pela banda de
+memória11. Em S = 256, mesmo que a largura de banda de memória fosse infinita, uma GPU
+móvel de 1,2 TFLOPS demora ~50 ms apenas em ciclos matemáticos para o Ettin-150M (~53,6
+ms incluindo sobrecarga de dispatch) e ~139 ms a ~154 ms para o d1-omni-600M e Von-1.311.
+A segunda fragilidade crítica é a compilação de toda a execução num único ComputePass com
+uma única chamada queue.submit(). Embora esta abordagem procure minimizar o custo de
+submissão da API, a evidência empírica acumulada em 2025 e 2026 demonstra três modos de
+falha graves em produção. Primeiro, ocorre perda de dispositivo (device.lost) no Metal
+(Apple Silicon / iOS) e em dispositivos de Memória Unificada (UMA): a equipa do motor
+WebGPU Pooled.run documentou que submeter um único command buffer massivo durante
+
+===== PAGE 8 =====
+passes largos de prefill provocou a perda do dispositivo no Metal, obrigando o motor a dividir o
+prefill em submissões a cada 8 camadas6; de igual modo, o llama.cpp teve de desativar o
+batching completo de submissão de grafos em dispositivos UMA para evitar erros device lost e
+reduzir o tamanho do lote em GPUs discretas de 100 para 6416. Segundo, existe um bug
+severo de congelamento de hardware (DXGI_ERROR_DEVICE_HUNG) no Chromium sob
+D3D12 (rastreado na issue Chromium 585125915 e LostBeard/webgpu-device-hung-test) que
+afeta GPUs NVIDIA Lovelace (como RTX 4070 e RTX 4050 Laptop) no Chrome e Edge9: quando
+um kernel de computação retém mais de 1.652 inteiros de 32 bits (6.608 bytes) por thread em
+arrays de escopo de função ou var<private> indexados dinamicamente e é seguido por
+qualquer outro dispatch dentro do mesmo queue.submit(), um kernel subsequente
+provoca o reset do driver de vídeo (ecrã preto momentâneo) e desativa o WebGPU na aba9.
+Inserir uma fronteira de queue.submit() imediatamente após o kernel pesado impede 100% da
+falha, mesmo sem espera na CPU9. Terceiro, ocorre inanição do compositor do navegador
+(compositor starvation): conforme documentado na issue #19342 do Apache TVM, agrupar
+todos os dispatches num único queue.submit() monopoliza a GPU continuamente e impede o
+compositor gráfico do navegador de intercalar a renderização da página8. Mesmo com a main
+thread JS desbloqueada, o pior tempo de apresentação de frame salta de 9,40 ms (0 frames
+com engasgo) para 166,60 ms, congelando o scroll, animações CSS e resposta ao toque8.
+A terceira fragilidade é a ausência de operadores especializados para Atenção Local (W =
+128) e para Convolução Curta Bidirecional (LFM2BiShortConv). Executar atenção densa
+O(S²) nas 22 camadas do ModernBERT/Ettin/Laya ou nas 28 camadas do Von-1.3 viola a
+máscara de atenção com que estes modelos foram treinados — onde apenas cada 3.ª camada
+(camadas 0, 3, 6, 9, 12, 15, 18, 21 no ModernBERT-base) usa atenção global e todas as restantes
+usam uma janela deslizante local de W = 128 tokens17 — além de desperdiçar até 87,5% de
+computação em sequências de S = 1.02411. De forma ainda mais restritiva, o tronco de 18
+blocos do LiquidAI/d1-omni-600M (LFM2.5-Encoder-350M) apresenta contagens de cabeças
+KV por camada do tipo 0, 0, 8, 0, 0, 8, …, onde a maioria dos blocos são operadores
+LFM2BiShortConv (convolução 1D depthwise centrada com gating multiplicativo) e não blocos
+de atenção20.
+2. Revisão Técnica do Estado da Arte (Desktop vs.
+Mobile WebGPU em 2026)
+2.1. Maturidade e Cobertura Real dos Navegadores (Novembro de
+2026)
+Após oito anos de trabalho de especificação no grupo W3C GPU for the Web, a API WebGPU
+atingiu massa crítica entre o final de 2025 e 2026, alcançando uma cobertura global estimada
+pelo CanIUse (com base nos dados StatCounter de outubro de 2026) entre 88,6% e 89,46%
+dos utilizadores web (~85,8%–86,83% de suporte total mais ~1,8%–3,66% de suporte
+parcial)38. Apesar da especificação W3C unificada, os três principais motores de navegador
+operam pilhas de tradução, mecanismos de IPC e compiladores de shaders totalmente
+independentes10.
+
+===== PAGE 9 =====
+No ecossistema Apple (Safari no iOS, iPadOS, macOS e visionOS), o suporte inicial surgiu
+oculto em Feature Flags no iOS 18.0, começou a ser ativado por padrão no iOS 18.2 (dezembro
+de 2024) e tornou-se universalmente ativo por padrão no Safari 26.0, lançado a 15 de
+setembro de 2025 em conjunto com o iOS 26, iPadOS 26, macOS 26 Tahoe e visionOS 2610.
+Como todos os navegadores no iOS (incluindo Chrome e Firefox) utilizam obrigatoriamente o
+motor WebKit, a disponibilidade de WebGPU no iPhone e iPad depende da versão do iOS e não
+do navegador instalado44. Internamente, o WebKit não usa nem o Dawn nem o wgpu: o
+JavaScriptCore comunica via WebIDL com o processo isolado GPU.framework através de
+chamadas XPC (RemoteGPU), utilizando WebGPU.framework (Objective-C++) e um
+compilador WGSL→MSL proprietário da Apple sobre a API Metal10.
+No ecossistema Chromium (Chrome, Edge, Opera, Samsung Internet e Android WebView),
+o WebGPU está ativo por padrão no ChromeOS, macOS e Windows desde o Chrome 113 (maio
+de 2023), no Android 12+ com GPUs Qualcomm Adreno ou ARM Mali desde o Chrome 121
+(janeiro de 2024), e no Linux (GPUs Intel Gen12+) desde o Chrome 144 (janeiro de 2026)28. A
+pilha Chromium serializa comandos via dawn::wire sobre Mojo IPC do processo Renderer para
+o processo GPU, onde o motor C++ Dawn realiza a validação de segurança e o compilador Tint
+traduz WGSL para SPIR-V (Vulkan no Android/Linux), HLSL (D3D12 no Windows) ou MSL (Metal
+no macOS)3. Em dispositivos Android, cada comando dispatchWorkgroups atravessa estas oito
+camadas de tradução (JS API → Blink WebIDL → Renderer Wire → Mojo IPC → Dawn
+Validation → Tint → Native API → Driver ISA → Hardware Command Processor), o que incorre
+numa latência base de ponta a ponta de aproximadamente 200 a 400 µs (medida num Apple
+M2 Pro)10.
+No Firefox (Gecko), a implementação baseia-se diretamente na biblioteca Rust wgpu-core e
+no compilador Naga através de IPDL IPC1. O Firefox ativou o WebGPU por padrão no Windows
+na versão 141 (julho de 2025), no macOS 26 Tahoe (Apple Silicon) na versão 145 (novembro de
+2025) e em todas as versões do macOS em Apple Silicon no Firefox 147 (janeiro de 2026)38.
+Contudo, em novembro de 2026, o Firefox ainda não suporta WebGPU por padrão no
+Android, no Linux nem em Macs com processador Intel28.
+
+===== PAGE 10 =====
+
+
+===== PAGE 11 =====
+2.2. Limites de Buffers (Slabs de 128 MiB vs. requiredLimits) e
+Sobrevivência a OOM
+A especificação base W3C WebGPU define um piso garantido de
+maxStorageBufferBindingSize = 134.217.728 bytes (128 MiB), maxBufferSize = 268.435.456 bytes
+(256 MiB) e maxComputeWorkgroupStorageSize = 16.384 bytes (16 KiB)3. Se a aplicação
+invocar adapter.requestDevice() sem parâmetros explícitos, o navegador imporá
+obrigatoriamente esse limite de 128 MiB/256 MiB, mesmo quando o adaptador físico suporta 4
+GiB3.
+Ao consultar adapter.limits e negociar limites superiores via requestDevice({ requiredLimits }),
+as estatísticas de telemetria em tempo real do web3dsurvey.com e levantamentos de
+hardware de 2026 mostram que 100% dos dispositivos reportam maxBufferSize >= 512 MiB
+(536.870.912 bytes), 97% suportam ≥805 MiB e 78% suportam ≥2 GiB47. Para
+maxStorageBufferBindingSize, 98% dos dispositivos suportam ≥256 MiB, 95% suportam
+≥322 MiB e 92% suportam ≥805 MiB, caindo abruptamente para 16% em ≥2 GiB porque os
+drivers D3D12 no Windows (NVIDIA e AMD) limitam as Shader Resource Views (SRV) de raw
+buffers logo abaixo de INT32_MAX (~2 GiB), ainda que o maxBufferSize seja de 4 GiB3.
+Dividindo por arquitetura de hardware, GPUs discretas (NVIDIA/AMD) expõem 2 GB a 4 GB,
+chips Apple M-series expõem 1 GB a 2 GB, GPUs integradas Intel (Iris Xe/UHD) expõem 256 MB
+a 1 GB, GPUs móveis Qualcomm Adreno expõem 256 MB a 512 MB, e GPUs móveis ARM Mali
+expõem 128 MB a 256 MB48. Adicionalmente, maxComputeWorkgroupStorageSize atinge
+≥32.766 bytes (~32 KiB) em 99% dos dispositivos, mas apenas 6% suportam 48 KiB47, e
+maxStorageBuffersPerShaderStage é de pelo menos 8 em 100% dos aparelhos (≥10 em 99% e
+≥16 em 81%)28.
+Consequentemente, o particionamento fixo em Slabs de 128 MiB com dynamic offsets já não
+precisa de ser o caminho padrão único: em 95% dos dispositivos (incluindo iPhones
+recentes e Androids com Adreno), solicitar requiredLimits na inicialização permite alocar um
+backbone de 112 MB a 318 MB num único GPUBuffer contínuo, simplificando o binding46.
+Contudo, a lógica de segmentação em 2 ou 3 Slabs de 128 MiB com dynamic offsets deve ser
+mantida como fallback automático acionado quando
+adapter.limits.maxStorageBufferBindingSize < requiredBytes, garantindo compatibilidade total
+com os 2% a 5% de dispositivos móveis ARM Mali restritos ao teto de 128 MiB47. Note-se
+também que o Chrome 133+ passou a permitir que limites desconhecidos recebam o valor
+undefined em requiredLimits sem quebrar a criação do dispositivo46.
+Quanto à sobrevivência a OOM (Out-of-Memory), a especificação WebGPU recusa-se
+deliberadamente a expor a quantidade de VRAM total ou disponível para evitar fingerprinting
+de hardware (a issue W3C gpuweb#5505 permanece aberta em 2026 e
+requestAdapterInfo().memoryHeaps[] no Chrome é experimental e não-portável)3. Os
+orçamentos empíricos de VRAM concedidos pelos navegadores por aba em abril de 2026
+situam-se em ~3–4 GB em Apple Silicon Desktop, ~4 GB por buffer único em NVIDIA RTX
+4090 (D3D12), ~2 GB em Snapdragon X Elite e ~1,0 GB a 2,0 GB em dispositivos móveis
+(iOS Safari e Chrome Android)3. No iOS Safari (WKWebView), quando a pressão combinada
+
+===== PAGE 12 =====
+de memória CPU + Metal ultrapassa o limite da página (frequentemente 1 GB de alocação GPU
+ou 1,5–2,0 GB totais), o gestor Jetsam do sistema operativo mata o processo da aba
+instantaneamente23. No Android Chrome, alocações excessivas ou rejeitadas pelo driver
+(reportadas em certos modelos Adreno 6xx ou sob limites de 256 MB em contextos gráficos)
+disparam a promessa device.lost23.
+A análise das "Três Muralhas da Inferência no Browser" (abril de 2026) comprova que a principal
+causa de OOM em motores Wasm+WebGPU era a retenção dos pesos na memória linear de 32
+bits do WebAssembly (Muralha 2)3. Como o wasm32 nunca devolve páginas alocadas ao
+sistema operativo e os dispositivos móveis usam Arquitetura de Memória Unificada (UMA),
+carregar pesos para o heap Wasm antes de os enviar para a GPU duplica permanentemente a
+pegada de RAM física3. Quando o ONNX Runtime 1.20+ e o novo C++ WebGPU EP
+(transformers.js v4, fevereiro/março de 2026) passaram a transmitir os pesos diretamente do
+fetch/OPFS para GPUBuffer (STORAGE | COPY_DST) via device.queue.writeBuffer() ou
+mappedAtCreation — deixando no módulo Wasm apenas ~150 bytes de handle por buffer e
+eliminando staging buffers redundantes em dispositivos UMA — o consumo total de memória
+num sistema UMA (Intel Tiger Lake) caiu de 5,1 GB para 3,2 GB sem perda de velocidade3. De
+igual modo, o framework LlamaWeb (llama.cpp WebGPU, maio de 2026) demonstrou em 16
+dispositivos (incluindo telemóveis no Chrome e Safari) que alocar estaticamente toda a
+memória de inferência no arranque e fazer streaming assíncrono direto para a GPU sem
+materializar pesos na CPU reduz o pico de memória em 29% a 33% face aos frameworks
+existentes13.
+2.3. Perfil Térmico, Consumo Energético e Degradação por DVFS em
+Mobile
+Em smartphones sem arrefecimento ativo, o comportamento térmico sob cargas WebGPU
+contínuas é governado pelo Dynamic Voltage and Frequency Scaling (DVFS) do SoC, onde a
+potência dissipada obedece à relação física51:
+
+
+
+
+Quando o die de silício se aproxima do seu limite térmico de segurança, o firmware reduz
+agressivamente a tensão (         ) e a frequência de relógio (      ) da GPU e da CPU51. Medições
+práticas de performance WebGPU no navegador revelam que o estrangulamento térmico
+(thermal throttling) manifesta-se rapidamente em uso sustentado: uma operação na GPU que
+demora 8 ms no início passa a demorar 25 ms (um aumento de 3,1x na latência) após
+apenas 30 segundos de carga contínua44. Em sessões prolongadas (5 a 30 minutos) ou
+quando o telemóvel está simultaneamente a carregar a bateria ou a transmitir dados em redes
+5G com sinal fraco, o calor acumulado nos reguladores de tensão (VRMs) e no controlador de
+memória degrada progressivamente a taxa de frames e aumenta o consumo total de bateria,
+pois as threads demoram mais tempo a concluir o trabalho e impedem o processador de
+entrar em estados de repouso51. Além disso, a especificação W3C WebGPU prevê que os
+navegadores monitorizem heuristicamente o alto consumo energético de contextos WebGPU
+
+===== PAGE 13 =====
+para alertar o utilizador ou restringir abas em segundo plano49.
+Como a API WebGPU não expõe sensores de temperatura nem estado da bateria44, a
+mitigação arquitetural obrigatória para o vosso SDK é garantir que o motor opere estritamente
+em pulsos efémeros orientados a eventos (event-driven bursts), nunca em loops
+contínuos44. Um passe único de 15 ms a 45 ms consome uma fração insignificante de energia
+térmica; porém, se a aplicação hospedeira acionar o modelo a cada tecla premida
+(onkeydown) sem debounce, 30 segundos de digitação rápida bastarão para saturar
+termicamente um SoC móvel e triplicar a latência44.
+3. Recomendações e Melhorias Práticas de Engenharia
+3.1. Estratégia de Quantização, Precisão Numérica e shader-f16
+Os dados empíricos de 2026 permitem responder com precisão às escolhas de formato
+numérico para modelos SOM no navegador:
+A extensão shader-f16 atingiu 94,15% de suporte global nas estatísticas WebGPU de 2026
+(sendo suportada tanto no Chromium/Dawn como no Safari/WebKit em Apple Silicon, iPhones
+modernos e GPUs Qualcomm Adreno/NVIDIA/AMD)47. Deve adotá-la como o caminho
+padrão de execução, pois reduz para metade o tráfego de memória das ativações e duplica a
+capacidade de staging em var<workgroup>37. Contudo, não a torne um requisito rígido
+incondicional: nos 5,85% de dispositivos sem suporte a shader-f16, o SDK deve detetar
+adapter.features.has('shader-f16') durante o pre-flight check e selecionar automaticamente
+shaders compilados para f32 (exatamente como implementado em projetos de referência com
+transformers.js v4 em 2026)6. Mais importante ainda: nunca utilize f16 para os acumuladores
+de produto escalar dentro dos kernels de GEMM/GEMV ou nas reduções de
+RMSNorm/Softmax. A equipa do motor WebGPU Pooled.run comprovou que a acumulação em
+f16 corrompe os resultados numéricos de saída, restringindo o uso de f16 às escalas de blocos
+e armazenamento/transferência, enquanto toda a acumulação aritmética ocorre em registos
+f326.
+Em relação aos formatos de pesos (Q4_K vs. FP8 vs. Q8_0 vs. Quantização Mista), FP8
+(E4M3 / E5M2) deve ser descartado: o WGSL v1 suporta apenas f32, i32, u32 e f16, não
+existindo tipos nativos FP8 nem instruções de matriz FP8 expostas no WebGPU padrão57.
+Quanto ao Q4_K, embora ofereça uma compressão atraente (144 bytes por super-bloco de
+256 pesos, ou 4,50 bpw, contendo d: f16, dmin: f16, scales: [u8; 12] com escalas e mínimos de 6
+bits empacotados para 8 sub-blocos de 32 pesos, e qs: [u8; 128])13, a sua desquantização
+on-the-fly é sub-ótima para inferência de passada única (prefill) por duas razões:
+  1.   Sobrecarga de ALU em Regime Compute-Bound: Desempacotar máscaras de 6 bits
+       de scales: [u8; 12] e calcular                          em cada sub-bloco adiciona instruções
+       de deslocamento de bits e aritmética num regime onde a GPU já está limitada por FLOPs
+       e registos11. Não por acaso, o LlamaWeb (llama.cpp WebGPU) perde para o WebLLM e
+       transformers.js em 21% a 51% durante o prefill apesar de vencer por 54%–69% no
+       decode13; no Android (SoC MediaTek Dimensity 7300), kernels K-quant caíram para 43
+       tok/s no processamento de prompt face a 121 tok/s em Q4_0 simétrico14; e o motor
+
+===== PAGE 14 =====
+       WebGPU Pooled.run optou por converter tensores K-quant para Q8_0 durante o
+       carregamento para a GPU6.
+  2.   Preservação da Calibração (ECE) e Ordenação de Confiança: Os modelos SOM são
+       treinados com regras de pontuação estritamente próprias (RLCD — Reinforcement
+       Learning for Calibrated Decisions, usando perdas de Brier ou log-score) para que a
+       probabilidade emitida reflita a frequência real de acerto5. Se o erro de quantização de 4
+       bits inverter a ordenação dos logits entre opções próximas, o temperature scaling
+       pós-treino não consegue recuperar a ordenação correta5. Nos testes oficiais do
+       LiquidAI/d1-omni-600M, a simples passagem de float16 para bfloat16 na GPU alterou a
+       resposta de topo em 0,8% das linhas de texto e 1,7% das linhas de áudio20. Em
+       contrapartida, a quantização INT8 (Q8_0, 34 bytes por 32 pesos: d: f16 + qs: [i8; 32])
+       mantém a precisão de decisão quase intacta (no benchmark TS-Ettin-150M, o modelo
+       ONNX int8 obteve 0,704 de acurácia contra 0,709 em PyTorch FP32)29.
+A estratégia ótima para o formato .sombin combina Offload de Vocabulário com
+Quantização Simétrica Alinhada (Q8_0 e Q4_0 Reempacotado):
+  ●   Offload da Tabela de Embeddings para OPFS/Worker: Mantenha a matriz vocab_size ×
+      H fora da GPU (no OPFS/Wasm Worker em Q8_0 ou F16). Para uma sequência de entrada
+      de S ≤ 512 tokens, o Worker extrai apenas os S vetores correspondentes aos tokens
+      ativos (ex.: 512 × 768 × 2 B = 768 KB em f16) e transfere esse micro-tensor para a GPU no
+      início do passe.
+  ●   Efeito Transformador no Ettin-150M e Laya-Multilingual (Q8_0 Puro em 1 Único
+      Slab): Sem a tabela de embeddings na VRAM, o backbone completo do Ettin-150M
+      (111,32M parâmetros) ocupa apenas 112,8 MB em Q8_0, e o backbone + cabeça de
+      decisão do Laya-Multilingual (125,39M parâmetros) ocupa apenas 127,1 MB em
+      Q8_011! Ambos cabem integralmente dentro de um único Slab padrão de 128 MiB da
+      especificação base W3C, eliminando a necessidade de Q4_K e garantindo máxima
+      velocidade de prefill e calibração ECE11.
+  ●   Quantização Mista para o d1-omni-600M Trunk (313,62M parâmetros no backbone)
+      e Von-1.3 (343,42M): Utilize Q4_0 com Load-Time Repacking nas projeções lineares
+      pesadas (Q, K, V, O e FFN w1, w2, w3) — separando os nibbles de 4 bits empacotados em
+      palavras u32 contíguas das escalas f16 (duas por u32), o que permite leituras coalesced
+      de 128 bits por faixa de 64 threads (técnica que gerou 2,2x de aceleração no Pooled.run
+      e 10% de economia de tráfego)6 — e preserve em Q8_0 ou FP16 todas as camadas
+      convolucionais LFM2BiShortConv, todos os RMSNorm (operatorNorm, ffnNorm, qNorm,
+      kNorm, embeddingNorm) e os 2 blocos da cabeça de decisão20.
+3.2. Arquitetura de Memória, Shaders de Atenção e Convolução em
+WGSL
+Para modelos bidirecionais em passada única, a implementação mais eficiente em WGSL
+hoje é a FlashAttention-2 (FA2) adaptada para tiling cooperativo em var<workgroup> com
+Online Softmax em registos12. O Flash-Decoding (que paraleliza a redução da dimensão KV
+através de Split-K com múltiplos workgroups por linha de Query) só traz benefícios quando o
+
+===== PAGE 15 =====
+número de tokens de consulta é unitário (L_Q = 1, durante o decode auto-regressivo), pois
+nesse caso há poucos workgroups para ocupar a GPU. Na passada única de um SOM, L_Q = S
+(64 a 1.024 tokens) multiplicado por 12 a 16 cabeças de atenção gera centenas de workgroups
+independentes na grelha (batch, num_heads, ceil(S / Q_TILE)), saturando todas as unidades de
+computação da GPU sem necessitar da sincronização global ou dos buffers intermédios do
+Flash-Decoding37. Por sua vez, a atenção clássica em múltiplos passos (materializando a matriz
+de pontuação [B, H, S, S] na VRAM global antes do Softmax) consome memória quadrática e
+tráfego excessivo de DRAM (num teste de referência em S = 512, a FlashAttention-2 em WGSL
+evitou ~67 MB de tráfego de memória global por camada)12.
+Para cobrir os vossos modelos com máxima eficiência, o motor deve implementar quatro
+famílias de shaders WGSL:
+  1.   FlashAttention-2 Bidirecional Global (fa2_global.wgsl) e Local
+       (fa2_local_w128.wgsl):
+   ○   Na variante Global (usada nas 8 camadas globais do ModernBERT/Ettin/Laya e nas
+       camadas GQA do d1-omni-600M), cada workgroup assume um bloco (batch, head,
+       Q_tile) de 16 linhas, carrega o tile de Query para var<workgroup> uma única vez e
+       percorre K e V em blocos de 16 colunas12. Cada invocação mantém em registos locais
+
+       (f32) o máximo corrente           , a soma exponencial         e o vetor acumulador de saída
+       (head_dim = 64), aplicando a identidade de reescalonamento do online softmax a cada
+       bloco de K/V12:
+
+
+
+
+
+
+
+
+
+
+   ○   Com head_dim = 64, o estado por thread exige apenas                                            floats
+       (face a array<f32, 1024> numa implementação FA1), cabendo integralmente nos registos
+       sem spilling12. Nas camadas GQA do d1-omni-600M (16 cabeças Q / 8 cabeças KV),
+       duas cabeças Q partilham o mesmo índice de cabeça KV (kv_head = q_head >> 1u)20.
+   ○   Na variante Local W = 128 (usada nas 14 camadas locais do
+       ModernBERT-base/Ettin-150M e do Laya-Multilingual, e nas 18 camadas locais do
+       Von-1.3)17, o shader restringe os limites do loop sobre os blocos de K/V apenas aos tiles
+       que intersetam a janela [q_idx - 64, q_idx + 64], cortando até 75%–87,5% dos FLOPs de
+       atenção em sequências de 512 a 1.024 tokens11.
+  2.   Convolução 1D Curta Bidirecional com Gating (lfm2_bi_shortconv.wgsl):
+   ○   Essencial para o tronco LFM2.5-Encoder-350M do d1-omni-600M20. Conforme a
+       especificação da arquitetura LFM2Bidirectional, cada camada não-atencional aplica
+       operatorNorm (RMSNorm), projeta a entrada via inProj: Linear(H, 3*H) e divide o
+
+===== PAGE 16 =====
+       resultado em três vetores de largura H = 1.024 (                      )21. O shader multiplica
+
+       elemento-a-elemento                    , aplica uma convolução 1D depthwise centrada (groups
+       = H, tamanho de filtro convLCache, padding = convLCache / 2 simétrico) em
+       var<workgroup>, multiplica o resultado pelo portão                  (                            ) e
+       executa a projeção linear outProj somando diretamente na conexão residual6.
+  3.   GEMM Tiled 64×64 com Sub-Tiles 4×4 ou 2×4 (Prevenção do Register Spill Cliff):
+   ○   Nas multiplicações de matrizes de passada única, cada workgroup
+       (@workgroup_size(16, 16)) calcula um bloco de 64 × 64 da saída, carregando
+       cooperativamente fatias de 64 × 16 de               e 16 × 64 de       para var<workgroup>
+       sincronizadas por workgroupBarrier()37. Cada carga da memória partilhada alimenta ~16
+       multiplicações-acumulações em registos37.
+   ○   Evite estritamente sub-tiles de 8×8 por thread: Benchmarks documentados em
+       WebGPU (posttrainllm, 2026) demonstram que aumentar o bloco de registos por thread
+       de 4×4 (16 floats) para 8×8 (64 floats) degrada a velocidade em todas as dimensões
+       (ex.: de 1,78 ms para 1,96 ms em 1024 × 1024 e de 10,15 ms para 11,52 ms em 2048 ×
+       2048) porque 64 acumuladores excedem o orçamento de registos por invocação em
+       GPUs Apple e móveis, provocando register spilling para a memória global e reduzindo a
+       ocupação por exigir 16 KB de var<workgroup> em vez de 4 KB12. No Pooled.run, sub-tiles
+       de 2×4 superaram até os de 4×4 em GPUs onde a ocupação de warps prevalece sobre o
+       reuso de registos6.
+   ○   Acumuladores Escalares Nomeados e Cargas vec4: Declare os acumuladores como
+       variáveis escalares/vetoriais individuais (var acc0: vec4<f32>; var acc1: vec4<f32>; ...) e
+       nunca como um array local indexado por variável (var acc: array<f32, 16>), pois o
+       indexamento variável causou um atraso de 3x por spilling para memória scratch no
+       Pooled.run6 e é o gatilho direto do bug DXGI_ERROR_DEVICE_HUNG em GPUs NVIDIA
+       Lovelace sob D3D129. Utilize cargas globais de 128 bits (vec4<f32>), que demonstraram
+       ser 1,37x mais rápidas do que cargas escalares em matrizes 2048 × 204812.
+  4.   Cabeça de Decisão e Calibração In-Shader (som_calibration_head.wgsl):
+   ○   O último shader recolhe as representações nas posições dos marcadores [MASK] (para
+       Laya/Von) ou aplica os 2 blocos de decisão (para o d1-omni-600M), calcula os logits de
+       cada opção, divide pela temperatura               específica do tipo de pergunta embutida nos
+       metadados do .sombin (ex.: no d1-omni-600M,                                    para choice de 2
+       opções,                 para 3–5 opções,                  para 6–10 opções,                   para >11
+       opções,                 para noul sim/não e                  para score de 3–5 níveis; no Laya,
+       aplicando obrigatoriamente clamp(T, 0.5, 5.0) para corrigir a temperatura extrema
+       0.1006 do bucket choice:11+), executa o Softmax em f32 e escreve os 64 a 256 bytes
+       finais no buffer de saída19.
+Adicionalmente, proteja o gerador de shaders WGSL contra quatro armadilhas de
+
+===== PAGE 17 =====
+portabilidade entre compiladores (Tint vs. Naga vs. WebKit MSL):
+  ●   Correspondência Estrita de Modo de Acesso no BindGroupLayout: Uma discrepância
+      entre var<storage, read> no shader WGSL e um layout explícito buffer: { type: "storage" }
+      (leitura-escrita) no host não gera erro de validação no Chromium/Apple Metal, mas
+      retorna dados corrompidos silenciosamente (causando divergência total dos
+      resultados)12.
+  ●   Proibição de Escritas Parciais em var<workgroup> array<vec4<f32>> no Metal:
+      Escrever num componente individual de um vec4 em memória partilhada apaga as
+      escritas de threads vizinhas em GPUs Apple sob Metal; escreva sempre o vec4 completo
+      ou use arrays escalares em var<workgroup>6.
+  ●   Sem Ponteiros storage em Argumentos de Função e Sem subgroups Obrigatórios:
+      Passar ponteiros de storage buffer como parâmetros de função é inseguro no Safari;
+      gere funções auxiliares por buffer no template WGSL6. Como o Safari não expõe
+      subgroups (69,54% de suporte global e ganho medido de 0% a 8% no Pooled.run,
+      embora chegue a ~3x quando combinado com extensões experimentais de matriz XMX
+      chromium_experimental_subgroup_matrix no Dawn/Intel Lunar Lake), trate enable
+      subgroups; apenas como otimização opcional mediante sonda em tempo de arranque3.
+3.3. Ponte Wasm↔WebGPU, Lições de Engines Gráficas e Execução
+Segmentada
+Sobre a questão do overhead da ponte Wasm ↔ WebGPU JS bindings: quando o vosso
+crate Rust é compilado para wasm32-unknown-unknown usando wgpu apenas com a feature
+webgpu (sem webgl nem wgpu-core), as chamadas compute_pass.set_pipeline(),
+set_bind_group() e dispatch_workgroups() atravessam o wasm-bindgen / web-sys diretamente
+para o motor JavaScript1. A travessia da fronteira Wasm→JS em si custa menos de 1 µs por
+chamada (<0,1 ms para 100 chamadas). Contudo, o estudo sistemático de Maczan (2026,
+arXiv:2608.08730) através de quatro fabricantes de GPU, três backends e três navegadores
+demonstrou que cada operação de dispatch no WebGPU impõe um custo marginal real de
+24 a 36 µs no Vulkan e 32 a 71 µs no Metal (e ~95,5 µs de custo total por operação quando
+somado ao framework), concluindo que a contagem de dispatches — e não apenas a
+qualidade individual do kernel — é um gargalo determinante na inferência WebGPU4.
+Porém, como vimos na Secção 1.3, agrupar todos os ~150 a 250 dispatches num único
+ComputePass / queue.submit() provoca perda de dispositivo (device.lost) no Metal/UMA6, ativa
+o bug de device hang no D3D129 e congela o compositor gráfico do navegador por 166,60
+ms8.
+
+===== PAGE 18 =====
+Para harmonizar baixa latência e estabilidade absoluta, combine Fusão de Kernels com
+Submissão Segmentada (Chunked Flushing a cada 7–8 camadas) e aplique as quatro
+grandes lições das engines gráficas WebGPU (Babylon.js, Bevy WebGPU, PlayCanvas e
+PixiJS):
+  ●    Fusão de Operadores e Submissão em 3 Blocos (Chunked Submit): Funda os
+       operadores elementares nas multiplicações de matrizes adjacentes — acumulando
+       diretamente no residual (y += W * x) nas projeções de saída de atenção/convolução e FFN
+       down, e fundindo as projeções gate e up com a ativação GeGLU/SwiGLU antes de
+       escrever na memória global (o que eliminou 128 dispatches por passo no Pooled.run e
+       acelerou a execução em 1,4x no Vulkan nos testes de Maczan)4. Reduzido o grafo para ~4
+       dispatches por camada (~90 no total), divida o passe único em 3 chamadas
+       queue.submit() (uma a cada 7 a 8 camadas)6. Esta divisão resolve simultaneamente a
+       perda de dispositivo no Metal6, previne o congelamento de 166,60 ms no compositor
+       gráfico da página (permitindo ao navegador desenhar frames intermédios a 60 FPS)8 e
+       isola kernels complexos contra o bug de device hang do D3D129.
+  ●    Lição 1 de Engines Gráficas — Proibição de createBuffer em Runtime e Pool de
+       Tamanhos Fixos (PlayCanvas / PixiJS / Ayoob): Nas engines WebGPU PlayCanvas
+       (issue #9297) e PixiJS (issue #12163), descobriu-se que criar e destruir um GPUBuffer a
+       cada leitura ou frame custa 0,3 ms a 1,2 ms por alocação e causa fugas invisíveis de
+       VRAM que o Garbage Collector do JS não recolhe até buffer.destroy() ser chamado48.
+       Pré-aloque no arranque um pool estático de buffers de ativação (ping-pong buffers
+       [S_max, H], reduzindo o custo de alocação para 0,01 ms)13 e um anel (ring buffer) de 3 a
+       4 staging buffers de 256 bytes (COPY_DST | MAP_READ) para o micro-readback63.
+       Como um buffer em estado mapAsync() não pode ser reutilizado pela GPU até que
+       unmap() seja chamado63, o anel permite enfileirar uma nova decisão enquanto a anterior
+
+===== PAGE 19 =====
+       ainda está a ser lida pelo JavaScript65.
+  ●    Lição 2 de Engines Gráficas — Upload Streaming sem Tocar no Heap Wasm
+       (webgpu-upload-stream / mappedAtCreation): No carregamento inicial dos pesos a
+       partir do FileSystemSyncAccessHandle do OPFS dentro do Web Worker, leia cada
+       pedaço de 8 MiB diretamente para um Uint8Array pré-alocado no JS (ou utilize
+       mappedAtCreation: true na criação inicial do Slab da GPU, que escreve diretamente no
+       upload heap e poupa um memcpy interno no Dawn/WebKit)3 e invoque
+       device.queue.writeBuffer() sem nunca copiar os 8 MiB para dentro da memória linear
+       WebAssembly.Memory do Rust3.
+  ●    Lição 3 de Engines Gráficas — Negociação Automática de Limites e Snapshot /
+       Device-Lost Recovery (Babylon.js): À semelhança das flags setMaximumLimits = true e
+       enableAllFeatures = true do WebGPUEngine do Babylon.js e do seu mecanismo de
+       device-lost recovery68, registe sempre um handler em device.lost. Se o sistema operativo
+       móvel reclamar os recursos da GPU quando o utilizador minimizar o navegador ou mudar
+       de aba, o vosso SDK reconstrói silenciosamente o GPUDevice quando a página regressa
+       ao primeiro plano (visibilitychange) e recarrega os Slabs em poucos milissegundos
+       diretamente a partir do FileSystemSyncAccessHandle local no OPFS, sem qualquer novo
+       download de rede27.
+3.4. UX de Carregamento (~80–200 MB), Core Web Vitals (LCP, INP) e
+Estratégia de Fallback
+Para eliminar a fricção de carregar ~80 MB a 204 MB na primeira visita sem penalizar o LCP
+(Largest Contentful Paint) nem o INP (Interaction to Next Paint), adote uma arquitetura de
+carregamento isolada em quatro camadas de proteção:
+  1.   Execução 100% em Web Worker com Sonda Pre-Flight Zero-Byte: Mantenha toda a
+       instância wgpu, a compilação de shaders WGSL e o acesso síncrono ao OPFS dentro de
+       um Web Worker dedicado (acessível via WorkerNavigator.gpu)13. Ao carregar a página,
+       execute apenas uma sonda assíncrona leve (pre-flight check) verificando
+       navigator.gpu.requestAdapter(), adapter.features.has('shader-f16'),
+       adapter.limits.maxStorageBufferBindingSize, navigator.deviceMemory e
+       navigator.storage.estimate(), sem disparar qualquer pedido de rede automático antes do
+       LCP7. Tenha em atenção um comportamento crítico documentado no Chromium em
+       2026: o OPFS não liberta blocos de armazenamento imediatamente após
+       removeEntry() (a contabilidade do Chrome demora vários minutos a refletir a exclusão),
+       pelo que a lógica de atualização de versões de .sombin deve consultar
+       navigator.storage.estimate() antes de gravar novos ficheiros7.
+  2.   Desacoplamento de Rede Pós-LCP e Compilação Assíncrona de Shaders: Reserve a
+       largura de banda inicial para os recursos críticos da página (marcados com
+       fetchpriority="high")71 e inicie o streaming dos blocos de 8 MiB do .sombin apenas após o
+       LCP, dentro de requestIdleCallback, usando fetch(url, { priority: 'low' }) no Worker. Valide
+       cada bloco de 8 MiB em streaming através de hashes BLAKE3 antes de o persistir no
+       OPFS e carregar no Slab da GPU (padrão comprovado pelo fusor-ai)72. Para evitar o
+
+===== PAGE 20 =====
+       congelamento de arranque a frio na compilação de WGSL (que em motores com 20 a 40
+       kernels pode bloquear o processo GPU durante vários segundos enquanto o Tint/WebKit
+       compila pipelines)3, restrinja o vosso motor a 6–8 shaders parametrizados por
+       uniformes e compile-os exclusivamente com device.createComputePipelineAsync().
+  3.   Progressive Enhancement com Modelo Semente (Instant-On Micro-SOM): A família
+       aberta Ettin (JHU CLSP / LightOn) e a suíte TS-Ettin fornecem codificadores treinados
+       exatamente com os mesmos dados e receita nas escalas 17M, 32M, 68M, 150M, 400M
+       e 1B18. Na primeira visita de um utilizador sem cache OPFS, o SDK pode descarregar
+       primeiro um pacote Ettin-17M (~9,5 MB em 4 bits / ~18 MB em 8 bits), que transfere e
+       compila em menos de 1 segundo para garantir decisões locais imediatas, enquanto o
+       modelo principal (Ettin-150M ou d1-omni-600M) faz streaming silencioso em segundo
+       plano para o OPFS18.
+  4.   Estratégia de Contingência (Fallback) — Wasm Relaxed SIMD Multithreaded + API
+       Remota (Descartando WebGL2):
+   ○   Por que rejeitar o WebGL2: O WebGL2 baseia-se no modelo OpenGL ES e não
+       suporta compute shaders, memória partilhada (var<workgroup>) nem barreiras de
+       sincronização de grupo59. Mesmo na biblioteca wgpu, o backend WebGL2 traduz
+       shaders via Naga para GLSL apenas para renderização gráfica e carece de suporte a
+       computação geral59. Emular atenção bidirecional e desquantização de blocos
+       Q8_0/Q4_0 em fragment shaders exige dezenas de passagens de texturas e sofre de
+       elevado overhead de CPU51.
+   ○   Fallback Primário On-Device — Wasm32 SIMD128 + Relaxed SIMD Multithreaded:
+       Nos ~10%–11% de navegadores sem WebGPU ativo (como Firefox no Android e Linux)38,
+       a melhor contingência local é WebAssembly SIMD128 combinado com Relaxed SIMD
+       (i32x4.relaxed_dot_i8x16_i7x16_add_s, que acelera produtos escalares INT8 mapeando
+       diretamente para ARM sdot e x86 AVX-VNNI)72. Como o Relaxed SIMD está ativo por
+       padrão no Chrome 114+, Edge e Firefox 128+ (incluindo Firefox Android 154), mas
+       permanece atrás de uma flag no Safari em 202680, o carregador JS deve selecionar
+       dinamicamente a build Wasm com relaxed-simd no Chrome/Firefox e a build simd128
+       padrão no Safari72. Quando a página hospedeira configura os cabeçalhos COOP / COEP
+       para habilitar SharedArrayBuffer, uma equipa de 4 Workers partilhando a mesma
+       memória Wasm alcança um ganho de 3,2x sobre Wasm escalar12, executando um
+       modelo de 150M em INT8 em ~196 ms (ou modelos leves como Ettin-17M/32M e Von em
+       CPUs rápidas em 15 ms a 80 ms)5.
+   ○   Fallback Secundário — Chaveamento Automático para API Remota: Se o WebGPU
+       falhar e o ambiente não dispuser de SharedArrayBuffer (limitando o Wasm a 1 thread),
+       ou em telemóveis de entrada onde a latência CPU exceda o SLA da aplicação, o SDK
+       deve chavear transparentemente a chamada para um endpoint remoto (onde o
+       d1-omni-600M executa em 8 ms numa RTX 4090)83.
+4. Comparativo de Alternativas da Indústria
+Para avaliar pragmaticamente onde o vosso runtime bare-metal em wgpu/Rust supera as
+
+===== PAGE 21 =====
+soluções existentes em 2026 e onde pode absorver técnicas já validadas, comparámos os seis
+principais motores do ecossistema:
+
+===== PAGE 22 =====
+
+
+===== PAGE 23 =====
+Runtime /                  Arquitetura de              Onde a Alternativa          Onde o Vosso
+Framework                  Execução no                 é Forte                     Motor
+(Estado em 2026)           Browser                     (Pragmatismo)               Customizado
+                                                                                   (wgpu/Rust)
+                                                                                   Vence
+                                                                                   Decisivamente
+
+
+ONNX Runtime               Substituiu o antigo         Suporta ~200                1. Tamanho do
+Web v1.24.x +              JSEP pelo novo C++          arquiteturas                Binário: O
+Transformers.js v4         WebGPU EP;                  prontas do Hugging          ort-wasm-simd-thr
+(GA março 2026)3           carrega pesos fora          Face num único              eaded.asyncify.was
+                           do heap Wasm;               código para                 m pesa ~20 a 23,5
+                           inclui                      Browser, Node, Bun          MB (3–8 MB em
+                           enableGraphCaptur           e Deno; excelente           build mínima)
+                           e, FlashAttention e         para prototipagem           contra <500 KB do
+                           Split-K MatMul3.            rápida3.                    vosso motor3.
+
+                                                                                   2. Cold-Start de
+                                                                                   Shaders: O ORT
+                                                                                   demorou ~11 s num
+                                                                                   reload a quente
+                                                                                   (com OPFS já
+                                                                                   populado num Mac
+                                                                                   M-series) a
+                                                                                   compilar dezenas
+                                                                                   de shaders
+                                                                                   genéricos e
+                                                                                   executar o prefill
+                                                                                   inicial3.
+
+                                                                                   3. Bugs em
+                                                                                   Quantização:
+                                                                                   Grafos dinâmicos
+                                                                                   INT8 (q8) geraram
+                                                                                   probabilidades
+                                                                                   incorretas sob
+                                                                                   WebGPU
+                                                                                   (crivo-150m-web)15
+                                                                                   , e o Softmax nativo
+                                                                                   falhava com escalas
+                                                                                   INT485.
+
+===== PAGE 24 =====
+Burn (burn-wgpu            Framework 100%              Permite partilhar           O Burn é
+v0.20 + CubeCL)86          Rust que compila            exatamente o                desenhado em
+                           para                        mesmo código de             torno de
+                           wasm32-unknown-             modelo entre                TensorData
+                           unknown usando              treino/inferência           genérico e pesos
+                           wgpu; o CubeCL              nativa                      F16/F32
+                           oferece fusão               (CUDA/Metal) e              Safetensors87. Não
+                           automática de               WebGPU no                   possui streaming
+                           kernels, Comptime           browser (usado              .sombin zero-copy
+                           e Autotune86.               com sucesso em              com offload de
+                                                       separação de áudio          vocabulário no
+                                                       Demucs 84 MB F16            OPFS, nem kernels
+                                                       em março de                 GGUF (Q4_0/Q8_0)
+                                                       2026)87.                    fundidos com
+                                                                                   calibração
+                                                                                   in-shader e
+                                                                                   micro-readback de
+                                                                                   64 bytes.
+                                                                                   (Recomendação:
+                                                                                   adote o conceito de
+                                                                                   Autotune rápido no
+                                                                                   arranque do
+                                                                                   CubeCL /
+                                                                                   Pooled.run para
+                                                                                   escolher
+                                                                                   workgroup_size por
+                                                                                   dispositivo)6.
+
+fusor-ai (Rust AOT         Compilador                  Zero sobrecarga de          O fusor-ai não
+Wasm + Relaxed             Ahead-of-Time               interpretação de            implementa
+SIMD)72                    (AOT) em Rust que           grafo; streaming            WebGPU (executa
+                           transforma cada             OPFS verificado por         100% em CPU
+                           modelo (incluindo           BLAKE3;                     Wasm; leva ~3,4 s
+                           d1-2B, d1-Omni-2B,          quantização em              num M4 Pro de 8
+                           Intern-Decision-2B          blocos (Q7b32,              threads para um
+                           e d3-nano) num              Q4b32) com                  passe de decisão
+                           módulo Wasm                 ativações int8              multimodal de 2B)72.
+                           selado, sem grafo           dinâmicas usando            O vosso motor
+                           dinâmico, com               relaxed_dot72.              deve adotar a
+                           Team::run sobre                                         filosofia AOT sem
+                           SharedArrayBuffer72                                     grafo e o
+                           .                                                       carregador
+
+===== PAGE 25 =====
+                                                                                 OPFS+BLAKE3 do
+                                                                                 fusor-ai, mas
+                                                                                 executando os
+                                                                                 kernels pesados em
+                                                                                 WebGPU e usando
+                                                                                 a arquitetura
+                                                                                 Team::run do
+                                                                                 fusor-ai como o
+                                                                                 vosso fallback CPU
+                                                                                 Wasm SIMD!
+
+LlamaWeb                   Compilam                   LlamaWeb reduz o           Penalidade severa
+(llama.cpp                 C++/GGML para              pico de memória            em Passada Única
+WebGPU) &                  Wasm64/Wasm32 +            em 29–33% com              (Prefill): O
+WebLLM (MLC /              WebGPU                     alocação estática e        LlamaWeb é 21% a
+TVM)8                      (LlamaWeb) ou              supera o                   51% mais lento no
+                           usam Apache TVM            WebLLM/ORT em              prefill do que
+                           (WebLLM) com               54–69% durante o           outras soluções no
+                           foco em LLMs               decode                     navegador porque
+                           auto-regressivos8.         token-a-token13.           os seus kernels
+                                                                                 priorizam GEMV de
+                                                                                 decode sobre
+                                                                                 GEMM
+                                                                                 row-stationary6.
+                                                                                 Além disso, o
+                                                                                 WebLLM sofreu
+                                                                                 com o bug de
+                                                                                 congelamento de
+                                                                                 UI por
+                                                                                 queue.submit()
+                                                                                 único (TVM #19342)
+                                                                                 e não suporta
+                                                                                 cabeças de decisão
+                                                                                 SOM sem geração
+                                                                                 de tokens8.
+
+Candle (Hugging            Biblioteca                 API muito simples          Não possui
+Face)87                    minimalista de             em Rust puro; fácil        backend WebGPU
+                           tensores em Rust           integração com             (apenas CUDA e
+                           inspirada no               rust-tokenizers e          Metal nativos; no
+                           PyTorch; compila           tiktoken-rs93.             navegador executa
+                           para wasm3293.                                        exclusivamente na
+
+===== PAGE 26 =====
+                                                                                    CPU via Wasm,
+                                                                                    entregando apenas
+                                                                                    2–5 tok/s em LLMs
+                                                                                    e 50–100 ms em
+                                                                                    modelos BERT
+                                                                                    pequenos)87.
+
+  ruNNtime                   Motores WebGPU              ruNNtime já                O vosso SDK
+  (Software Mansion)         escritos                    demonstrou o               open-source em
+  & Pooled.run6              diretamente sobre           d1-omni-600M a             Rust/wgpu combina
+                             operações                   correr no browser          esta mesma
+                             nucleares (matmul,          via WebGPU a ~45           velocidade de
+                             attention, norms)           ms por pergunta            kernels WGSL
+                             com templates               (~180 ms para 4            bare-metal com a
+                             WGSL                        perguntas de               segurança de tipos
+                             especializados por          moderação)                 do Rust, o formato
+                             dispositivo6.               carregando pesos           compacto .sombin,
+                                                         Safetensors83.             o offload de
+                                                                                    vocabulário no
+                                                                                    OPFS e o
+                                                                                    micro-readback
+                                                                                    calibrado nativo
+                                                                                    para choice, noul e
+                                                                                    score.
+5. Roteiro de Ação Imediato (Checklist de
+Implementação)
+Para consolidar a arquitetura do vosso SDK e atingir o SLA sub-50ms com estabilidade de
+produção no Desktop, iOS Safari 26 e Android Chrome:
+  1.   Substituir o Von-1.3 na Matriz de Modelos Prioritários: Remova o Von-1.3 dos alvos
+       principais de longo prazo (visto que os pesos foram arquivados pelo autor) e concentre o
+       suporte oficial na tríade: Ettin-150M / TS-Ettin-150M (com Ettin-17M/32M para
+       cold-start), Laya-Multilingual (322M) (aplicando clamp de temperatura [0.5, 5.0] e
+       ignorando act_probability) e LiquidAI/d1-omni-600M (Tronco de 380,73M)19.
+  2.   Desacoplar a Tabela de Embeddings da VRAM da GPU: Estruture o ficheiro .sombin
+       em duas secções: (Secção A) Tabela de Embeddings quantizada em Q8_0 ou F16 que
+       permanece em OPFS/Wasm no Web Worker para consulta direta por ID dos S tokens de
+       entrada, e (Secção B) Pesos do Backbone + Cabeça de Decisão carregados na VRAM da
+       GPU. Isto reduz o consumo de VRAM do Laya-Multilingual em 61,1% (permitindo usar
+       Q8_0 puro em 127,1 MB) e do Ettin-150M para 112,8 MB em Q8_011.
+  3.   Adotar Q8_0 e Q4_0 Reempacotado em vez de Q4_K: Utilize Q8_0 para o Ettin-150M
+
+===== PAGE 27 =====
+       e Laya-Multilingual, e uma mistura de Q4_0 (com separação contígua de nibbles u32 e
+       escalas f16 no momento da criação do .sombin) para as matrizes lineares do
+       d1-omni-600M, preservando as convoluções ShortConv, RMSNorm e a cabeça de
+       decisão em Q8_0/FP166.
+  4.   Implementar os 3 Kernels Arquiteturais em Falta: Escreva os shaders WGSL para
+       FlashAttention-2 Bidirecional com Janela Local (W = 128) para as 14 camadas locais do
+       ModernBERT/Ettin/Laya17, Convolução 1D Curta Bidirecional com Gating
+       (LFM2BiShortConv) para as camadas convolucionais do d1-omni-600M20, e GEMM Tiled
+       64 × 64 com sub-tiles de registo 4 × 4 ou 2 × 4 em f32 com acumuladores escalares
+       nomeados (evitando o abismo de register spilling de 8 × 8 e arrays indexados por
+       variáveis)6.
+  5.   Trocar o queue.submit() Único por Chunked Submits a cada 7–8 Camadas + Staging
+       Ring Buffer: Divida a execução do passe único em 3 submissões por inferência para
+       impedir device.lost no Metal da Apple, DXGI_ERROR_DEVICE_HUNG no D3D12 e
+       congelamentos de 166,60 ms no compositor da página6, lendo os 64–256 bytes finais
+       através de um anel pré-alocado de 4 buffers MAP_READ63.
+  6.   Negociar requiredLimits Dinamicamente Mantendo o Fallback de Slabs de 128 MiB:
+       Consulte adapter.limits.maxStorageBufferBindingSize e maxBufferSize na inicialização;
+       aloje o backbone num único buffer nos 95% de dispositivos que suportam ≥322 MiB, e
+       acione automaticamente a divisão em 2–3 Slabs de 128 MiB com dynamic offsets nos
+       2%–5% de GPUs ARM Mali limitadas ao piso da especificação W3C46.
+
+Referências citadas
+
+  1.   wgpu - Rust - Docs.rs,
+       https://docs.rs/wgpu/latest/wasm32-unknown-unknown/wgpu/
+  2.   Rust wgpu Tutorial 2026: GPU Compute, Rendering, vs CUDA,
+       https://rustify.rs/articles/rust-gpu-computing-wgpu-2026
+  3.   The three walls of in-browser LLM inference - Daneel AI,
+       https://daneel.injen.io/research/three-walls-browser-llm-inference-2026.html
+  4.   Characterizing WebGPU Dispatch Overhead for LLM Inference,
+       https://arxiv.org/html/2604.02344v1
+  5.   https://local-ai-zone.github.io/blog/system-one-decision-models-deep-dive.html
+  6.   Engine and kernels | Pooled docs, https://pooled.run/docs/internals/engine
+  7.   Build a Local Multi-Agentic RAG App in 7 Steps (Zero Bills) - TutLinks,
+       https://tutlinks.com/local-multi-agentic-rag-app-browser/
+  8.   [Bug] [Web] Batched WebGPU dispatch (#18871) causes UI jank,
+       https://github.com/apache/tvm/issues/19342
+  9.   webgpu-device-hung-test/README.md at main - LostBeard - GitHub,
+       https://github.com/LostBeard/webgpu-device-hung-test/blob/main/README.md
+  10. 一次dispatch 的八重翻译— WebGPU 全栈源码深读 - Airing,
+       https://ursb.me/immersive/webgpu/
+  11. unknown_url
+
+===== PAGE 28 =====
+12. https://posttrainllm.com/llms-full.txt
+13. Llamas on the Web: Memory-Efficient, Performance-Portable ... - arXiv,
+    https://arxiv.org/html/2605.20706v1
+14. llama-cpp-pydist · PyPI, https://pypi.org/project/llama-cpp-pydist/
+15. dizyann/crivo-150m-web - Hugging Face,
+    https://huggingface.co/dizyann/crivo-150m-web
+16. llama_cpp/CHANGELOG.md at main - GitHub,
+    https://github.com/shamitv/llama_cpp/blob/main/CHANGELOG.md
+17. Bekko Embedding: Parameter-Efficient Multilingual Retrieval ... - arXiv,
+    https://arxiv.org/html/2607.25180v1
+18. jhu-clsp/ettin-encoder-150m - Hugging Face,
+    https://huggingface.co/jhu-clsp/ettin-encoder-150m
+19. Laya Explained: A Decision Model With Zero Output Tokens,
+    https://www.orcarouter.ai/blog/laya-decision-model-explained
+20. Liquid AI d1-omni-600M is now an Ollama pull: what ships,
+    https://www.orcarouter.ai/blog/liquid-ai-d1-omni-ollama-decision-model
+21. https://github.com/ml-explore/mlx-swift-lm/blob/main/Libraries/MLXEmbedders/
+    Models/LFM2Bidirectional.swift
+22. GitHub - wfzyx/von: The open-source System One decision model,
+    https://github.com/wfzyx/von
+23. 四大平台Web Canvas显存限制差异全解析- U深搜,
+    https://unifuncs.com/s/R1uiy08H
+24. Characterizing WebGPU Dispatch Overhead for LLM Infer - arXiv,
+    https://arxiv.org/pdf/2604.02344
+25. Downloading WebGPU buffer with await mapAsync is 5000 times,
+    https://stackoverflow.com/questions/78566825/downloading-webgpu-buffer-wit
+    h-await-mapasync-is-5000-times-slower-in-firefox-ni
+26. The origin private file system | Articles - web.dev,
+    https://web.dev/articles/origin-private-file-system
+27. Local Storage in Browser: OPFS with Web Workers - Zenn,
+    https://zenn.dev/hideyuki_hori/articles/3abc10be8d9ca0?locale=en
+28. GPUSupportedLimits - Web APIs | MDN,
+    https://developer.mozilla.org/en-US/docs/Web/API/GPUSupportedLimits
+29. Modern Quantization: FP8, AWQ, and Marlin | Harness Academy,
+    https://infinitytechstack.uk/harness-academy/quantization-kernel-optimization/m
+    odern-quantization-fp8-awq-and-marlin
+30. typestrict/TS-Ettin-150M - Hugging Face,
+    https://huggingface.co/typestrict/TS-Ettin-150M
+31. ModernBERT: a modern encoder for fast classification - Laya Studio,
+    https://laya.studio/learn/modernbert
+32. Von: Open-source 395M "System One" model : r/LocalLLaMA - Reddit,
+    https://www.reddit.com/r/LocalLLaMA/comments/1wkpxn6/von_opensource_395
+    m_system_one_model/
+33. Von - Learn AI, https://ai.miraheze.org/wiki/Von
+34. Liquid D1-Omni 600M - VRAM Requirements, Specs & Benchmarks,
+
+===== PAGE 29 =====
+   https://apxml.com/models/liquid-d1-omni-600m
+35. https://www.orcarouter.ai/blog/liquid-ai-d1-omni-600m-vs-lfm2-5-vl-3b
+36. What Is Laya? Laya vs Jev, with Live Demo!! - DEV Community,
+   https://dev.to/vishalmysore/what-is-laya-laya-vs-jev-with-live-demo-4j6e
+37. The WebGPU execution model (for reading our shaders),
+   https://posttrainllm.com/docs/learn/webgpu-execution-model/
+38. WebGPU Release Date & Browser Support 2026,
+   https://www.programming-helper.com/tech/webgpu-2026-next-generation-bro
+   wser-graphics-compute-api
+39. WebGPU Browser Support in 2026: Is It Mostly Available? | imgtotable,
+   https://imgtotable.com/blog/is-webgpu-mostly-available-now
+40. WebGPU Hits Critical Mass: All Major Browsers Now Ship It,
+   https://webgpu.com/news/webgpu-hits-critical-mass-all-major-browsers/
+41. Implementation Status - GitHub,
+   https://github.com/gpuweb/gpuweb/wiki/Implementation-Status
+42. Safari 26 ships WebGPU support by default - Cinevva,
+   https://app.cinevva.com/news/2025-09-15-safari-webgpu
+43. Early access to the new WebGPU backend - Page 20 - Web,
+   https://discussions.unity.com/t/early-access-to-the-new-webgpu-backend/9334
+   93?page=20
+44. WebGPU: the browser's new performance engine - Joan León,
+   https://joanleon.dev/en/webgpu-browser-performance/
+45. Run an LLM Inside a Browser Tab: WebGPU and Local Inference in,
+   https://pinggy.io/blog/run_llm_in_browser_webgpu/
+46. What's New in WebGPU (Chrome 133) | Blog,
+   https://developer.chrome.com/blog/new-in-webgpu-133
+47. https://web3dsurvey.com/webgpu
+48. WebGPU Memory Limits: maxStorageBufferBindingSize - Ayoob AI,
+   https://ayoob.ai/blog/webgpu-maxstoragebufferbindingsize-limits-enterprise
+49. WebGPU - W3C, https://www.w3.org/TR/webgpu/
+50. nfsu2-web/docs/web/PLAYING.md at main - GitHub,
+   https://github.com/th0mk/nfsu2-web/blob/main/docs/web/PLAYING.md
+51. WebGPU VRAM Stress Test & Thermal Throttling Checker,
+   https://toolkitgen.com/tool/webgpu_vram_thermal_check
+52. Thermal Throttling: How Heat Impacts Android App UX - eInfochips,
+   https://www.einfochips.com/blog/thermal-throttling-how-heat-quietly-destroys-
+   user-experience/
+53. WebGL Test & WebGPU Checker: Test Your Browser's GPU | Cinevva,
+   https://app.cinevva.com/tools/webgl-webgpu-checker
+54. Chrome does not allow to down mix 5.1 to 4.0 - Chromium Issue,
+   https://issues.chromium.org/issues/452919818
+55. WebAssembly and WebGPU enhancements for faster Web AI, part 2,
+   https://developer.chrome.com/blog/io24-webassembly-webgpu-2
+56. OpenAI Privacy Filter — browser demo (transformers.js v4 ... - GitHub,
+   https://github.com/montevive/openai-privacy-filter
+
+===== PAGE 30 =====
+57. (PDF) GPU Goldmines: Tunable WebGPU Kernels for Edge LLM,
+   https://www.researchgate.net/publication/415750933_GPU_Goldmines_Tunable_
+   WebGPU_Kernels_for_Edge_LLM_Inference
+58. WebGPU Data Memory Layout,
+   https://webgpufundamentals.org/webgpu/lessons/webgpu-memory-layout.html
+59. wgpu::documentation::platforms::web - Rust,
+   https://wgpu.rs/doc/wgpu/documentation/platforms/web/index.html
+60. wgpu_hal - Rust - Docs.rs, https://docs.rs/wgpu-hal
+61. Measuring and Reducing WebGPU Dispatch Overhead for LLM,
+   https://arxiv.org/abs/2608.08730
+62. Measuring and Reducing WebGPU Dispatch Overhead for LLM,
+   https://arxiv.org/html/2608.08730v2
+63. Pool the WebGPU readback staging buffers · Issue #9297 - GitHub,
+   https://github.com/playcanvas/engine/issues/9297
+64. WebGPU renderer recreates GPU buffers every frame ... - GitHub,
+   https://github.com/pixijs/pixijs/issues/12163
+65. WebGPU Interview Questions: Buffers, Bind Groups, and ... - PracHub,
+   https://prachub.com/resources/webgpu-interview-questions-buffers-bind-group
+   s-and-synchronization
+66. Reading Results – Compute and Workgroups – WebGPU,
+   https://webcodingcenter.com/webgpu/compute-shaders-workgroups-and-synch
+   ronization--reading-back-compute-results-to-javascript.html
+67. Buffer in bevy::render::render_resource - Rust - Docs.rs,
+   https://docs.rs/bevy/latest/bevy/render/render_resource/struct.Buffer.html
+68. Question about the maximum maxStorageBufferBindingSize of,
+   https://forum.babylonjs.com/t/question-about-the-maximum-maxstoragebufferb
+   indingsize-of-webgpu-storagebuffer-array/50678
+69. babylonjs-loaders - Yarn Classic,
+   https://classic.yarnpkg.com/en/package/babylonjs-loaders
+70. Babylon.js/CHANGELOG.md at master · BabylonJS ... - GitHub,
+   https://github.com/BabylonJS/Babylon.js/blob/master/CHANGELOG.md
+71. The most effective ways to improve Core Web Vitals | Articles,
+   https://web.dev/articles/top-cwv
+72. fusor-rs/fusor-ai: Compile AI models into sealed WebAssembly,
+   https://github.com/fusor-rs/fusor-ai
+73. Introducing Ettin Suite: the SoTA open recipe to outperform existing,
+   https://lighton.ai/fr-blog-posts/introducing-ettin-suite-the-sota-open-recipe-to-
+   outperform-existing-generative-retrieval-models
+74. Fill-Mask Models: ModernBERT, mmBERT and How to Use Them,
+   https://acta.ai/blogs/fill-mask-models-explained-and-how-to-use-them
+75. WebGPU Explained: The Browser's New Graphics and Compute,
+   https://dev.to/biomathcode/webgpu-explained-the-browsers-new-graphics-and-
+   compute-engine-1cld
+76. Run a compute shader with WebGPU - Deno Docs,
+   https://docs.deno.com/examples/webgpu_compute/
+
+===== PAGE 31 =====
+77. Introduction to WebGPU Compute Shaders | Three.js Roadmap,
+   https://threejsroadmap.com/blog/introduction-to-webgpu-compute-shaders
+78. wgpu - crates.io: Rust Package Registry, https://crates.io/crates/wgpu/0.19.1
+79. WebGPU: New graphics and compute possibilities beyond WebGL,
+   https://ics.media/en/entry/230426/
+80. The State of WebAssembly – 2025 and 2026 - Uno Platform,
+   https://platform.uno/blog/the-state-of-webassembly-2025-2026/
+81. Web features explorer - Limited availability,
+   https://web-platform-dx.github.io/web-features-explorer/limited-availability/
+82. A curated list of awesome Zig frameworks, libraries and software.,
+   https://github.com/uhub/awesome-zig
+83. omni-d1 600M by Liquid AI running in the browser using WebGPU,
+   https://www.reddit.com/r/LocalLLaMA/comments/1x03mrh/omnid1_600m_by_liqu
+   id_ai_running_in_the_browser/
+84. O futuro da IA on-device: WebNN, WebGPU e além - Prompt API,
+   https://prompt.api.br/blog/10-futuro-ia-on-device/
+85. WebGPU加速DeepSeek-R1：端侧大模型浏览器推理实战 - CSDN博客,
+   https://blog.csdn.net/weixin_29021291/article/details/170327595
+86. Announcing Burn-Wgpu: New Deep Learning Cross-Platform GPU,
+   https://www.reddit.com/r/rust/comments/159cbto/announcing_burnwgpu_new_d
+   eep_learning/
+87. burn-wgpu - crates.io: Rust Package Registry,
+   https://crates.io/crates/burn-wgpu/0.20.0
+88. Installation - The CubeCL Book - Burn.dev,
+   https://burn.dev/books/cubecl/getting-started/installation.html
+89. candle vs burn - compare differences and reviews? - LibHunt,
+   https://www.libhunt.com/compare-candle-vs-burn
+90. graphrag-rs/README.md at main - GitHub,
+   https://github.com/automataIA/graphrag-rs/blob/main/README.md
+91. GPU Goldmines: Tunable WebGPU Kernels for Edge LLM Inference,
+   https://arxiv.org/html/2610.17321v1
+92. PRIVATE WEBGPU INFERENCE FOR GENOME MOES - OpenReview,
+   https://openreview.net/pdf?id=pMEd8dqKuA
+93. On-Device Tiny Language Models and Model Breeding Strategies,
+   https://modelbreeder.com/research/report/rise-on-device-tiny-language-models
+94. Awesome Open Source AI, https://awesomeosai.com/
+95. Tools - Ground Truth, https://groundtruth.day/tools/index.html

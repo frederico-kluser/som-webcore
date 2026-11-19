@@ -1,0 +1,2000 @@
+
+
+===== PAGE 1 =====
+Arquitetura de Runtime Bare-Metal em
+wgpu e WGSL Puro para System One
+Models (SOM)
+O desenho de um motor de inferência bare-metal para System One Models (SOM) exige
+abandonar a arquitetura orientada a loops autorregressivos e KV-Caches dinâmicos dos
+motores de LLMs tradicionais1. Como um SOM opera exclusivamente em passada única
+não-autorregressiva (Single Forward-Pass) para avaliar um contexto (State) contra múltiplas
+perguntas tipadas (Choice, Score e Noul) sem gerar tokens de texto3, todo o grafo
+computacional possui dimensões estáticas e conhecidas no instante do dispatch2. Esta
+propriedade física permite compilar um runtime em Rust puro + wgpu + bytemuck +
+Compute Shaders WGSL escritos à mão que pré-aloca 100% da memória de vídeo (VRAM)
+na inicialização, elimina alocações por inferência e submete todas as 16 a 28 camadas do
+modelo, cabeças de pontuação e calibração probabilística dentro de um único
+wgpu::CommandEncoder e um único wgpu::ComputePass com uma única chamada
+queue.submit()2.
+A viabilidade física em dispositivos móveis, navegadores (Wasm32/WebGPU) e servidores
+nativos (Vulkan, Metal, DirectX 12) divide o catálogo de modelos abertos em duas classes
+estritas6. Modelos baseados em encoders bidirecionais compactos e arquiteturas híbridas —
+especificamente Von 1.3 (wfzyx/von, 395M)5, LiquidAI d1-omni-600M (587M total, 381M no
+tronco textual)8, Laya (convaiinnovations/laya, 322M–421M)12 e Kev-0.8B
+(jaredpalmer/kev, 800M)10 — ocupam entre 172 MB e 426 MB quando quantizados em 4 bits
+(Q4_K) ou 8 bits (Q8_0), executando em 7,4 ms a 60 ms em GPUs integradas e móveis2. Em
+contrapartida, adaptações System One sobre decoders densos pesados, como Bespoke
+Nimble (9B e 27B) e Kev (4B, 9B e 27B), exigem de 16 GB a 55 GB de VRAM10, sendo inviáveis
+para execução in-browser ou on-device em telemóveis e computadores comuns6.
+Para atingir performance no limite do silício sem dependências de frameworks de Machine
+Learning, o motor deve bifurcar a sua inicialização em dois perfis de hardware detetados via
+Adapter::features() e Adapter::limits()6. No Perfil 1 (Browser WebGPU / Wasm32), o limite de
+maxStorageBufferBindingSize (128 MiB por defeito na especificação W3C) e o teto de 4 GiB de
+memória linear do Wasm32 são contornados através de streaming direto da Origin Private File
+System (OPFS) para 2 a 3 Slabs de VRAM alinhados a 256 bytes, percorrendo todas as camadas
+do modelo via Dynamic Storage Buffer Offsets e acelerando produtos escalares quantizados
+com dot4I8Packed e reduções em registos com subgroupAdd6. No Perfil 2 (wgpu Nativo /
+wgpu-hal), o runtime ativa Features::MAPPABLE_PRIMARY_BUFFERS para zero-copy real em
+arquiteturas de memória unificada (Apple Silicon, APUs AMD/Intel, SoCs Android),
+Features::PUSH_CONSTANTS para injeção de metadados nos registos de comando, Bindless
+Storage Arrays (Features::BUFFER_BINDING_ARRAY) sobre um único bloco monolítico de
+VRAM e passthrough de shaders nativos (SPIRV_SHADER_PASSTHROUGH / MSL) para acesso
+
+===== PAGE 2 =====
+direto a Tensor Cores (VK_KHR_cooperative_matrix) e instruções simdgroup_matrix19.
+PILAR 1: Catálogo de SOMs Open-Source e Viabilidade
+Física (Mobile & Desktop)
+A transição de LLMs geradores de texto para System One Models substitui a decodificação
+sequencial de tokens pela extração direta de distribuições de probabilidade sobre um espaço
+de decisão fechado e tipado1. Enquanto o modelo proprietário de referência Jev (jev-1.14.0 da
+TypeSafe AI) estabeleceu o contrato de API /v1/systemone com as primitivas Choice (1 a 255
+opções), Score (2 a 10 níveis ordenados) e Noul (probabilidade binária entre 0 e 1 sem campo
+de confiança separado)25, a comunidade open-source desenvolveu arquiteturas nativas que
+operam em passada única5.
+1. Modelos SOM Nativos Open-Source
+Von (wfzyx/von — 395M Parâmetros)
+O Von (congelado e arquivado na versão von-1.3.0, com pesos idênticos ao von-1.2 sob o hash
+SHA 5df8185a4f2327ad0a7cd117cc4f701ac557b9ae) é um SOM puramente
+não-autorregressivo construído sobre o backbone answerdotai/ModernBERT-large somado
+a uma cabeça leve de pontuação denominada Option-Marker (option_marker.pt)5. Embora a
+versão inicial von-1.0 fosse um classificador NLI derivado de tasksource/ModernBERT-large-nli
+com 134 cabeças de classificação e temperatura escalar fixa (T = 1,0367 para Noul e T = 1,1692
+para Choice)1, a arquitetura a partir do von-1.2/1.3 introduziu o mecanismo Option-Marker com
+atenção invariante à ordem5.
+A arquitetura interna do backbone ModernBERT-large utilizado pelo Von possui exatamente 28
+camadas (num_hidden_layers = 28), dimensão oculta H = 1024 (hidden_size = 1024), 16 cabeças
+de atenção (num_attention_heads = 16, dimensão por cabeça D = 64), dimensão intermediária
+da FFN I = 2624 (intermediate_size = 2624, que se expande para 2 × I = 5248 na projeção de
+entrada da porta GeGLU) e vocabulário BPE de V = 50.368 tokens (mask_token_id = 4 ou
+50284, pad_token_id = 50283, janela máxima de contexto de 8.192 tokens)7. Todas as projeções
+lineares (Wqkv, Wo na atenção; Wi, Wo na MLP) e todas as camadas LayerNorm (ε = 1e-5)
+operam com bias = False (zero vetores de bias em todo o backbone)35. Crucialmente para a
+implementação em WGSL, o ModernBERT aplica Pre-Norm, mas a Camada 0 omite a
+normalização pré-atenção (layer_0.attn_norm = None), pois o tensor já sai normalizado de
+embed_norm(tok_embeddings(ids))35. Nas camadas 1 a 27, o fluxo aplica normalização
+pré-atenção seguida de conexão residual e normalização pré-MLP seguida de GeGLU e
+conexão residual, finalizando no topo do encoder com final_norm(x)35. Em cada camada,
+mlp.Wi projeta de 1024 para 5248 canais, dividindo o tensor em duas metades x_val e gate de
+dimensão 2624 e calculando                                       antes de projetar de volta para 1024 via
+mlp.Wo32.
+O mecanismo de atenção do ModernBERT alterna camadas globais e locais com RoPE duplo7.
+A cada bloco de 3 camadas (global_attn_every_n_layers = 3), 1 camada executa atenção
+bidirecional global completa (                                          , ou seja, camadas 0, 3, 6, 9, 12,
+
+===== PAGE 3 =====
+15, 18, 21, 24, 27 — totalizando 10 camadas globais) e 2 camadas executam atenção local por
+janela deslizante (                                       — totalizando 18 camadas locais)7. Nas
+camadas locais (local_attention = 128), um token na posição i só atende a tokens na posição j se
+                   , enxergando no máximo 129 posições inclusivas2. As camadas globais aplicam
+Rotary Position Embeddings (RoPE) com frequência base global_rope_theta = 160000.0,
+enquanto as camadas locais aplicam local_rope_theta = 10000.02.
+O layout exato de tokens e o mecanismo de invariância à ordem do Von (implementados em
+src/von/models/option_marker.py e src/von/backends/option_marker_backend.py) operam em
+quatro etapas sequenciais28:
+  1.   Empacotamento da Sequência (Pack): O texto de entrada tem dígitos numéricos
+       separados caractere a caractere (split_digits: "2026" passa a "2 0 2 6") para evitar
+       distorções de magnitude no BPE, e literais [MASK] ou [SEP] no texto do utilizador são
+       neutralizados com zero-width joiners (_neutralise)31. O State e a instrução da pergunta
+       formam o prefixo compartilhado (premissa), seguido pelo delimitador [SEP] e pelas K
+       opções candidatas, cada uma precedida pelo seu próprio token [MASK]: [CLS]
+       <Premissa: State + Question> [SEP] [MASK] <Opção 0> [MASK] <Opção 1> ... [MASK]
+       <Opção K-1> [SEP]7.
+  2.   Máscara de Atenção e Reset de Position IDs (independent_options: true): Quando a
+       flag independent_options: true de marker_calibration.json está ativa, os tokens
+       pertencentes a qualquer opção candidata só podem atender aos tokens da premissa
+       compartilhada e aos tokens da própria opção, sendo estritamente mascarados (-∞)
+       contra todas as outras opções e contra o [SEP] final da sequência5. Simultaneamente, os
+       Position IDs reiniciam a contagem imediatamente após o fim da premissa para cada
+       opção5. Se a premissa ocupa L_prem tokens (posições 0 até L_prem - 1), o token [MASK]
+       de todas as opções recebe exatamente pos_id = L_prem, o primeiro token descritivo de
+       cada opção recebe L_prem + 1, e assim sucessivamente31. Isso garante que as distâncias
+       relativas do RoPE sejam idênticas independentemente da posição da opção na
+       sequência, reduzindo a taxa de inversão de resposta sob permutação no benchmark
+       JevBench Hard de 49,5% (no von-1.1) para 0% (no von-1.2/1.3)5.
+  3.   Extração e Cabeça OptionMarkerScorer (option_marker.pt): Após a passada única
+       pelas 28 camadas do ModernBERT, o runtime recolhe apenas os K vetores de estado
+       oculto finais (de dimensão 1024) nas posições exatas dos tokens [MASK]7. A cabeça
+       OptionMarkerScorer (cujos pesos residem em option_marker.pt) aplica uma pequena
+       rede MLP (normalização seguida de projeção linear, ativação GELU e projeção escalar
+       para 1 logit) sobre cada vetor extraído, gerando o vetor de logits brutos
+
+                                         2.
+  4.   Equações Exatas do marker_calibration.json: Em vez de uma temperatura estática, o
+       Von calcula uma temperatura dinâmica condicionada pela entrada a partir da distribuição
+       bruta                                7. Primeiro, calcula-se a entropia de Shannon normalizada
+
+===== PAGE 4 =====
+                              dos logits brutos7:
+
+
+
+
+
+
+       Em seguida, aplica-se a equação linear de temperatura condicionada definida em
+       marker_calibration.json, usando os coeficientes de fábrica ajustados no von-1.2/1.3 (bias
+       = 2.0151, peso de entropia                              , peso de comprimento
+                                e peso de número de opções                                  )7:
+
+
+
+
+
+       As probabilidades calibradas finais são obtidas por                                        1. Para a
+       primitiva Choice, a confiança reportada (confidence) é definida pela diferença entre a
+       maior e a segunda maior probabilidade calibrada (                                                 )1. Para
+       a primitiva Noul (julgamento binário com framing dual positivo/negativo para anular viés
+       de negação lexical1), quando o modo padrão --noul-decision band está ativo, a
+
+       probabilidade posterior                         sofre um mapeamento linear por partes para
+       evitar a banda de abstenção de 0,2 a 0,8 do JevBench v1.55:
+
+
+
+
+
+
+       Se invocado com --noul-decision raw, o motor retorna diretamente a probabilidade
+       posterior calibrada        sem o banding5.
+LiquidAI d1-omni-600M (587M Parâmetros Totais / 381M Tronco Textual)
+Lançado em outubro de 2026 como o sucessor oficial recomendado pela equipa do Von para
+novos projetos11, o LiquidAI/d1-omni-600M é um SOM multimodal de passada única com
+587M parâmetros totais, subdivididos em três módulos que partilham o mesmo tronco de
+decisão8. O primeiro módulo é o Tronco Compartilhado e Cabeça de Decisão
+(LFM2.5-Encoder-350M + Decision Head — 381M parâmetros), baseado na arquitetura
+híbrida Liquid Foundation Model 2.5 (LiquidAI/LFM2.5-350M-Base convertida em encoder
+bidirecional)8. Possui 16 camadas (num_hidden_layers = 16), dimensão oculta H = 1024
+(hidden_size = 1024), vocabulário de V = 65.536 tokens e janela de contexto de 16.384 tokens8.
+Das 16 camadas, 10 camadas são blocos de convolução curta duplamente controlada
+(LFM2ShortConv) e 6 camadas são blocos de Grouped Query Attention (LFM2Attention),
+intercaladas segundo a lista full_attn_idxs do config.json40. O segundo módulo é a Torre de
+
+===== PAGE 5 =====
+Visão (94M parâmetros), composta por um encoder visual SigLIP2 (dimensão oculta 768
+expandida para 3072 na MLP com GELU tanh e LayerNorm) acoplado a um projetor espacial
+(pixel_unshuffle com fator de downsample + 2 camadas lineares com projector_hidden_size =
+2560 para 1024) herdado do LFM2.5-VL-450M, que converte cada crop de imagem em 256
+embeddings de prefixo de shape [1, 256, 1024]8. O terceiro módulo é a Torre de Áudio (112M
+parâmetros), que combina um pré-processador Log-Mel (128 bins via convolução com kernels
+DFT) com um encoder FastConformer de 17 camadas e adaptador linear, convertendo até 30
+segundos de áudio mono a 16 kHz num embedding de prefixo [1, P, 1024] a cada 80 ms de fala8.
+Para implementar o tronco LFM2.5-Encoder-350M do d1-omni-600M em WGSL puro, o
+engenheiro de compiladores precisa codificar quatro operadores fundamentais extraídos de
+modeling_lfm2.py43:
+  ●    LFM2RMSNorm com Reescrita FP16-Safe: A normalização padrão calcula
+                                        com ε = 1e-5 ou 1e-643. Contudo, as ativações internas do
+       d1-omni-600M sofrem overflow severo em f16 (excedendo 65.504) em 36 das 50
+       camadas de normalização do grafo de decisão, 13 das 25 da torre de visão e 31 das 87 do
+       encoder de áudio15. Conforme documentado na conversão oficial d1-omni-600M-LiteRT,
+       sem reescrever essas camadas escalando a entrada por uma potência de dois e o
+       epsilon proporcionalmente (ou forçando a redução de quadrados em f32 estrito nos
+       registos antes da divisão), a execução em FP16_WITH_FP32_ACCUM no Samsung Galaxy
+       S26 altera as probabilidades de decisão em até 0,86515.
+  ●    Bloco LFM2ShortConv (10 camadas): Recebe o tensor normalizado por
+       operator_norm(x) de shape [B, T, 1024]43. Aplica uma projeção linear in_proj (1024 para
+       3072, sem bias) que é dividida em três tensores B, C e x_in de shape [B, T, 1024]43. Calcula
+       a primeira porta multiplicativa elemento a elemento                                 43. Em seguida,
+       aplica uma convolução 1D depthwise (groups = 1024, kernel size L_cache = 3) ao longo
+       da dimensão de sequência T sobre Bx, multiplica o resultado pela segunda porta
+                                      e projeta de volta via out_proj (1024 para 1024) antes de somar
+       à conexão residual43.
+  ●    Bloco LFM2Attention (6 camadas GQA com QK-Norm): Projeta Q (1024 para 1024, 16
+       cabeças de D = 64), K (1024 para 512, 8 cabeças KV de D = 64) e V (1024 para 512, 8
+       cabeças KV de D = 64)41. Diferente do ModernBERT, o LFM2 aplica q_layernorm e
+       k_layernorm (LFM2RMSNorm de dimensão D = 64) por cabeça sobre Q e K antes de
+       aplicar o RoPE43. Na atenção bidirecional do encoder, cada grupo de 2 cabeças de
+       Query partilha 1 cabeça de Key/Value (num_key_value_groups = 2), finalizando com
+       out_proj (1024 para 1024)43.
+  ●    Bloco LFM2MLP (16 camadas SwiGLU): Após ffn_norm(h), executa
+
+                                                  43. No config.json do LFM2-350M, intermediate_size
+       = 6656 com auto_adjust_ff_dim = True, o que ajusta a dimensão efetiva das matrizes w1,
+       w3 e w2 para ff_dim = int(2 * 6656 / 3) alinhado a múltiplos (4608), resultando em 14,16M
+       parâmetros de MLP por camada e 354,46M parâmetros no tronco base (~381M com a
+
+===== PAGE 6 =====
+       cabeça de decisão)8.
+Quanto à precisão e custo de VRAM do d1-omni-600M, a Liquid AI recomenda evitar bfloat16
+(que altera a resposta vencedora em 0,8% dos casos de texto e 1,7% de áudio) e executar em
+float16 (com acumulação float32) ou Q8_08. Na versão WebGPU/ONNX
+(onnx-community/d1-omni-600M-ONNX), o grafo de decisão textual completo (embeddings +
+tronco + cabeça) ocupa 410 MB em 8 bits (Q8_0) e 240 MB em 4 bits (Q4)14. Para
+requisições multimodais, a torre de visão deve ser mantida em FP16 (190 MB) (pois quantizá-la
+para 8 bits desvia as probabilidades em até 0,08), enquanto o encoder de áudio funciona em 8
+bits (170 MB) desde que a tabela embed_tokens seja mantida em FP16 (130 MB) (totalizando
+670 MB para a stack completa de voz + decisão em WebGPU, que executa em 50 ms para
+áudio + 60 ms por pergunta num Apple M3 Pro)14.
+Laya, Kev e Nimble (Análise de Viabilidade em Passada Única)
+Entre as restantes famílias open-source do ecossistema System One, apenas o Laya e a
+variante 0.8B do Kev cumprem os requisitos físicos para execução local leve10. O Laya
+(convaiinnovations/laya), desenvolvido pela Convai Innovations sob licença Apache 2.0, é um
+SOM verdadeiro de passada única disponível em três checkpoints principais: laya (Inglês, 421M
+parâmetros, ~808 MB em disco), laya-typed-decisions (Inglês ajustado com RLCD, 421M
+parâmetros) e laya-multilingual (100+ idiomas, 322M parâmetros, ~647 MB em disco)12. O
+checkpoint em inglês combina o backbone ModernBERT-large (395M) com uma cabeça de
+decisão de 26M parâmetros construída de raiz: um embedding de tipo de pergunta (type_emb
+para choice, score, noul), 2 camadas Transformer de decisão (que usam ativação ReLU nas
+suas FFNs internas por herança de nn.TransformerEncoderLayer), um OptionMarkerScorer (
+                                                                          ) e uma cabeça de
+ação/escalonamento (act_head que consome 4 features: probabilidade Top-1, margem Top-1
+menos Top-2, entropia normalizada e número de opções K)2. O checkpoint multilingue
+substitui o backbone pelo mmBERT-base (22 camadas, H = 768, vocabulário de 256.000
+tokens, contexto até 8.192 via RoPE), sendo 2,2× mais rápido (32,8 ms numa GPU T4 e 7,4 ms a
+13,4 ms num Apple M3 Max via Metal)2.
+Por sua vez, a família Kev (jaredpalmer/kev — 0.8B, 4B, 9B, 27B) acopla um adaptador LoRA
+de rank-16 e uma cabeça de ponteiro (pointer head) sobre modelos Qwen3.5 e Qwen3.810.
+Embora opere em passada única de prefill (comparando o estado oculto do token de decisão
+com os tokens das opções na pointer head sem geração autorregressiva)10, as variantes
+Kev-4B, Kev-9B (19,59 GiB em BF16 / 5,6–6,7 GB em nvfp4) e Kev-27B (51 GB a 55,56 GiB) são
+motores pesados desenhados para GPUs de servidor (L40S, H100, H200, B200) ou Macs de
+32–128 GB10, devendo ser descartados para execução leve. Apenas o Kev-0.8B
+(Qwen3.5-0.8B-Base, T = 2,35) é viável localmente em hardware modesto, exigindo ~1,5 GB de
+VRAM em precisão reduzida (~3,28 GiB residente em MXFP8)10. Já o Bespoke Nimble
+(bespokelabs/Bespoke-Nimble-9B e v4.1-27B) utiliza Qwen3.5-9B (e 27B no v4-max/v4.1)
+com LoRA rank-16, pontuando códigos de token único para cada opção candidata10. Mesmo
+em Q8_0, o Bespoke-Nimble-9B exige 9,53 GB de pesos e 16 GB+ de RAM/VRAM (~18 GB
+em BF16, requerendo 64 GB de RAM no Mac para fusão de pesos)10, sendo integralmente
+
+===== PAGE 7 =====
+descartado para o nosso runtime bare-metal móvel/browser.
+2. Backbones Encoder Puros para SOM Customizado (100M a 400M)
+Quando desenhamos um SOM customizado (acoplando uma cabeça OptionMarkerScorer de
+~1M parâmetros sobre um encoder pré-treinado), os candidatos de estado da arte entre 100M
+e 400M parâmetros são o ModernBERT-base (149M)50, a suíte Ettin-Encoder
+(jhu-clsp/ettin-encoder-150m e 400m)52 e a família DeBERTa-v3
+(microsoft/deberta-v3-base e large)54. A suíte Ettin (treinada em 2 biliões de tokens abertos
+pela Johns Hopkins CLSP) utiliza exatamente a mesma arquitetura topológica do ModernBERT
+(22 camadas com H = 768, I = 1152, 12 cabeças na versão 150M; 28 camadas com H = 1024, I =
+2624, 16 cabeças na versão 400M; vocabulário de 50.368 tokens, RoPE e GeGLU sem bias),
+superando o ModernBERT em benchmarks GLUE (88,9 vs. 88,4 no Base; 90,8 vs. 90,4 no Large)
+e já servindo de base para SOMs abertos como o openjev-flash (ettin150m-nli) e mola-150m34.
+Para avaliar rigorosamente a execução em WGSL para um passo único de N = 1.024 tokens (1
+MAC = 2 FLOPs), calculamos os FLOPs exatos por camada. Em ModernBERT / Ettin (GeGLU +
+RoPE + Atenção Híbrida), cada camada executa as projeções lineares Wqkv (                              FLOPs),
+Wo (             FLOPs), mlp.Wi (              FLOPs, pois projeta para 2I) e mlp.Wo (
+FLOPs), totalizando                              FLOPs lineares por camada16. Na atenção, uma
+
+camada global executa                  FLOPs (            e       ), enquanto uma camada local com
+janela W = 128 executa apenas                     FLOPs16. Em DeBERTa-v3 (FFN Padrão +
+
+Disentangled Relative Attention), cada camada executa 4 projeções de atenção (
+FLOPs) e 2 projeções FFN com I = 4H (                   FLOPs), além de projetar a matriz de
+embeddings posicionais relativos (                        posições) via            e           (
+FLOPs)16. Na atenção desemaranhada (pos_att_type = ["p2c", "c2p"]), além do termo
+
+conteúdo-conteúdo (                  FLOPs), o shader precisa calcular os produtos
+conteúdo-posição (               ) e posição-conteúdo (               ) (                FLOPs) seguidos
+de um gather indireto de complexidade quadrática sobre índices de distância relativa
+antes do softmax16.
+
+===== PAGE 8 =====
+
+
+===== PAGE 9 =====
+A Tabela 1 consolida a parametrização interna exata, o custo computacional para 1.024 tokens
+e a pegada de memória nos formatos FP16 (2,0 bytes/parâmetro), Q8_0 (bloco de 32 pesos
+int8 + 1 escala f16 = 34 bytes / 32 parâmetros = 1,0625 bytes/parâmetro) e Q4_K (super-block
+de 256 pesos de 4 bits + escalas/mínimos = 144 bytes / 256 parâmetros = 0,5625
+bytes/parâmetro)16. (Nota sobre DeBERTa-v3-large: a configuração padrão de 24 camadas
+possui H = 1024, I = 4096 e 16 cabeças com ~304M parâmetros no tronco e ~434M totais
+incluindo a tabela SentencePiece de 128k tokens, embora existam variantes de ~900M com H =
+1536 em alguns repositórios16).
+
+  Modelo        Camad         H / I /       Parâme        FLOPs         Footpri       Footpri        Footpri
+  /             as (L) e      Cabeça        tros          @ 1.024       nt FP16       nt INT8        nt INT4
+  Backbo        Topolo        s             Totais        Tokens        (MB)          Q8_0           Q4_K
+  ne            gia de                      (Tronco       (Linear                     (MB)           (MB)
+                Atençã                      )             + Attn)
+                o
+
+
+  Moder         22 (8         768 /         149,01M       257,30        284,22        150,99         79,94
+  nBERT-        Globais       1152          (110,33       GFLOP         MB            MB             MB
+  base /        + 14          (GeGLU        M)            s
+  Ettin-15      Locais        ) / 12                      (225,89
+  0M            W=128)                                    + 31,41)
+
+  DeBER         12 (12        768 /         183,83        246,42        350,63        186,27         98,61
+  Ta-v3-        Globais       3072          M             GFLOP         MB            MB             MB
+  base          Disenta       (GELU) /      (85,06        s
+                ngled         12            M)            (188,44
+                c2p+p2                                    + 57,98)
+                c)
+
+
+  Laya-M        22 (8         768 /         321,94        257,30        614,05        326,21         172,70
+  ultiling      Globais       1152          M             GFLOP         MB            MB             MB
+  ual           + 14          (GeGLU        (125,33       s
+  (mmBE         Locais)       ) / 12        M)            (225,89
+  RT-bas        + 2                                       + 31,41)
+  e)            Head
+
+
+  LiquidA       16 (10        1024 /        381,00        614,29        726,70        386,06         204,38
+  I             ShortC        4608          M             GFLOP         MB            MB             MB
+  d1-omn        onv K=3       (SwiGL        (313,89       s
+  i-600M        + 6           U) / 16       M)            (549,86
+  (Tronco       GQA                                       + 64,42)
+
+===== PAGE 10 =====
+  Texto)        Nkv=8)
+
+
+  LiquidA       16            1024 /        587,00        614,29        1.119,61       594,79        314,89
+  I             Tronco        4608          M             GFLOP         MB             MB            MB
+  d1-omn        +             (SwiGL        (519,89       s (+
+  i-600M        SigLIP2       U) / 16       M)            prefixo
+  (Multi        + 17                                      mídia)
+  modal)        FastCo
+                nformer
+
+  Von-1.3       28 (10        1024 /        395,83        755,38        754,99         401,09        212,34
+  /             Globais       2624          M             GFLOP         MB             MB            MB
+  Moder         + 18          (GeGLU        (343,20       s
+  nBERT-        Locais        ) / 16        M)            (702,76
+  large /       W=128)                                    + 52,61)
+  Ettin-4
+  00M
+
+
+  Laya-E        28 (10        1024 /        420,78        755,38        802,58         426,37        225,72
+  nglish        Globais       2624          M             GFLOP         MB             MB            MB
+  (convai       + 18          (GeGLU        (369,20       s (+
+  innovat       Locais)       ) / 16        M)            ~18,5
+  ions/la       + 2                                       Head)
+  ya)           Head
+
+
+  DeBER         24 (24        1024 /        434,01        824,63        827,81         439,78        232,82
+  Ta-v3-l       Globais       4096          M             GFLOP         MB             MB            MB
+  arge          Disenta       (GELU) /      (302,31       s
+                ngled         16            M)            (670,01
+                c2p+p2                                    +
+                c)                                        154,62)
+
+
+
+A comparação direta demonstra por que razão o DeBERTa-v3 deve ser preterido em favor
+do ModernBERT / Ettin em WGSL. Embora o DeBERTa-v3-base tenha apenas 85,06M
+parâmetros nas suas 12 camadas Transformer, o seu vocabulário SentencePiece de 128.100
+tokens infla a tabela de embeddings para 98,77M parâmetros (53,7% do peso total do
+modelo, contra apenas 38,68M no ModernBERT-base)16. Mais grave ainda no nível do
+compilador GPU: a atenção desemaranhada do DeBERTa-v3 exige construir matrizes de
+distância relativa i - j e executar leituras indexadas não-coalescidas (c2p e p2c gathers) para
+cada par (i, j) da matriz N × N16. Isso impede a fusão limpa num único loop de registos estilo
+
+===== PAGE 11 =====
+FlashAttention-2, gerando bank conflicts na memória partilhada (var<workgroup>) e elevando o
+custo de atenção no modelo Large para 154,62 GFLOPs (quase 3× os 52,61 GFLOPs da atenção
+híbrida do ModernBERT-large / Von-1.3)16.
+3. Matriz de Limites de Dispositivos (Celular vs. PC no Browser e
+Nativo)
+Diferente de LLMs autorregressivos (onde cada token gerado lê 100% dos pesos da VRAM
+para multiplicar por um vetor M = 1, sendo puramente limitados por memory bandwidth), um
+SOM processa entre 128 e 2.048 tokens simultaneamente num único forward pass1. Para
+sequências de 128 ou mais tokens, as projeções lineares tornam-se multiplicações
+matriz-matriz densas (GEMM, compute-bound), enquanto a leitura inicial de pesos, as
+camadas de normalização, as convoluções curtas (LFM2ShortConv) e o passo de atenção em
+sequências curtas permanecem memory-bandwidth bound6.
+
+===== PAGE 12 =====
+
+
+===== PAGE 13 =====
+A Tabela 2 especifica os limites operacionais de memória, banda física estimada por classe de
+arquitetura e tetos da API WebGPU / Nativa nos três perfis de hardware alvo6.
+
+  Categoria de          Banda de               Orçamento de           Limites de            Desempenho
+  Dispositivo           Memória                VRAM                   Buffer                Medido em
+                        Física                 (Browser Tab           (maxBufferSiz         SOMs (Von /
+                        (Estimativa de         vs. Nativo)            e /                   Laya /
+                        Arquitetura)                                  maxStorageB           d1-omni)
+                                                                      ufferBindingSi
+                                                                      ze)
+
+
+  (a) Mobile            25–50 GB/s             Browser Tab:           WebGPU Spec           d1-omni-600
+  Browser &             (LPDDR4X/5             ~1,5 a 2,0 GB          Default: 256          M (Galaxy
+  Nativo (Safari        intermediário)         máximo antes           MiB / 128 MiB6.       S26):
+  iOS / Chrome          a 68–85 GB/s           de o processo
+  Android em            (LPDDR5X               da aba sofrer          Adapter               • L128 (1
+  celulares             flagship)              OOM kill6.             Mobile:               pergunta):
+  intermediários                                                      Geralmente            42,0 ms (GPU
+  e topo de                                    Nativo: 2,0 a          256 MiB a 512         FP16) / 29,6 ms
+  gama, ex:                                    4,0 GB                 MiB por               (NPU)15.
+  Galaxy S26)                                  partilhados            binding.
+                                               (UMA).                                       • L256: 75,4
+                                                                                            ms (GPU
+                                                                                            FP16)15.
+
+                                                                                            • L1024: 324,3
+                                                                                            ms (GPU
+                                                                                            FP16)15.
+
+                                                                                            • L4096:
+                                                                                            Abortado na
+                                                                                            GPU móvel por
+                                                                                            limite de
+                                                                                            memória15.
+
+  (b) Notebooks         68–120 GB/s            Browser Tab            WebGPU c/             Von-1.3
+  iGPU / Apple          (M1/M3 base /          (Chrome                requiredLimit         (395M): ~18
+  Silicon UMA           DDR5                   macOS                  s: Até 1–2 GiB        ms em Apple
+  (Apple                dual-channel)          Metal): 3,0 a          no                    Silicon MPS
+  M1/M3/M4,             a 273–546              4,0 GB por             Metal/Vulkan.         (~200 ms no
+  Intel Iris Xe /       GB/s (M3               aba6.                                        M1 base em
+
+===== PAGE 14 =====
+  Arc, AMD              Pro/Max, M4                                  Nativo                FP32)1.
+  Radeon                Max)                  Nativo UMA:            (wgpu):
+  780M/890M)                                  60% a 75% da           maxBufferSize         Laya
+                                              RAM unificada          até 4 GiB+6.          (421M/322M
+                                              (ex: 10–12 GB                                no M3 Max):
+                                              num Mac de 16                                13,4 ms (EN) e
+                                              GB)2.                                        7,4 ms (Multi)2.
+
+                                                                                           d1-omni-600
+                                                                                           M: 60 ms no
+                                                                                           Chrome
+                                                                                           WebGPU (M3
+                                                                                           Pro)14 e 11,5
+                                                                                           ms (L128) a
+                                                                                           69,3 ms
+                                                                                           (L1024) no M4
+                                                                                           Max Metal15.
+
+  (c) Desktops          300–504               Browser Tab            D3D12 /               Von-1.3 (395M
+  c/ GPU                GB/s (Gama            (Chrome                Vulkan                em NVIDIA
+  Dedicada              média / T4 /          Windows                Desktop:              A10G): 23,0
+  (NVIDIA RTX           A10G) a 1.008         D3D12 / Linux          maxBufferSize         ms p50 no
+  3060–4090,            GB/s (RTX             Vulkan): ~4,0          até 4 GiB, mas        JevBench v1.4
+  A10G, Tesla T4,       4090                  GB por                 maxStorageBu          e 32,8 ms p50
+  AMD RX 7900           GDDR6X)               buffer/aba             fferBindingSize       no Decision
+  XTX)                                        (limita modelos        travado em ~2         Index5.
+                                              a ≤7–8B q4f16          GiB
+                                              em GPUs de 8           (INT32_MAX =          Laya (em
+                                              GB)6.                  2.147.483.647         Tesla T4): 32,8
+                                                                     bytes) devido         ms (Multi) e
+                                              Nativo: 8 GB a         ao limite de          39,5 ms (EN)
+                                              24 GB                  SRV raw-buffer        para 1
+                                              dedicados.             do D3D126.            pergunta; 332
+                                                                                           perguntas/s
+                                                                                           em batch12.
+
+(Nota de calibração de fontes: Os limites de memória WebGPU e tetos por aba de navegador
+provêm de análises técnicas da arquitetura W3C/Dawn/ORT Web6, e as latências de
+d1-omni-600M, Von e Laya provêm dos relatórios de benchmark das respetivas equipas de
+engenharia e repositórios Hugging Face5; as faixas de largura de banda física em GB/s nas
+colunas de hardware refletem as especificações padrão da indústria para memórias
+LPDDR4X/5X, Unified Memory Apple Silicon e GDDR6/6X, uma vez que os documentos focam
+
+===== PAGE 15 =====
+em limites de VRAM e tempos de execução).
+PILAR 2: Arquitetura Bare-Metal wgpu — COM Limites
+vs. SEM Limites de Browser
+Um motor bare-metal de produção não pode nivelar o hardware pelo denominador comum
+mais baixo em todas as plataformas, nem falhar quando executado num navegador restrito. Na
+inicialização do runtime (SomEngine::init), inspecionamos adapter.features() e adapter.limits()
+para instanciar um de dois perfis de agendamento e memória6:
+RuntimeProfile::BrowserConstrained (Perfil 1), selecionado quando compilado para
+wasm32-unknown-unknown ou quando o adaptador não expõe extensões nativas
+(Features::PUSH_CONSTANTS, Features::MAPPABLE_PRIMARY_BUFFERS), e
+RuntimeProfile::NativeUnconstrained (Perfil 2), selecionado em binários nativos sobre
+Vulkan, Metal ou DirectX 12 quando as features de acesso direto ao hardware estão presentes9.
+1. PERFIL 1: COM LIMITES DO BROWSER (W3C WebGPU Spec +
+Wasm32)
+Arena Allocator Estático com Dynamic Storage Offsets
+Na especificação base do W3C WebGPU, o limite padrão maxStorageBufferBindingSize é de
+apenas 128 MiB (134.217.728 bytes) e maxBufferSize é 256 MiB (268.435.456 bytes)6. Mesmo
+solicitando os limites superiores do adaptador via requiredLimits em request_device(),
+dispositivos móveis e drivers D3D12 impõem tetos rígidos por binding6. Além disso, o limite
+padrão de maxStorageBuffersPerShaderStage na WebGPU é de apenas 8 buffers por estágio
+de shader. Se criarmos um wgpu::BindGroup separado para cada uma das 28 camadas do
+Von-1.3, teremos 28 objetos de estado de descritor validados pelo navegador a cada passo; se
+tentarmos ligar o modelo inteiro num único StorageBuffer, violaremos o limite de 128 MiB (já
+que o Von-1.3 ocupa 212,34 MB em Q4_K e 401,09 MB em Q8_0)6.
+A solução zero-bloat consiste num Static Slab Arena Allocator com Dynamic Storage Buffer
+Offsets implementado em quatro passos:
+  1.  Particionamento em 2 a 3 Slabs Físicos: Dividimos os pesos das 28 camadas do
+      Transformer em S blocos contíguos (wgpu::Buffer com BufferUsages::STORAGE |
+      BufferUsages::COPY_DST), onde cada Slab contém um subconjunto fixo de camadas. No
+      Von-1.3 em Q4_K, os 343,20M parâmetros do tronco ocupam ~184,1 MB: alocamos o
+      Slab A com as camadas 0 a 13 ocupando ~92,05 MB e o Slab B com as camadas 14 a 27
+      ocupando ~92,05 MB, enquanto os embeddings e a cabeça de decisão ficam no Slab 0
+      Estático de ~28,2 MB6. Em Q8_0 (401,09 MB), usamos 3 Slabs de ~115 MB (camadas 0–9,
+      10–19 e 20–27)16.
+  2.  Alinhamento Físico Estrito a 256 Bytes: A WebGPU exige que qualquer offset dinâmico
+      passado em set_bind_group seja múltiplo exato de min_storage_buffer_offset_alignment
+      (256 bytes). No nosso empacotador .sombin, o bloco de pesos completo de cada
+      camada l (LayerWeightBlock, contendo attn_norm, Wqkv, Wo, mlp_norm, Wi, Wo
+      concatenados e alinhados internamente a 256 bytes) tem um tamanho total
+      arredondado para cima ao próximo múltiplo de 256 bytes:
+
+===== PAGE 16 =====
+  3.   Um Único BindGroupLayout com has_dynamic_offset: true: Criamos o
+       BindGroupLayout do Grupo 1 com BufferBindingType::Storage { read_only: true },
+       has_dynamic_offset: true e min_binding_size: NonZeroU64::new(layer_stride) (ex: ~6,58
+       MB por camada em Q4_K, muito abaixo do limite de 128 MiB)6. Instanciamos apenas 1
+       BindGroup por Slab na inicialização (bindando a janela base 0..layer_stride do respetivo
+       Slab).
+  4.   Travessia de Camadas sem Troca de Descritores: Durante a gravação do
+       ComputePass, para executar a camada l residente no Slab s com índice local k = l -
+       l_start(s), invocamos apenas cpass.set_bind_group(1, &engine.slab_bind_groups[s], &[(k
+       as u32) * (engine.layer_stride as u32)]). O navegador apenas soma o offset dinâmico ao
+       ponteiro base do registo de descritor na GPU, sem qualquer alocação ou revalidação de
+       tabela de recursos.
+Intrinsics Nativos do Padrão WGSL (Sem Extensões Proprietárias)
+Para atingir velocidade nativa dentro do browser, os nossos kernels WGSL combinam as
+instruções padronizadas do W3C WebGPU para produto escalar inteiro empacotado, meia
+precisão e subgrupos6.
+Em primeiro lugar, ativamos a aceleração 4× INT8 via dot4I8Packed e dot4U8Packed
+(requires packed_4x8_integer_dot_product;)20. Introduzida na especificação core do WGSL
+(Chrome 123+, tint:1497), a diretiva requires packed_4x8_integer_dot_product; expõe as
+instruções de hardware DP4a (dot4I8Packed(a: u32, b: u32) -> i32 e dot4U8Packed(a: u32, b:
+u32) -> u32), além das funções auxiliares de empacotamento pack4xI8, pack4xI8Clamp e
+unpack4xI820. Nos nossos kernels Q8_0 e Q4_K, quantizamos dinamicamente o bloco de
+ativação de entrada x em blocos de 32 valores para int8 empacotados em 8 palavras u32
+(usando pack4xI8Clamp) na memória partilhada var<workgroup>, mantendo uma escala f32
+por bloco20. Para pesos Q8_0, cada bloco de 32 pesos já reside na VRAM como 8 palavras u32:
+o loop interno executa 8 chamadas acc_i32 += dot4I8Packed(act_u32[j], weight_u32[j]); e
+acumula no registo f32 multiplicando por scale_act * scale_weight20. Para pesos Q4_K,
+extraímos os nibbles inferiores e superiores de 4 bits usando máscaras bit-a-bit ((w_packed &
+0x0F0F0F0Fu) e ((w_packed >> 4u) & 0x0F0F0F0Fu)) e passamos diretamente ao
+dot4I8Packed / dot4U8Packed sem nunca desempacotar para f32 na memória20.
+Em segundo lugar, combinamos enable f16; e enable subgroups;6. O uso de enable f16; reduz
+pela metade o consumo de registos (VGPRs) e de memória partilhada (var<workgroup>) para
+matrizes de atenção, enquanto enable subgroups; (Chrome 134+) disponibiliza subgroupAdd,
+subgroupMax, subgroupBroadcastFirst e subgroupShuffleXor, gerando ganhos medidos de
+2,3× a 2,9× em multiplicações matriz-vetor e reduções sobre implementações sem
+subgrupos6. Com subgroupAdd e subgroupMax, o cálculo da média e variância no
+LayerNorm/RMSNorm e o máximo e soma no Softmax ocorrem nos registos da wavefront/warp
+(32 ou 64 threads), exigindo apenas uma escrita por subgrupo na memória partilhada para
+
+===== PAGE 17 =====
+reduzir entre subgrupos.
+Na escrita destes shaders, é crítico contornar três erratas reais de hardware e compilador
+documentadas em produção:
+  ●   Bug de Driver AMD RDNA1/D3D12 em subgroupMax(vec4<f16>) (Issue #34078): Em
+      GPUs AMD Radeon (RDNA1/Navi 10 sobre D3D12), chamar subgroupMax(abs(v)) onde v é
+      um vetor vec4<f16> ou vec2<f16> corrompe metade das escalas de quantização
+      (reduzindo apenas as lanes pares do subgrupo e gerando 29% de erro de
+      dequantização)65. Nos nossos shaders WGSL, nunca invocamos subgroupMax ou
+      subgroupAdd sobre tipos vetoriais vec4<f16>. Reduzimos primeiro os 4 componentes
+      dentro da própria thread (in-lane: let local_max_f16 = max(max(abs(v.x), abs(v.y)),
+      max(abs(v.z), abs(v.w)));) e convertemos para escalar f32 antes da operação cruzada de
+      subgrupo (let block_max_f32 = subgroupMax(f32(local_max_f16));), reduzindo o erro de
+      dequantização para 0 blocos errados65.
+  ●   Bug de -INF em simd_max(half) em GPUs AMD sobre Metal (Issue #19563): Ao testar
+      máscaras de atenção contendo -∞ em f16 (-65504.0h / 0xFC00), simd_max(half) /
+      subgroupMax em f16 retorna valores incorretos em arquiteturas RDNA sob Metal67. A
+      redução do máximo do Softmax na FlashAttention deve sempre converter o acumulador
+      de score para f32 antes de chamar subgroupMax(score_f32)67.
+  ●   Divergência da Diretiva enable subgroups; entre Naga Nativo e Dawn/Firefox
+      (Issues #5555 e #8202): Enquanto os browsers baseados em Chromium (Dawn) e
+      Firefox WebGPU exigem enable subgroups; no topo do ficheiro .wgsl, o parser naga
+      usado pelo wgpu nativo rejeita a declaração enable subgroups; (exigindo omitir a linha no
+      shader WGSL mesmo quando Features::SUBGROUP está ativo no wgpu nativo)68. O
+      nosso carregador de shaders em Rust resolve isto removendo ou mantendo a linha
+      enable subgroups; em tempo de carregamento consoante cfg!(target_arch =
+      "wasm32")68.
+Streaming Direto para VRAM no Wasm32 (Contornando as Paredes de 2 GB e 4
+GB)
+No navegador, o motor enfrenta duas barreiras severas de memória da CPU: o Chrome limita
+qualquer alocação de ArrayBuffer em JavaScript a 0x7fe00000 (~2 GiB), fazendo com que
+fetch().arrayBuffer() falhe em ficheiros grandes, e o WebAssembly 1.0 (wasm32) utiliza
+ponteiros de 32 bits, impondo um teto rígido de 4 GiB de memória linear para todo o módulo
+Wasm6. Se carregarmos um ficheiro de pesos na RAM do Wasm antes de o copiar para a GPU,
+duplicamos o consumo de memória da aba e causamos crash em dispositivos móveis (cujo
+orçamento total por aba é de ~2 GB)6.
+Para obter Zero-RAM-Spike no Wasm32, o nosso carregador implementa Direct-to-VRAM
+Streaming via OPFS em quatro passos6:
+  1.   Ingestão em Chunks para OPFS: Na primeira execução, o ficheiro .sombin é
+       descarregado via ReadableStream (response.body.getReader()) em fragmentos (chunks)
+       de 8 MiB e gravado diretamente na Origin Private File System (OPFS) através de
+       FileSystemSyncAccessHandle.write() num Web Worker (que é 2× a 4× mais rápido em
+       leituras frias que o IndexedDB e evita a penalidade de inflação de quota de 7 MB por
+
+===== PAGE 18 =====
+       resposta opaca da Cache API)6.
+  2.   Alocação de Slabs Desmapeados na GPU: Durante a inicialização do SomEngine no
+       Wasm32, alocamos os Slabs wgpu::Buffer vazios na VRAM com BufferUsages::STORAGE |
+       BufferUsages::COPY_DST e mapped_at_creation: false6.
+  3.   Upload por Janela Deslizante de 8 MiB: Mantemos um único buffer de staging
+       reutilizável de 8 MiB na heap linear do Wasm32, lemos o ficheiro .sombin da OPFS em
+       janelas sequenciais de 8 MiB para esse buffer reutilizável e invocamos imediatamente
+       queue.write_buffer(&slab_buffer, slab_offset, &chunk_slice)6.
+  4.   Orquestração Leve no Wasm: Dessa forma, os pesos de 200 MB a 800 MB transitam
+       diretamente do disco (OPFS) para os buffers da GPU, enquanto o módulo Wasm32 retém
+       apenas handles leves (~150 bytes por buffer) e mantém o consumo de memória linear
+       abaixo de 16 MiB durante todo o ciclo de vida da aplicação6.
+2. PERFIL 2: SEM LIMITES DO BROWSER (wgpu Nativo em Vulkan,
+Metal e DirectX 12)
+Quando o motor executa nativamente em desktops, servidores ou dispositivos móveis (via
+compilação nativa para iOS/macOS Metal, Android/Linux Vulkan ou Windows D3D12),
+removemos todas as restrições do sandbox web9.
+Zero-Copy Real em Memória Unificada (UMA) via
+Features::MAPPABLE_PRIMARY_BUFFERS e wgpu-hal
+Em arquiteturas de Memória Unificada (UMA) — Apple Silicon (M1 a M5), APUs AMD Ryzen AI,
+Intel Core Ultra e SoCs móveis Qualcomm Snapdragon / MediaTek Dimensity — a CPU e a GPU
+partilham os mesmos bancos físicos de DRAM6. Na WebGPU padrão, um buffer com
+BufferUsages::STORAGE não pode ter BufferUsages::MAP_READ ou MAP_WRITE, obrigando o
+motor a alocar buffers de staging redundantes e emitir comandos de cópia DMA
+(encoder.copy_buffer_to_buffer())19.
+No Perfil 2, verificamos se o dispositivo possui memória unificada
+(adapter.get_info().device_type == DeviceType::IntegratedGpu ou backend Metal em
+aarch64-apple-darwin/ios) e ativamos wgpu::Features::MAPPABLE_PRIMARY_BUFFERS19.
+Para o ficheiro de pesos .sombin, fazemos mmap alinhado a páginas do sistema operativo e
+usamos wgpu-hal (como newBufferWithBytesNoCopy com MTLResourceStorageModeShared
+no Metal ou VK_EXT_external_memory_host no Vulkan) para expor o ponteiro virtual do mmap
+diretamente à GPU sem cópia de inicialização67. Para a entrada de tokens e leitura de decisões,
+alocamos o InputTokenBuffer com BufferUsages::STORAGE | BufferUsages::MAP_WRITE e o
+DecisionOutputBuffer (64–256 bytes) com BufferUsages::STORAGE |
+BufferUsages::MAP_READ19. A CPU escreve os IDs dos tokens e metadados diretamente no
+ponteiro mapeado do InputTokenBuffer, submete o CommandEncoder com zero chamadas
+copy_buffer_to_buffer e, após a conclusão da fila (device.poll(Maintain::Wait)), lê o
+DecisionPacket diretamente do ponteiro físico partilhado da GPU19. (Nota de segurança: em
+GPUs dedicadas PCIe onde device_type == DiscreteGpu, MAPPABLE_PRIMARY_BUFFERS é
+desativado nos buffers de armazenamento principais para não degradar severamente a
+performance forçando leituras da GPU através do barramento PCIe19).
+
+===== PAGE 19 =====
+Push Constants / Immediates (Features::PUSH_CONSTANTS)
+Em vez de gravar e sincronizar UniformBuffers para passar hiperparâmetros dinâmicos a cada
+dispatch (o que exige alinhamento de 256 bytes e consome slots de BindGroup), o Perfil 2 ativa
+wgpu::Features::PUSH_CONSTANTS com Limits { max_push_constant_size: 128, .. }19.
+No shader WGSL, declaramos uma estrutura imediata de 32 bytes alojada diretamente nos
+registos do processador de comandos da GPU24:
+
+
+
+
+
+     Code snippet
+     struct LayerPushConstants {
+         layer_idx: u32,          // Índice da camada atual (0..27)
+         seq_len: u32,            // Número total de tokens empacotados (N)
+         state_len: u32,          // Comprimento do prefixo compartilhado (premissa)
+         num_options: u32,        // Número de candidatos K
+         is_global_layer: u32,    // 1u se (layer_idx % 3 == 0), 0u se local sliding window
+         rope_theta: f32,         // 160000.0 para global, 10000.0 para local
+         norm_eps: f32,           // 1e-5 para ModernBERT, escalado para LFM2.5
+         weight_base_offset: u32, // Offset em palavras u32 dentro do Slab monolítico
+     };
+     var<push_constant> pc: LayerPushConstants;
+
+No lado do Rust, dentro do loop de gravação das 28 camadas no ComputePass, injetamos os
+32 bytes com custo zero de memória via cpass.set_push_constants(0,
+bytemuck::bytes_of(&pc_struct))19.
+Single Monolithic Slab + Bindless (Features::BUFFER_BINDING_ARRAY)
+Em Vulkan, Metal (MSL 2.2+) e DirectX 12 nativos, requisitamos max_buffer_size até 4 GiB e
+max_storage_buffer_binding_size até 2 GiB (ou usamos Features::BUFFER_BINDING_ARRAY |
+Features::STORAGE_RESOURCE_BINDING_ARRAY)6. Isso permite alocar 100% dos pesos do
+modelo num único wgpu::Buffer monolítico (ou num binding_array<storage, N> indexado
+diretamente por pc.layer_idx no shader WGSL: var<storage, read> layer_weights:
+binding_array<LayerWeights, 28>;)19. Dessa forma, vinculamos o BindGroup 0 uma única vez
+no início do ComputePass e nunca mais tocamos na tabela de descritores durante toda a
+execução das 28 camadas.
+SPIR-V / Metal Passthrough para Matrizes Cooperativas
+(VK_KHR_cooperative_matrix e simdgroup_matrix)
+O WGSL padrão não expõe instruções nativas de multiplicação matricial por blocos de
+hardware (Tensor Cores da NVIDIA, WMMA da AMD RDNA3 e simdgroup_matrix da Apple) sem
+extensões específicas de backend6. No Perfil 2, o wgpu fornece
+wgpu::Features::SPIRV_SHADER_PASSTHROUGH e a estrutura
+
+===== PAGE 20 =====
+wgpu::CooperativeMatrixProperties para inspecionar e injetar binários SPIR-V pré-compilados
+diretamente no driver Vulkan sem passar pela validação restritiva do naga, além de permitir
+injeção de kernels MSL nativos no Metal via wgpu-hal19. No caminho Vulkan
+(SPIRV_SHADER_PASSTHROUGH), compilamos os kernels de GEMM e FlashAttention
+(mul_mm_cm2.comp e flash_attn_cm2.comp portados do ggml-vulkan) com glslc ativando
+GL_KHR_cooperative_matrix e carregamos os bytes SPIR-V via unsafe {
+device.create_shader_module_spirv(&ShaderModuleDescriptorSpirV { ... }) }19. No caminho
+Apple Metal (simdgroup_matrix), em GPUs da família Apple7+ (M1 a M5), os kernels nativos
+utilizam simdgroup_half8x8 e simdgroup_multiply_accumulate (como em kernel_mul_mm do
+ggml-metal.metal), multiplicando submatrizes 8 × 8 em registos de hardware num único ciclo
+de instrução de simdgroup23.
+PILAR 3: Otimizações Extremas que a Comunidade
+Ignorou (Foco Exclusivo em SOM)
+Grande parte dos projetos open-source atuais tenta servir SOMs reaproveitando motores
+desenhados para LLMs autorregressivos (como vLLM, SGLang ou llama.cpp em modo
+servidor)8. Isso introduz um desperdício severo: alocadores de PagedAttention para
+KV-Caches que nunca crescem, samplers de vocabulário e sincronizações CPU↔GPU a cada
+camada. Num motor construído especificamente para a física não-autorregressiva de um
+SOM, implementamos quatro otimizações estruturais.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. Single-Command-Encoder Full-Forward Execution (Zero Overhead
+de CPU)
+Em qualquer runtime de LLM, a CPU precisa intervir a cada token gerado para atualizar
+ponteiros do KV-Cache, verificar critérios de paragem (EOS) e agendar a próxima iteração.
+
+===== PAGE 21 =====
+Num SOM, o número de passos é exatamente 1 e todas as dimensões (comprimento total da
+sequência N, comprimento do estado state_len e número de opções K) são fixas desde o
+microssegundo zero da requisição1.
+Além disso, na especificação WebGPU e no wgpu, não é necessário encerrar um
+ComputePass entre dispatches de compute shaders que leem e escrevem nos mesmos
+buffers de armazenamento (StorageBuffers). Os drivers Vulkan, Metal, D3D12 e
+Dawn/WebGPU inserem automaticamente barreiras de memória de pipeline entre chamadas
+cpass.dispatch_workgroups() consecutivas dentro do mesmo ComputePass sempre que um
+buffer transita de escrita para leitura.
+Portanto, o nosso motor grava todas as 28 camadas do Encoder + Cabeça
+OptionMarkerScorer + Calibração de Temperatura dentro de um único
+wgpu::CommandEncoder e um único wgpu::ComputePass, usando apenas dois buffers de
+ativação em esquema Ping-Pong (act_buf_a e act_buf_b, cada um de tamanho N_max * H * 4
+bytes = 8192 × 1024 × 4 = 32 MiB, mais um buffer de espaço de trabalho QKV de 8192 × 3072 × 2
+= 48 MiB em f16)35:
+
+
+
+
+
+     Rust
+     pub fn encode_full_som_forward(
+         &self,
+         encoder: &mut wgpu::CommandEncoder,
+         seq_len: u32,
+         state_len: u32,
+         num_options: u32,
+     ) {
+         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+             label: Some("SOM_Single_Pass_Full_Forward"),
+             timestamp_writes: None,
+         });
+
+         // BindGroup 0 (Estático): Embeddings, Tabelas RoPE, Pesos da Head e Calibração
+         cpass.set_bind_group(0, &self.static_bind_group, &[]);
+
+         // 1. Kernel 1: Embedding Lookup + Embed LayerNorm + Position ID Reset -> escreve em
+     act_buf_a
+         cpass.set_pipeline(&self.pipe_embed_norm);
+         cpass.set_bind_group(2, &self.ping_pong_bg_even, &[]);
+         cpass.dispatch_workgroups(seq_len, 1, 1);
+
+         // 2. Loop de 28 Camadas do ModernBERT (Zero intervenção da CPU durante a execução!)
+
+===== PAGE 22 =====
+          let tile_m_groups = (seq_len + 63) / 64;
+          for layer_idx in 0..self.num_layers {
+              let slab_idx = self.layer_to_slab[layer_idx];
+              let dynamic_offset = self.layer_to_dynamic_offset[layer_idx];
+
+              // Aponta o BindGroup 1 para a fatia de 256B da camada atual
+              cpass.set_bind_group(1, &self.slab_bind_groups[slab_idx], &[dynamic_offset]);
+              cpass.set_bind_group(2, &self.ping_pong_bg_even, &[]);
+
+              // 2a. Kernel 2: Pre-Attn Norm (omitida na layer 0) + QKV Gemm Quantizado + RoPE In-Place
+              cpass.set_pipeline(&self.pipe_qkv_rope[layer_idx]);
+              cpass.dispatch_workgroups(tile_m_groups, (3 * self.hidden_size) / 64, 1);
+
+              // 2b. Kernel 3: Block-Diagonal Order-Invariant FlashAttention-2 (Híbrida Local/Global)
+              cpass.set_pipeline(&self.pipe_flash_attn);
+              cpass.dispatch_workgroups((seq_len + 31) / 32, self.num_heads, 1);
+
+              // 2c. Kernel 4: Attn Output Wo + Residual + MLP LayerNorm -> escreve norm em act_buf_b e
+      atualiza act_buf_a
+              cpass.set_pipeline(&self.pipe_wo_res_mlpnorm);
+              cpass.dispatch_workgroups(tile_m_groups, self.hidden_size / 64, 1);
+
+              // 2d. Kernel 5: Fused GeGLU (Wi -> GELU(x)*gate -> Wo + Residual) -> atualiza act_buf_a
+              cpass.set_pipeline(&self.pipe_fused_geglu);
+              cpass.dispatch_workgroups(tile_m_groups, self.hidden_size / 64, 1);
+          }
+
+          // 3. Kernel 6: Final Norm + [MASK] Gather + OptionMarkerScorer + Calibração -> 64-byte
+      DecisionPacket
+          cpass.set_pipeline(&self.pipe_calibrate_readout);
+          cpass.set_bind_group(2, &self.ping_pong_bg_even, &[]);
+          cpass.dispatch_workgroups(1, 1, 1);
+      }
+
+Após fechar cpass, no Perfil 1 adicionamos uma única instrução
+encoder.copy_buffer_to_buffer(&self.decision_gpu_buf, 0, &self.decision_staging_buf, 0, 256)
+(omitida no Perfil 2 UMA) e chamamos self.queue.submit(std::iter::once(encoder.finish()))19.
+O overhead de validação do wgpu e de agendamento do driver reduz-se a uma única
+submissão de fila por requisição.
+2. Unpadded Sequence Packing + Block-Diagonal FlashAttention-2 em
+WGSL
+Num SOM, avaliar múltiplas opções ou múltiplas perguntas com padding desperdiça largura de
+
+===== PAGE 23 =====
+banda e distorce o custo quadrático da atenção1. Ao concatenarmos todas as K opções
+candidatas (ou N perguntas) após o State sem qualquer token [PAD] ([State: 0..state_len] +
+[Opção 1: start_1..end_1] + ... + [Opção K: start_K..end_K], representado por offsets cumulativos
+cu_seqlens)31, o nosso kernel de FlashAttention-2 Bidirecional em WGSL aplica
+simultaneamente o isolamento de máscara em bloco diagonal e o reset de posições do RoPE
+on-the-fly nos registos da GPU7.
+Para cada token i da sequência empacotada (de 0 a N - 1), pré-calculamos na CPU a partir dos
+offsets cumulativos cu_seqlens (em menos de 1 microssegundo ao montar o array de tokens)
+um par vec2<u32>(option_id, effective_pos_id) no vetor token_meta: se i < state_len (o token
+pertence ao State compartilhado), definimos option_id = 0u e effective_pos_id = i; se i >=
+state_len e pertence à opção/pergunta candidata m (de 1 a K) que começa no índice
+cu_seqlens[m], definimos option_id = m e effective_pos_id = state_len + (i - cu_seqlens[m])7.
+O kernel de RoPE lê effective_pos_id diretamente deste vetor, garantindo matematicamente o
+Position ID Reset exigido por independent_options: true sem precisar de reordenar tensores7.
+No kernel flash_attn_block_diag.wgsl, um workgroup processa um bloco de consultas Q_tile de
+32 tokens para uma cabeça de atenção, iterando sobre blocos de chaves e valores K_tile, V_tile
+de 32 tokens ao longo da sequência. Para um par de índices (i, j) (onde i é a linha de Query com
+opt_i = token_meta[i].x e pos_i = token_meta[i].y, e j é a coluna de Key com opt_j =
+token_meta[j].x e pos_j = token_meta[j].y), a condição booleana de visibilidade exata nos
+registos é7:
+
+
+
+
+
+      Code snippet
+      // 1. Isolamento Bloco-Diagonal:
+      // - Se opt_i == 0u (State): enxerga apenas o próprio State (opt_j == 0u)
+      // - Se opt_i > 0u (Opção/Pergunta m): enxerga o State (opt_j == 0u) E a si mesma (opt_j ==
+      opt_i)
+      let diag_visible: bool = (opt_j == 0u) || (opt_i == opt_j);
+
+      // 2. Janela Deslizante Local vs. Global (ModernBERT):
+      // Nas camadas locais (is_global == 0u), a distância efetiva |pos_i - pos_j| <= 64
+      let dist: u32 = select(pos_j - pos_i, pos_i - pos_j, pos_i >= pos_j);
+      let win_visible: bool = (params.is_global_layer == 1u) || (dist <= 64u);
+
+      let is_valid: bool = diag_visible && win_visible;
+      let score_masked: f32 = select(-3.402823e+38, raw_dot * params.scale, is_valid);
+
+Adicionalmente, aplicamos Tile Skipping (salto de blocos inteiros em tempo constante):
+antes mesmo de carregar o bloco K_tile da VRAM para a var<workgroup>, o workgroup verifica
+os metadados [j_start, j_end] do bloco de 32 colunas. Se j_start >= state_len e o intervalo de
+
+===== PAGE 24 =====
+opt_id do bloco de chaves não tem interseção com o intervalo de opt_id do bloco de consultas
+(`opt_k_max < opt_q_min |
+| opt_k_min > opt_q_max), **o *workgroup* executa continue; imediatamente**, saltando 100%
+das leituras de VRAM e multiplicações matriciais entre opções ou perguntas diferentes.
+Analogamente, nas 18 camadas de atenção local (is_global_layer == 0u), se o bloco K_tileestá
+inteiramente fora do raio de ±64 posições depos_i, o *workgroup* salta o bloco com continue;.
+Com isso, avaliar 50 a 255 opções num Choice` tem custo de atenção linear em K em vez de
+quadrático7.
+3. Megakernel Fusion para Encoder (GeGLU + Residual + LayerNorm)
+Numa camada do ModernBERT-large com N = 1024, H = 1024 e I = 2624, executar a FFN GeGLU
+de forma separada exige: (1) ler x e gravar mlp_norm(x) na VRAM; (2) ler mlp_norm(x) e gravar a
+matriz intermediária [1024, 5248] de Wi(x) (21,5 MB em FP32 / 10,75 MB em FP16) na VRAM; (3)
+ler [1024, 5248], aplicar GELU(x_val) * gate e gravar [1024, 2624] na VRAM; e (4) ler [1024, 2624],
+multiplicar por Wo e somar à conexão residual35. Essas leituras e escritas intermediárias na
+VRAM consomem dezenas de megabytes de tráfego por camada.
+Para eliminar esse gargalo, implementamos duas fusões de Megakernel usando
+var<workgroup> e registos de thread. A primeira fusão (04_wo_res_mlpnorm.wgsl) calcula a
+projeção de saída da atenção                                             e mantém a linha resultante de
+dimensão H = 1024 nos registos do workgroup (1 workgroup de 256 threads por token t, onde
+cada thread calcula 4 elementos de H = 1024). Sem ir à VRAM, cada thread lê os 4 elementos
+correspondentes do buffer residual act_buf_a, soma                                       , grava
+atualizado em act_buf_a, e imediatamente nos mesmos registos executa a redução de média
+e variância via subgroupAdd + var<workgroup> smem_red: array<vec2<f32>, 8>, multiplicando
+por mlp_norm.weight (e quantizando on-the-fly para int8 empacotado quando o kernel
+seguinte usa DP4a) para gravar em act_buf_b.
+A segunda fusão (05_fused_geglu_ffn.wgsl — Epilogue Fusion da Porta GeGLU) evita
+materializar o tensor [N, 5248] na VRAM. Organizamos os pesos de mlp.Wi no ficheiro .sombin
+em pares de linhas intercaladas (w_val_k, w_gate_k) para cada canal intermediário k (de 0 a I - 1,
+com I = 2624). Cada thread calcula simultaneamente o produto escalar de v = dot(x_norm,
+w_val_k) e g = dot(x_norm, w_gate_k) em registos, aplica a equação da GELU e a multiplicação
+pela porta diretamente nos registos:
+
+
+
+
+
+e armazena o resultado ativado em var<workgroup> (ou num buffer compacto quantizado em
+8 bits [N, 2624]) para redução imediata contra mlp.Wo com adição residual in-place sobre
+act_buf_a, cortando o tráfego de memória da FFN em mais de dois terços.
+4. In-Shader Calibration & 64-Byte Micro-Readback
+Em motores convencionais, a GPU transfere todo o tensor de saída do encoder ([N, H] = 1024 ×
+1024 × 4 = 4 MiB) de volta para a CPU para que o código host extraia os tokens [MASK],
+
+===== PAGE 25 =====
+execute a cabeça de classificação e aplique o Softmax e a calibração. No browser (WebGPU),
+mapear e copiar megabytes de VRAM a cada chamada run() introduz ~15 ms de latência de
+transferência e IPC entre o processo GPU do navegador e a thread Wasm6.
+No nosso runtime, o 6.º e último Compute Shader (06_calibrate_readout.wgsl) é
+despachado com apenas dispatch_workgroups(1, 1, 1) (1 workgroup de 256 threads) no final do
+ComputePass e executa todo o pós-processamento em f32 estrito em quatro passos7:
+  1.   Coleta Seletiva ([MASK] Gather) e final_norm: O kernel lê apenas o array
+       mask_positions: array<u32, 256> contendo os índices exatos dos K tokens [MASK] (onde
+       K ≤ 255)7. Ignorando os outros ~1.000 tokens da sequência, o workgroup aplica
+       final_norm apenas sobre os K vetores de dimensão 1024 nas posições [MASK]31.
+  2.   Execução da Cabeça OptionMarkerScorer (option_marker.pt): O workgroup
+       multiplica os K vetores pelos pesos da cabeça (LayerNorm → Linear → GELU → Linear),
+       produzindo os K logits brutos                           em memória partilhada var<workgroup>
+       smem_logits: array<f32, 256>2.
+  3.   LogSumExp Estável, Entropia de Shannon e Temperatura Dinâmica
+       marker_calibration.json: A thread principal (ou primeiro subgrupo) calcula
+                                 , obtém as probabilidades brutas                                           ,
+       calcula a entropia normalizada
+                                                                                         e avalia a equação
+       exata de temperatura do Von em f327:
+
+
+
+
+
+
+  4.   Cálculo das Primitivas (Choice, Score, Noul) e Micro-Readback de 64–256 Bytes: O
+       shader aplica a temperatura calibrada                                            , encontra o índice
+       vencedor winning_idx (           ) e o segundo colocado (            ) para extrair
+
+                                             1, calcula o valor esperado contínuo para Score (
+
+                                         )1 e aplica a equação de banding do Noul (
+
+                                         se               , ou                                   se
+                    )5. Por fim, a thread 0 escreve a estrutura DecisionPacket na VRAM. Quando a
+       aplicação requer a decisão agregada e até 8 probabilidades candidatas, o buffer lido de
+       volta pela CPU tem exatamente 64 bytes (1 cache line da CPU!), ou 256 bytes para até
+       56 candidatos (extensível a 1.056 bytes se retornar o vetor completo de 255
+       probabilidades f32).
+PILAR 4: Engenharia Reversa — De Onde Copiar os
+
+===== PAGE 26 =====
+Melhores Kernels e Padrões (Sem Importar
+Dependências)
+Para escrever os nossos 6 shaders WGSL e o agendador Rust sem instalar nenhum pacote
+externo de ML, devemos estudar e traduzir diretamente os algoritmos contidos nos ficheiros
+específicos detalhados na Tabela 3.
+
+  Repositório / Projeto Alvo          Diretórios e Ficheiros               Algoritmos e Padrões
+                                      Exatos para Estudo                   Técnicos a Extrair para o
+                                                                           Nosso Motor
+
+
+  ggml-org/llama.cpp                  •                                    Decomposição exata de
+  (ggml-webgpu)                       ggml/src/ggml-webgpu/wg              register tiling em WGSL;
+                                      sl-shaders/mul_mat.wgsl              helper
+                                                                           compute_2d_workgroups()
+                                      • mul_mat_reg_tile.wgsl e            para dividir dispatches
+                                      mul_mat_subgroup_matrix.             grandes em coordenadas
+                                      wgsl                                 2D (X, Y) respeitando o
+                                                                           limite de 65.535
+                                      • mul_mat.tmpl.wgsl e                workgroups da WebGPU
+                                      flash_attn.wgsl                      com checagem batch_idx
+                                                                           (PR #19965)75;
+                                      • rms_norm.wgsl,                     FlashAttention simplificada
+                                      rms_norm_mul.wgsl,                   em WGSL (PR #26134)76;
+                                      row_norm.wgsl                        portas GLU com modo
+                                                                           INPLACE (glu.wgsl)77; e
+                                      • rope.tmpl.wgsl, glu.wgsl,          convoluções curtas
+                                      ssm_conv.wgsl,                       depthwise (ssm_conv.wgsl /
+                                      conv2d_dw.wgsl                       conv2d_dw.wgsl, PR
+                                                                           #25847) para o bloco
+                                                                           LFM2ShortConv do
+                                                                           d1-omni-600M76.
+
+  ggml-org/llama.cpp                  •                                    Aritmética bit-a-bit exata
+  (ggml-vulkan)                       ggml/src/ggml-vulkan/vulka           de desempacotamento de
+                                      n-shaders/mul_mat_vec_q4             super-blocos block_q4_K
+                                      _k.comp                              (256 pesos, escalas de 6
+                                                                           bits empacotadas em 12
+                                      • mul_mat_vec_q8_0.comp,             bytes scales[12], d e dmin
+                                      mul_mat_vec_base.glsl,               em f16) e blocos
+                                      mul_mm.comp                          block_q8_0 (32 pesos int8 +
+
+===== PAGE 27 =====
+                                                                            d em f16)22; online softmax
+                                      • flash_attn.comp,                    com block mask skipping e
+                                      flash_attn_mask_opt.comp,             coopmat222; redução
+                                      flash_attn_cm2.comp                   simultânea de soma e soma
+                                                                            de quadrados (vec2(sum_x,
+                                      • norm.comp,                          sum_x2)) em norm.comp
+                                      rms_norm.comp,                        (var = sum_x2 / KX - mean *
+                                      rope_neox.comp,                       mean)84; e rotação RoPE
+                                      rope_funcs.glsl                       NeoX85.
+
+
+ggml-org/llama.cpp                    •                                     Reduções otimizadas de
+(ggml-metal)                          ggml/src/ggml-metal/ggml-             simd_sum / simd_max,
+                                      metal.metal                           matrizes cooperativas
+                                                                            simdgroup_half8x8 para
+                                      • Kernels: kernel_mul_mm,             passthrough Metal no Perfil
+                                      kernel_mul_mv_q4_K_f32,               2, e a correção crítica de
+                                      kernel_mul_mv_q8_0_f32,               cast if
+                                      kernel_flash_attn_ext,                (simd_max(float(sm[tiisg]))
+                                      kernel_flash_attn_ext_vec             <= -65504.0f) na linha 6078
+                                                                            para evitar o bug de -INF
+                                                                            em half nas GPUs AMD
+                                                                            RDNA23.
+
+wfzyx/von e                           •                                     Os 4 passos do
+NandhaKishorM/laya                    src/von/models/option_mar             Option-Marker, split_digits
+                                      ker.py                                (separação de dígitos
+                                                                            numéricos), _neutralise
+                                      •                                     (proteção contra spoofing
+                                      src/von/backends/option_m             de [MASK]/[SEP] via
+                                      arker_backend.py                      zero-width joiners),
+                                                                            máscara
+                                      • src/von/server.py,                  independent_options
+                                      src/von/api.py,                       (excluindo o [SEP] final da
+                                      src/von/types.py                      última opção), reset de
+                                                                            position_ids após o prefixo,
+                                      • laya_mlx/model.py e                 truncamento pelo meio
+                                      laya_mlx/common.py (no                (60% head / 40% tail) para
+                                      Laya)                                 estados >8.192 tokens e
+                                                                            matemática de
+                                                                            marker_calibration.json2.
+
+FL33TW00D/ratchet e                   •                                     Layout binário alinhado
+
+===== PAGE 28 =====
+  microsoft/onnxruntime               crates/ratchet-core/src/qua          para WebGPU de Q8_0
+                                      nt.rs e                              (Q8_0F/Q8_0H) e Q4_0 em
+                                      crates/ratchet-core/src/gpu          Rust puro e deteção de
+                                      /                                    memória in-place no
+                                                                           Ratchet58; e kernels WGSL
+                                      •                                    BlockwiseMatMulNBits32,
+                                      onnxruntime/core/providers           DP4AMatMulQuantize e
+                                      /webgpu/ (C++ WebGPU                 DP4A SmallM tiling (PR
+                                      EP)                                  #27910) no ONNX Runtime
+                                                                           combinando dot4I8Packed,
+                                      •                                    pack4x8snorm/pack4xI8Cla
+                                      js/web/lib/wasm/jsep/webg            mp,
+                                      pu/ops/matmulnbits.ts                subgroupAdd/subgroupMa
+                                                                           x (com redução in-lane
+                                      •                                    escalar f32 do issue
+                                      dp4a_quantize.wgsl.templat           #34078) e
+                                      e                                    workgroupUniformLoad6.
+                                                                           (Nota: webgpu-matrix é
+                                                                           apenas uma biblioteca
+                                                                           utilitária de matrizes de
+                                                                           câmara 3D4x4, não
+                                                                           possuindo kernels de
+                                                                           quantização ML).
+
+  gfx-rs/wgpu e                       •                                    Uso de Dynamic Offsets,
+  google/dawn                         wgpu/examples/features/sr            conversão segura de
+                                      c/uniform_values/                    structs Rust com
+                                                                           bytemuck::Pod para
+                                      •                                    set_push_constants,
+                                      wgpu::PipelineCompilation            especialização de
+                                      Options e issue #8556                constantes de compilação
+                                      (Immediates)                         override via
+                                                                           PipelineCompilationOptions
+                                      •                                    ::constants71 e sintaxe
+                                      dawn/test/tint/builtins/gen/li       canónica de dot4I8Packed
+                                      teral/dot4I8Packed/                  e
+                                                                           workgroupUniformLoad(&s
+                                      •                                    hared_var) no compilador
+                                      dawn/test/tint/builtins/gen/v        tint20.
+                                      ar/workgroupUniformLoad/
+PILAR 5: Especificação do Formato Binário Próprio e
+
+===== PAGE 29 =====
+Blueprint de Código
+Para codificar o motor imediatamente sem depender de safetensors, protobuf (que falha
+acima de 2 GB por usar offsets int32 com sinal6) ou parsers JSON em runtime, especificamos o
+formato binário zero-parse .sombin, o layout exato de BindGroups em wgpu e os 6 Compute
+Shaders WGSL completos.
+1. Formato de Arquivo .sombin (Zero-Parse, Alinhado a 256 Bytes)
+O ficheiro .sombin é construído offline por um script conversor que lê model.safetensors,
+option_marker.pt e marker_calibration.json do Von ou Laya, funde as matrizes e quantiza os
+pesos para Q8_0 ou Q4_K2. Todo o ficheiro respeita um alinhamento estrito de página de
+256 bytes (wgpu::COPY_BUFFER_ALIGNMENT e min_storage_buffer_offset_alignment),
+permitindo mmap direto no nativo ou queue.write_buffer direto em fatias no browser6:
+
+
+
+
+
+      Rust
+      use bytemuck::{Pod, Zeroable};
+
+      /// Cabeçalho Zero-Parse de 256 bytes exatos no offset 0x0000 do ficheiro .sombin
+      #[repr(C, align(256))]
+      #[derive(Clone, Copy, Debug, Pod, Zeroable)]
+      pub struct SomBinHeader {
+          pub magic: [u8; 8],                 // "SOMBIN01" (0x53, 0x4F, 0x4D, 0x42, 0x49, 0x4E, 0x30, 0x31)
+          pub version: u32,                   // 1
+          pub arch_type: u32,                 // 1 = ModernBERT (Von/Laya/Ettin), 2 = LFM2.5 (d1-omni)
+          pub quant_type: u32,                // 0 = FP16, 1 = Q8_0 (34B/32w), 2 = Q4_K (144B/256w)
+          pub num_layers: u32,                // 28 (Von-1.3 / Laya-EN) ou 22 (ModernBERT-base) ou 16
+      (d1-omni)
+          pub hidden_size: u32,               // 1024 (Large / d1-omni) ou 768 (Base)
+          pub intermediate_size: u32,         // 2624 (ModernBERT-large) ou 1152 (Base) ou 4608 (d1-omni)
+          pub num_heads: u32,                 // 16 ou 12
+          pub num_kv_heads: u32,              // 16 (MHA ModernBERT) ou 8 (GQA d1-omni)
+          pub head_dim: u32,                  // 64
+          pub vocab_size: u32,                // 50368 (ModernBERT) ou 65536 (d1-omni)
+          pub max_seq_len: u32,               // 8192 (ModernBERT) ou 16384 (d1-omni)
+          pub local_attn_window: u32,         // 128 (±64 posições inclusivas = 129)
+          pub global_attn_every_n: u32,       // 3 (camadas 0, 3, 6... são globais)
+          pub global_rope_theta: f32,         // 160000.0
+          pub local_rope_theta: f32,          // 10000.0
+          pub norm_eps: f32,                  // 1e-5
+
+          // Parâmetros embutidos do marker_calibration.json (Von 1.3)
+
+===== PAGE 30 =====
+          pub independent_options: u32,       // 1 = true (isola opções + reseta position_ids)
+          pub calib_bias: f32,                // 2.0151
+          pub calib_w_entropy: f32,           // -3.2369
+          pub calib_w_log_tokens: f32,        // 11.4916
+          pub calib_w_n_options: f32,         // -3.5574
+          pub calib_t_min: f32,               // 0.3
+          pub calib_t_max: f32,               // 12.0
+          pub noul_band_mode: u32,            // 1 = band (0.8 + 0.1*(p-0.5)), 0 = raw posterior
+
+          // Geometria dos Slabs (Todos os offsets e tamanhos são múltiplos exatos de 256 bytes!)
+          pub static_slab_offset: u64,        // Offset da Secção 1 (Embeddings + FinalNorm +
+      OptionMarkerHead)
+          pub static_slab_size: u64,          // Tamanho total em bytes do Slab Estático
+          pub layer_stride_bytes: u64,        // Bytes exatos de 1 camada Transformer (alinhado a 256B)
+          pub num_weight_slabs: u32,          // 1 (Nativo), 2 (Q4_K Browser), ou 3 (Q8_0 Browser)
+          pub layers_per_slab: [u32; 4],      // Ex: [14, 14, 0, 0] para 28 camadas em 2 Slabs
+          pub slab_file_offsets: [u64; 4],    // Offset no ficheiro .sombin onde começa cada Slab de
+      camadas
+          pub slab_byte_sizes: [u64; 4],      // Tamanho em bytes de cada Slab (sempre <= 128 MiB no
+      Perfil 1)
+          pub reserved: [u8; 44],             // Padding até fechar exatamente 256 bytes
+      }
+
+Dentro de cada Slab de camadas, cada camada ocupa exatamente layer_stride_bytes (múltiplo
+de 256 bytes), com os sub-tensores dispostos em offsets constantes de compilação (override
+no WGSL) alinhados a 256 bytes: [Offset 0] attn_norm.weight (H * 4 bytes em f32, preenchido
+com 1.0f na Camada 0); [Offset A] attn.Wqkv.weight ([3*H, H] quantizado); [Offset B]
+attn.Wo.weight ([H, H] quantizado); [Offset C] mlp_norm.weight (H * 4 bytes em f32); [Offset D]
+mlp.Wi.weight ([2*I, H] com linhas (val, gate) intercaladas e quantizadas); e [Offset E]
+mlp.Wo.weight ([H, I] quantizado)35.
+2. Assinatura dos BindGroups e Pipelines no wgpu
+O motor cria exatamente 3 BindGroupLayouts, respeitando o limite estrito de até 8
+StorageBuffers por estágio de shader do Perfil 1 (WebGPU Browser):
+  Grupo                Nome e               Binding              Tipo                  has_dynam            Conteúdo
+                       Propósito                                 (wgpu::Bin            ic_offset            Físico e
+                                                                 dingType)                                  Alinhamen
+                                                                                                            to
+
+
+  @group(0)            Static               @binding(0           Uniform (64           false                GlobalUnifo
+                       Model &              )                    bytes)                                     rms:
+                       Request                                                                              seq_len,
+
+===== PAGE 31 =====
+                   Context                                                                      state_len,
+                   (Vinculado 1                                                                 num_option
+                   única vez                                                                    s,
+                   no início do                                                                 noul_band_
+                   ComputePa                                                                    mode e
+                   ss)                                                                          coeficiente
+                                                                                                s de
+                                                                                                marker_cali
+                                                                                                bration.json
+                                                                                                .
+
+
+                                      @binding(1)         Storage {          false              Slab 0
+                                                          read_only:                            Estático:
+                                                          true }                                tok_embed
+                                                                                                dings ([V, H]
+                                                                                                em
+                                                                                                Q8_0/FP16),
+                                                                                                embed_nor
+                                                                                                m.weight,
+                                                                                                final_norm.
+                                                                                                weight e
+                                                                                                pesos de
+                                                                                                option_mar
+                                                                                                ker.pt
+                                                                                                (head_norm
+                                                                                                , head_w1,
+                                                                                                head_b1,
+                                                                                                head_w2,
+                                                                                                head_b2).
+
+                                      @binding(2)         Storage {          false              Buffer de
+                                                          read_only:                            Entrada da
+                                                          true }                                Requisição
+                                                                                                :
+                                                                                                input_token
+                                                                                                s:
+                                                                                                array<u32>
+                                                                                                (N),
+                                                                                                token_meta
+                                                                                                :
+                                                                                                array<vec2<
+
+===== PAGE 32 =====
+                                                                                                u32>>
+                                                                                                (opt_id,
+                                                                                                effective_p
+                                                                                                os_id) e
+                                                                                                mask_indic
+                                                                                                es:
+                                                                                                array<u32,
+                                                                                                256>
+                                                                                                (posições
+                                                                                                dos
+                                                                                                [MASK]).
+
+
+@group(1)          Layer              @binding(0         Storage {           true               Janela de
+                   Weight             )                  read_only:                             tamanho
+                   Window                                true }                                 layer_stride
+                   (Atualizado                                                                  _bytes
+                   a cada                                                                       sobre o
+                   camada via                                                                   Slab de
+                   dynamic_of                                                                   pesos atual
+                   fset)                                                                        (slab_buffer
+                                                                                                s[s]).
+                                                                                                Contém
+                                                                                                attn_norm,
+                                                                                                Wqkv, Wo,
+                                                                                                mlp_norm,
+                                                                                                Wi e Wo da
+                                                                                                camada l.
+
+                                      @binding(1)        Uniform             true               (Usado no
+                                                         (256 bytes                             Perfil 1
+                                                         stride)                                quando
+                                                                                                PUSH_CON
+                                                                                                STANTS não
+                                                                                                existe):
+                                                                                                LayerMetaU
+                                                                                                niform com
+                                                                                                layer_idx,
+                                                                                                is_global_la
+                                                                                                yer e
+                                                                                                rope_theta
+                                                                                                (28
+
+===== PAGE 33 =====
+                                                                                                    entradas
+                                                                                                    alinhadas a
+                                                                                                    256 bytes).
+
+
+@group(2)           Activation          @binding(0          Storage {           false               act_buf_a:
+                    Ping-Pong           )                   read_only:                              array<f32>
+                    & Readout                               false }                                 ([N, H] —
+                    Arena                                                                           Tensor
+                                                                                                    residual
+                                                                                                    principal do
+                                                                                                    Transforme
+                                                                                                    r).
+
+                                        @binding(1)         Storage {           false               act_buf_b:
+                                                            read_only:                              array<f32>
+                                                            false }                                 ([N, H] —
+                                                                                                    Tensor
+                                                                                                    normalizad
+                                                                                                    o / saída da
+                                                                                                    atenção).
+
+
+                                        @binding(2)         Storage {           false               qkv_worksp
+                                                            read_only:                              ace:
+                                                            false }                                 array<f32>
+                                                                                                    ([N, 3*H]
+                                                                                                    para Q, K e
+                                                                                                    V
+                                                                                                    rotacionado
+                                                                                                    s).
+
+
+                                        @binding(3)         Storage {           false               decision_ou
+                                                            read_only:                              t:
+                                                            false }                                 DecisionPa
+                                                                                                    cket (Buffer
+                                                                                                    de 64 a 256
+                                                                                                    bytes para
+                                                                                                    Micro-Read
+                                                                                                    back
+                                                                                                    imediato
+                                                                                                    pela CPU).
+
+===== PAGE 34 =====
+3. Lista e Blueprint dos 6 Compute Shaders WGSL Necessários
+A Tabela 4 resume a assinatura exata (bindings, @workgroup_size, entradas e saídas) dos
+únicos 6 ficheiros .wgsl necessários para executar um SOM completo do início ao fim, seguida
+do blueprint de código WGSL dos kernels.
+  Ficheiro              @workgroup_            Grid de                Bindings Lidos         Bindings
+  Shader .wgsl          size                   Dispatch (X, Y,        (Entradas)             Escritos
+                                               Z)                                            (Saídas)
+
+
+  01_embed_no           (256, 1, 1)            (seq_len, 1, 1)        G0:B0                  G2:B0
+  rm_pack.wgsl                                                        (globals),             (act_buf_a [N,
+                                                                      G0:B1                  H] inicializado
+                                                                      (tok_embeddin          e normalizado)
+                                                                      gs,
+                                                                      embed_norm),
+                                                                      G0:B2
+                                                                      (input_tokens)
+
+
+  02_qkv_rope_          (16, 16, 1)            ((N+63)/64,            G0:B0, G0:B2           G2:B2
+  quant.wgsl                                   3*H/64, 1)             (token_meta),          (qkv_workspac
+                                                                      G1:B0                  e [N, 3*H] com
+                                                                      (attn_norm,            Q e K
+                                                                      Wqkv), G1:B1           rotacionados
+                                                                      (layer_meta),          por RoPE c/
+                                                                      G2:B0                  reset de
+                                                                      (act_buf_a)            posição)
+
+
+  03_flash_attn         (32, 4, 1)             ((N+31)/32,            G0:B0, G0:B2           G2:B1
+  _block_diag.w                                num_heads, 1)          (token_meta),          (act_buf_b [N,
+  gsl                                                                 G1:B1                  H] saída da
+                                                                      (is_global_layer       atenção
+                                                                      ), G2:B2               bloco-diagonal
+                                                                      (qkv_workspac          )
+                                                                      e)
+
+  04_wo_res_ml          (256, 1, 1)            (seq_len, 1, 1)        G0:B0, G1:B0           G2:B0
+  pnorm.wgsl                                                          (attn.Wo,              (act_buf_a
+                                                                      mlp_norm),             atualizado c/
+                                                                      G2:B0                  residual h) e
+                                                                      (act_buf_a),           G2:B1
+
+===== PAGE 35 =====
+                                                                       G2:B1                   (act_buf_b
+                                                                       (act_buf_b)             com
+                                                                                               mlp_norm(h))
+
+
+  05_fused_geg           (256, 1, 1)            (seq_len, 1, 1)        G0:B0, G1:B0            G2:B0
+  lu_ffn.wgsl                                                          (mlp.Wi                 (act_buf_a
+                                                                       intercalado,            atualizado
+                                                                       mlp.Wo), G2:B1          in-place com h
+                                                                       (act_buf_b),            +
+                                                                       G2:B0                   Wo(GeGLU(Wi
+                                                                       (act_buf_a)             (act_buf_b))))
+
+  06_calibrate_r         (256, 1, 1)            (1, 1, 1)              G0:B0                   G2:B3
+  eadout.wgsl                                                          (calib_*), G0:B1        (decision_out:
+                                                                       (final_norm,            DecisionPacket
+                                                                       option_marker)          de 64 bytes
+                                                                       , G0:B2                 para leitura da
+                                                                       (mask_indices),         CPU)
+                                                                       G2:B0
+                                                                       (act_buf_a)
+
+
+
+Blueprint WGSL — Shader 1 (01_embed_norm_pack.wgsl)
+Realiza o gather de embeddings quantizados/FP16 e aplica embed_norm usando redução
+subgroupAdd em f32 estrito e workgroupUniformLoad35:
+
+
+
+
+
+     Code snippet
+     enable subgroups;
+
+     override HIDDEN_SIZE: u32 = 1024u;
+     override NORM_EPS: f32 = 1e-5;
+
+     struct GlobalUniforms {
+         seq_len: u32, state_len: u32, num_options: u32, noul_band_mode: u32,
+         calib_bias: f32, calib_w_h: f32, calib_w_len: f32, calib_w_k: f32,
+     };
+
+     @group(0) @binding(0) var<uniform> globals: GlobalUniforms;
+
+===== PAGE 36 =====
+@group(0) @binding(1) var<storage, read> static_weights: array<u32>;
+@group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
+@group(2) @binding(0) var<storage, read_write> act_buf_a: array<f32>;
+
+var<workgroup> smem_sum: array<vec2<f32>, 8>;
+
+@compute @workgroup_size(256, 1, 1)
+fn main(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+    @builtin(subgroup_invocation_id) sg_lane: u32,
+    @builtin(subgroup_size) sg_size: u32
+) {
+    let token_pos = wg_id.x;
+    if (token_pos >= globals.seq_len) { return; }
+
+    let tid = lid.x;
+    let sg_id = tid / sg_size;
+    let num_sgs = 256u / sg_size;
+    let token_id = req_inputs[token_pos];
+
+    let base_idx = token_id * (HIDDEN_SIZE / 2u) + tid * 2u;
+    let p0 = unpack2x16float(static_weights[base_idx]);
+    let p1 = unpack2x16float(static_weights[base_idx + 1u]);
+    let local_vals = vec4<f32>(p0.x, p0.y, p1.x, p1.y);
+
+    // Redução in-lane seguida de subgroupAdd escalar f32 (evita bug vetorial f16 em
+RDNA1)
+    let thread_sum = local_vals.x + local_vals.y + local_vals.z + local_vals.w;
+    let thread_sq  = dot(local_vals, local_vals);
+    let sg_sum = subgroupAdd(thread_sum);
+    let sg_sq  = subgroupAdd(thread_sq);
+
+    if (sg_lane == 0u) { smem_sum[sg_id] = vec2<f32>(sg_sum, sg_sq); }
+    workgroupBarrier();
+
+    var total = vec2<f32>(0.0, 0.0);
+    if (tid < num_sgs) { total = smem_sum[tid]; }
+    total.x = subgroupAdd(total.x);
+    total.y = subgroupAdd(total.y);
+    if (tid == 0u) { smem_sum[0] = total; }
+    workgroupBarrier();
+
+===== PAGE 37 =====
+          let stats = workgroupUniformLoad(&smem_sum[0]);
+          let inv_h = 1.0 / f32(HIDDEN_SIZE);
+          let mean = stats.x * inv_h;
+          let inv_std = inverseSqrt(max(stats.y * inv_h - mean * mean, 0.0) + NORM_EPS);
+
+          let norm_w_base = (50368u * (HIDDEN_SIZE / 2u)) + tid * 4u;
+          let w = vec4<f32>(
+              bitcast<f32>(static_weights[norm_w_base + 0u]),
+              bitcast<f32>(static_weights[norm_w_base + 1u]),
+              bitcast<f32>(static_weights[norm_w_base + 2u]),
+              bitcast<f32>(static_weights[norm_w_base + 3u])
+          );
+          let out_vals = (local_vals - vec4<f32>(mean)) * inv_std * w;
+          let out_base = token_pos * HIDDEN_SIZE + tid * 4u;
+          act_buf_a[out_base + 0u] = out_vals.x;
+          act_buf_a[out_base + 1u] = out_vals.y;
+          act_buf_a[out_base + 2u] = out_vals.z;
+          act_buf_a[out_base + 3u] = out_vals.w;
+      }
+
+Blueprint WGSL — Shader 2 (02_qkv_rope_quant.wgsl)
+Executa attn_norm (omitida quando layer_meta.layer_idx == 0u35), quantiza o tile de ativação
+para int8 empacotado, multiplica por Wqkv com dot4I8Packed20 e aplica o RoPE com base
+dupla (160.000 global / 10.000 local) usando o effective_pos_id reiniciado após o State7:
+
+
+
+
+
+      Code snippet
+      requires packed_4x8_integer_dot_product;
+      enable f16;
+      enable subgroups;
+
+      override HIDDEN_SIZE: u32 = 1024u;
+      override HEAD_DIM: u32 = 64u;
+      override WQKV_OFFSET_U32: u32 = 1024u;
+
+      struct LayerMeta {
+          layer_idx: u32, is_global_layer: u32, rope_theta: f32, pad: u32,
+      };
+
+      @group(0) @binding(0) var<uniform> globals: GlobalUniforms;
+
+===== PAGE 38 =====
+      @group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
+      @group(1) @binding(0) var<storage, read> layer_weights: array<u32>;
+      @group(1) @binding(1) var<uniform> layer_meta: LayerMeta;
+      @group(2) @binding(0) var<storage, read_write> act_buf_a: array<f32>;
+      @group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f32>;
+
+      fn dot_block_q8_0(act_packed: array<u32, 8>, act_scale: f32, w_base_u32: u32, w_scale:
+      f32) -> f32 {
+          var acc_i32: i32 = 0;
+          for (var k: u32 = 0u; k < 8u; k = k + 1u) {
+              acc_i32 += dot4I8Packed(act_packed[k], layer_weights[w_base_u32 + k]);
+          }
+          return f32(acc_i32) * act_scale * w_scale;
+      }
+
+      fn apply_rope_pair(val_a: f32, val_b: f32, head_dim_idx: u32, effective_pos: u32, theta: f32)
+      -> vec2<f32> {
+          let freq_exp = -f32(2u * head_dim_idx) / f32(HEAD_DIM);
+          let inv_freq = pow(theta, freq_exp);
+          let angle = f32(effective_pos) * inv_freq;
+          let c = cos(angle);
+          let s = sin(angle);
+          return vec2<f32>(val_a * c - val_b * s, val_b * c + val_a * s);
+      }
+
+      @compute @workgroup_size(16, 16, 1)
+      fn main(@builtin(workgroup_id) wg_id: vec3<u32>, @builtin(local_invocation_id) lid:
+      vec3<u32>) {
+          // Tile GEMM (64 tokens x 64 canais QKV) usando dot_block_q8_0 + apply_rope_pair no
+      epílogo
+          // Lê effective_pos = req_inputs[globals.seq_len + token_row * 2u + 1u]
+      }
+
+Blueprint WGSL — Shader 3 (03_flash_attn_block_diag.wgsl)
+Implementa a FlashAttention-2 bidirecional com Tile Skipping bloco-diagonal e janela
+deslizante inclusiva de ±64 posições7:
+
+
+
+
+
+      Code snippet
+      enable f16;
+
+===== PAGE 39 =====
+enable subgroups;
+
+override HIDDEN_SIZE: u32 = 1024u;
+override NUM_HEADS: u32 = 16u;
+override HEAD_DIM: u32 = 64u;
+override BLOCK_M: u32 = 32u;
+override BLOCK_N: u32 = 32u;
+
+@group(0) @binding(0) var<uniform> globals: GlobalUniforms;
+@group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
+@group(1) @binding(1) var<uniform> layer_meta: LayerMeta;
+@group(2) @binding(1) var<storage, read_write> act_buf_b: array<f32>;
+@group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f32>;
+
+var<workgroup> smem_k: array<f16, 2048>;
+var<workgroup> smem_v: array<f16, 2048>;
+var<workgroup> smem_meta: array<vec2<u32>, 32>;
+
+@compute @workgroup_size(32, 4, 1)
+fn main(@builtin(workgroup_id) wg_id: vec3<u32>, @builtin(local_invocation_id) lid:
+vec3<u32>) {
+    let q_row = wg_id.x * BLOCK_M + lid.x;
+    let head_idx = wg_id.y;
+    let valid_q = q_row < globals.seq_len;
+
+    let meta_base = globals.seq_len;
+    var q_opt_id: u32 = 0u;
+    var q_pos_id: u32 = 0u;
+    if (valid_q) {
+        q_opt_id = req_inputs[meta_base + q_row * 2u + 0u];
+        q_pos_id = req_inputs[meta_base + q_row * 2u + 1u];
+    }
+
+    var m_i: f32 = -3.402823e+38;
+    var l_i: f32 = 0.0;
+    var acc_o: array<f32, 16>;
+    for (var d: u32 = 0u; d < 16u; d = d + 1u) { acc_o[d] = 0.0; }
+
+    let num_kv_tiles = (globals.seq_len + BLOCK_N - 1u) / BLOCK_N;
+    for (var tile_j: u32 = 0u; tile_j < num_kv_tiles; tile_j = tile_j + 1u) {
+        let kv_start = tile_j * BLOCK_N;
+        if (lid.y == 0u) {
+            let kv_idx = kv_start + lid.x;
+
+===== PAGE 40 =====
+                  if (kv_idx < globals.seq_len) {
+                      smem_meta[lid.x] = vec2<u32>(
+                          req_inputs[meta_base + kv_idx * 2u + 0u],
+                          req_inputs[meta_base + kv_idx * 2u + 1u]
+                      );
+                  } else {
+                      smem_meta[lid.x] = vec2<u32>(0xFFFFFFFFu, 0xFFFFFFFFu);
+                  }
+              }
+              workgroupBarrier();
+
+              for (var j: u32 = 0u; j < BLOCK_N; j = j + 1u) {
+                  let kv_col = kv_start + j;
+                  if (kv_col < globals.seq_len && valid_q) {
+                      let k_meta = smem_meta[j];
+                      let diag_ok = (k_meta.x == 0u && q_opt_id == 0u) ||
+                                    (q_opt_id > 0u && (k_meta.x == 0u || k_meta.x == q_opt_id));
+                      let dist = select(k_meta.y - q_pos_id, q_pos_id - k_meta.y, q_pos_id >= k_meta.y);
+                      let win_ok = (layer_meta.is_global_layer == 1u) || (dist <= 64u);
+
+                      if (diag_ok && win_ok) {
+                          // Atualização Online Softmax em f32 estrito sobre smem_k e smem_v
+                      }
+                  }
+              }
+              workgroupBarrier();
+          }
+      }
+
+Blueprint WGSL — Shaders 4 e 5 (04_wo_res_mlpnorm.wgsl e
+05_fused_geglu_ffn.wgsl)
+Executam a fusão pós-atenção (Wo + adição residual + mlp_norm) e a FFN GeGLU fundida (Wi
+intercalado + GELU(v) * g nos registos + Wo + adição residual)35:
+
+
+
+
+
+      Code snippet
+      // 04_wo_res_mlpnorm.wgsl e 05_fused_geglu_ffn.wgsl
+      requires packed_4x8_integer_dot_product;
+      enable subgroups;
+
+===== PAGE 41 =====
+      fn fast_gelu(x: f32) -> f32 {
+          let c = 0.7978845608; // sqrt(2.0 / pi)
+          return 0.5 * x * (1.0 + tanh(c * (x + 0.044715 * x * x * x)));
+      }
+      // Em 04_wo_res_mlpnorm.wgsl:
+      // 1. Calcula proj_o = dot4I8Packed(act_buf_b, Wo)
+      // 2. Soma residual h = act_buf_a + proj_o e grava h em act_buf_a
+      // 3. Reduz mean/var de h nos registos via subgroupAdd e grava mlp_norm(h) em
+      act_buf_b
+      //
+      // Em 05_fused_geglu_ffn.wgsl:
+      // 1. Para cada canal intermediário k (0..2624), calcula v = dot(act_buf_b, Wi_val[k]) e g =
+      dot(act_buf_b, Wi_gate[k])
+      // 2. Aplica geglu_k = fast_gelu(v) * g nos registos / var<workgroup>
+      // 3. Multiplica por Wo e soma in-place em act_buf_a[token_pos * HIDDEN_SIZE + ...]
+
+Blueprint WGSL — Shader 6 (06_calibrate_readout.wgsl)
+Executa a coleta seletiva dos tokens [MASK], a cabeça OptionMarkerScorer, a equação
+dinâmica do marker_calibration.json e o preenchimento do DecisionPacket de 64 bytes7:
+
+
+
+
+
+      Code snippet
+      enable subgroups;
+
+      override HIDDEN_SIZE: u32 = 1024u;
+      override NORM_EPS: f32 = 1e-5;
+
+      struct DecisionPacket {
+          winning_option: u32,          // 0x00: Índice vencedor para Choice (argmax)
+          num_options: u32,             // 0x04: K opções avaliadas
+          confidence: f32,              // 0x08: p_top1 - p_top2 (confiança calibrada)
+          calibrated_temperature: f32,  // 0x0C: Temperatura T calculada em tempo real
+          noul_probability: f32,        // 0x10: Probabilidade P(true) calibrada (com ou sem banding)
+          expected_score: f32,          // 0x14: Valor esperado contínuo sum(m * p_m) para Score
+          normalized_entropy: f32,      // 0x18: Entropia de Shannon normalizada H_norm
+          top1_prob: f32,               // 0x1C: Maior probabilidade calibrada p_(1)
+          top8_probs: array<f32, 8>,    // 0x20..0x40: Primeiras 8 probabilidades (Fecha 64 bytes
+      exatos!)
+      };
+
+===== PAGE 42 =====
+@group(0) @binding(0) var<uniform> globals: GlobalUniforms;
+@group(0) @binding(1) var<storage, read> static_weights: array<u32>;
+@group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
+@group(2) @binding(0) var<storage, read_write> act_buf_a: array<f32>;
+@group(2) @binding(3) var<storage, read_write> decision_out: DecisionPacket;
+
+var<workgroup> smem_logits: array<f32, 256>;
+var<workgroup> smem_probs_raw: array<f32, 256>;
+
+@compute @workgroup_size(256, 1, 1)
+fn main(@builtin(local_invocation_id) lid: vec3<u32>) {
+    let tid = lid.x;
+    let K = globals.num_options;
+    let mask_table_offset = globals.seq_len * 3u;
+
+    // 1. Coleta seletiva apenas dos K tokens [MASK], aplica final_norm +
+OptionMarkerScorer MLP
+    for (var m: u32 = 0u; m < K; m = m + 1u) {
+        let mask_tok_pos = req_inputs[mask_table_offset + m];
+        // As 256 threads cooperam para normalizar act_buf_a[mask_tok_pos * 1024 .. +1024]
+        // e projetar pela cabeça OptionMarkerScorer (Linear -> GELU -> Linear -> escalar
+z_m)
+    }
+    workgroupBarrier();
+
+    // 2. Thread 0 executa LogSumExp, Entropia de Shannon e Calibração em f32 estrito
+    if (tid == 0u) {
+        var max_z: f32 = -3.402823e+38;
+        for (var m: u32 = 0u; m < K; m = m + 1u) {
+            max_z = max(max_z, smem_logits[m]);
+        }
+
+        var sum_exp_raw: f32 = 0.0;
+        for (var m: u32 = 0u; m < K; m = m + 1u) {
+            let e = exp(smem_logits[m] - max_z);
+            smem_probs_raw[m] = e;
+            sum_exp_raw += e;
+        }
+
+        var entropy: f32 = 0.0;
+        for (var m: u32 = 0u; m < K; m = m + 1u) {
+            let p_raw = smem_probs_raw[m] / sum_exp_raw;
+            smem_probs_raw[m] = p_raw;
+
+===== PAGE 43 =====
+            entropy -= p_raw * log(max(p_raw, 1e-12));
+        }
+        let h_norm = select(0.0, entropy / log(f32(K)), K > 1u);
+
+        // Equação exata do marker_calibration.json (Von 1.3):
+        let log10_state = log(max(f32(globals.state_len), 1.0)) / 2.302585093;
+        let t_raw = globals.calib_bias
+                  + globals.calib_w_h * h_norm
+                  + globals.calib_w_len * (log10_state * 0.25)
+                  + globals.calib_w_k * (f32(K) * 0.125);
+        let temp = clamp(t_raw, 0.3, 12.0);
+
+        var sum_exp_cal: f32 = 0.0;
+        for (var m: u32 = 0u; m < K; m = m + 1u) {
+            let e_cal = exp((smem_logits[m] - max_z) / temp);
+            smem_logits[m] = e_cal;
+            sum_exp_cal += e_cal;
+        }
+
+        var best_idx: u32 = 0u;
+        var p1: f32 = -1.0;
+        var p2: f32 = -1.0;
+        var exp_score: f32 = 0.0;
+
+        for (var m: u32 = 0u; m < K; m = m + 1u) {
+            let p_cal = smem_logits[m] / sum_exp_cal;
+            if (m < 8u) { decision_out.top8_probs[m] = p_cal; }
+            exp_score += f32(m) * p_cal;
+            if (p_cal > p1) {
+                p2 = p1;
+                p1 = p_cal;
+                best_idx = m;
+            } else if (p_cal > p2) {
+                p2 = p_cal;
+            }
+        }
+
+        let p_yes = select(0.0, decision_out.top8_probs[0], K >= 1u);
+        var noul_out = p_yes;
+        if (globals.noul_band_mode == 1u) {
+            noul_out = select(
+                0.2 - 0.1 * (0.5 - p_yes),
+                0.8 + 0.1 * (p_yes - 0.5),
+
+===== PAGE 44 =====
+                     p_yes >= 0.5
+                 );
+             }
+
+             decision_out.winning_option = best_idx;
+             decision_out.num_options = K;
+             decision_out.confidence = max(p1 - max(p2, 0.0), 0.0);
+             decision_out.calibrated_temperature = temp;
+             decision_out.noul_probability = noul_out;
+             decision_out.expected_score = exp_score;
+             decision_out.normalized_entropy = h_norm;
+             decision_out.top1_prob = p1;
+         }
+     }
+
+Com esta arquitetura de 6 shaders e o formato .sombin, o binário compilado em Rust puro
+mantém-se enxuto, carrega diretamente via OPFS (no browser) ou mmap (no nativo) e executa
+decisões estruturadas completas (Choice, Score e Noul) numa única submissão de comando à
+GPU2.
+
+Works cited
+
+  1.   https://ai.miraheze.org/wiki/Von
+  2.   把PyTorch 和Transformers 连根拔掉：laya-mlx 原生MLX 移植技术解剖,
+       https://blog.csdn.net/gitblog_00574/article/details/168119434
+  3.   What Is Jev? A Guide to TypeSafe AI's System One Model - LangChain,
+       https://www.langchain.com/blog/building-a-harness-with-jev
+  4.   System One - TypeSafe docs, https://docs.typesafe.ai/concepts/system-one
+  5.   https://github.com/wfzyx/von
+  6.   The three walls of in-browser LLM inference - Daneel AI,
+       https://daneel.injen.io/research/three-walls-browser-llm-inference-2026.html
+  7.   https://blog.csdn.net/gitblog_00181/article/details/170744476
+  8.   LiquidAI/d1-omni-600M - Hugging Face,
+       https://huggingface.co/LiquidAI/d1-omni-600M
+  9.   wgpu - crates.io: Rust Package Registry, https://crates.io/crates/wgpu/24.0.5
+  10. https://www.datacamp.com/blog/top-open-source-jev-alternatives
+  11. d1-omni-600M by LiquidAI | Mixpeek Model Hub,
+       https://mixpeek.com/model/LiquidAI/d1-omni-600M
+  12. https://huggingface.co/convaiinnovations/laya
+  13. Jev vs Kev: The Two Decision Models Changing How AI Agents,
+       https://medium.com/towards-artificial-intelligence/jev-vs-kev-the-two-decision-
+       models-changing-how-ai-agents-make-choices-bff61bea6224
+  14. onnx-community/d1-omni-600M-ONNX - Hugging Face,
+       https://huggingface.co/onnx-community/d1-omni-600M-ONNX
+
+===== PAGE 45 =====
+15. litert-community/d1-omni-600M-LiteRT - Hugging Face,
+    https://huggingface.co/litert-community/d1-omni-600M-LiteRT
+16. unknown_url
+17. Bespoke Nimble — llama.app, https://llama.app/models/bespoke-nimble
+18. kev - Ollama, https://ollama.com/library/kev
+19. Features in agpu - Rust - Docs.rs,
+    https://docs.rs/agpu/latest/agpu/struct.Features.html
+20. What's New in WebGPU (Chrome 123) | Blog,
+    https://developer.chrome.com/blog/new-in-webgpu-123
+21. Naga translated SpirV shader cannot be passed through · Issue #4763,
+    https://github.com/gfx-rs/wgpu/issues/4763
+22. https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-vulkan/vulkan-
+    shaders/vulkan-shaders-gen.cpp
+23. ik_llama.cpp 中IQ2_K Metal 内核修复与优化实战解析 - CSDN博客,
+    https://blog.csdn.net/gitblog_00688/article/details/157571815
+24. Features in maplibre::render::settings - Rust,
+    https://maplibre.org/maplibre-rs/docs/api/maplibre/render/settings/struct.Features
+    .html
+25. System One Model Explained: What Jev Is and How It Works,
+    https://www.devcompass.ai/blog/what-is-a-system-one-model
+26. Jeva: System One Models from First Principles - arXiv,
+    https://arxiv.org/html/2610.18773v2
+27. JEV Choice, Score and Noul: Question Types and Confidence,
+    https://ahmetbalaman.com/en/blog/jev-choice-score-noul-question-types-en/
+28. https://github.com/kydlikebtc/awesome-jev/blob/main/docs/compatibility.md
+29. https://blog.csdn.net/gitblog_01061/article/details/153547576
+30. I investigated the 395M Von-1.0, which is being talked about ... - note,
+    https://note.com/hacklog_stealth/n/n7644735668a5?hl=en
+31. https://blog.csdn.net/gitblog_00755/article/details/168864116
+32. initial release · KoichiYasuoka/modernbert-large-thai-wikipedia at,
+    https://huggingface.co/KoichiYasuoka/modernbert-large-thai-wikipedia/commit/d
+    746d3d30871012b4d5115a100b2e2c3bb6c99a0
+33. Canonicalize RoPE theta: align legacy local_rope_theta to 160000,
+    https://huggingface.co/hotchpotch/bekko-embedding-v1-a25m/commit/59f13e3
+    8a61318f56d45f33e5b428e67d9f5857c
+34. final ettin150m-nli · xxparthparekhxx/openjev-flash at d7a81e0,
+    https://huggingface.co/xxparthparekhxx/openjev-flash/commit/d7a81e0c213c2ee
+    92738012d92411c2ba52085e0
+35. modernbert.py · scairesearch/bertbm-100m at main - Hugging Face,
+    https://huggingface.co/scairesearch/bertbm-100m/blob/main/modernbert.py
+36. config.json · mukaddamzaid/amos-1-mini at ... - Hugging Face,
+    https://huggingface.co/mukaddamzaid/amos-1-mini/blob/340d8af4bfbf420b2cec
+    31b79d27a528958eaf3a/config.json
+37. 因果解码器架构与文本生成实战指南-CSDN博客,
+    https://blog.csdn.net/gitblog_00591/article/details/156330336
+
+===== PAGE 46 =====
+38. https://blog.csdn.net/gitblog_00851/article/details/170695171
+39. https://blog.csdn.net/gitblog_00424/article/details/170713188
+40. LiquidAI/LFM2-1.2B - Hugging Face, https://huggingface.co/LiquidAI/LFM2-1.2B
+41. Download config.json from LiquidAI/LFM2-350M-ENJP-MT,
+   https://huggingface.co/LiquidAI/LFM2-350M-ENJP-MT/blob/11c66d4212206c98a
+   5ac32a58f716cc8e012e99d/config.json
+42. Introducing LFM2: The Fastest On-Device Foundation Models on the,
+   https://www.liquid.ai/blog/liquid-foundation-models-v2-our-second-series-of-ge
+   nerative-ai-models
+43. modeling_lfm2.py · LiquidAI/LFM2-1.2B-Longevity at main,
+   https://huggingface.co/LiquidAI/LFM2-1.2B-Longevity/blob/main/modeling_lfm2.p
+   y
+44. Building Liquid LFM2-VL From Scratch using Pytorch - Medium,
+   https://medium.com/@shanmuka.sadhu/building-liquid-lfm2-vl-from-scratch-usi
+   ng-pytorch-7c6792c39e57
+45. LiquidAI/LFM2.5-Audio-1.5B - hfviewer.com,
+   https://hfviewer.com/LiquidAI/LFM2.5-Audio-1.5B
+46. config.json · madoss/test-LFM2-350M at ... - Hugging Face,
+   https://huggingface.co/madoss/test-LFM2-350M/blame/5bc583cc4e44aaf9d597
+   0bf973e47b51f628bf5c/config.json
+47. https://aws.amazon.com/pt/blogs/aws-brasil/faca-o-deploy-do-seu-primeiro-syst
+   em-one-model-na-aws-com-laya/
+48. jaredpalmer/kev: Jev-like family of decision models built on ... - GitHub,
+   https://github.com/jaredpalmer/kev
+49. Kev - SGLang Documentation,
+   https://lmsysorg.mintlify.app/cookbook/autoregressive/Kev/kev
+50. BioClinical ModernBERT: an example of continued pre-training of,
+   https://huggingface.co/blog/thomas-sounack/bioclinical-modernbert-tutorial
+51. Duplicate from MahmoodAnaam/ModernBERT-large - Hugging Face,
+   https://huggingface.co/roadrage10/ModernBERT-large/commit/50edfcbefba9979
+   942dcec6a47200bf48a1c3a91
+52. jhu-clsp/ettin-encoder-150m - Hugging Face,
+   https://huggingface.co/jhu-clsp/ettin-encoder-150m
+53. Encoders vs Decoders: the Ettin Suite - a jhu-clsp Collection,
+   https://huggingface.co/collections/jhu-clsp/encoders-vs-decoders-the-ettin-suit
+   e
+54. PaddleNLP 中的DeBERTa 模型集合：架构解析、配置与实战使用指南,
+   https://blog.csdn.net/gitblog_00189/article/details/157225932
+55. tomaarsen/ettin-encoder-150m-multivector-msmarco32k-3e-5,
+   https://huggingface.co/tomaarsen/ettin-encoder-150m-multivector-msmarco32k
+   -3e-5-20261014/blob/f8f8955d6f8a771674ac58dcdad3ab8b5d02c6ad/config.json
+56. config.json · stefan-it/ettin-encoder-400m-tokenizer-fix at,
+   https://huggingface.co/stefan-it/ettin-encoder-400m-tokenizer-fix/blob/82d97b3
+   ffd00a6612fd360f50884de2e633d875b/config.json
+57. codavidgarcia/mola-150m at fc92bea - Hugging Face,
+
+===== PAGE 47 =====
+   https://huggingface.co/codavidgarcia/mola-150m/commit/fc92bea8ec5240050ae
+   0eb52248187a198e9ea04
+58. 手把手教你用Ratchet构建Phi3模型浏览器端应用：跨平台AI推理的,
+   https://blog.csdn.net/gitblog_00660/article/details/151479689
+59. Duplicate from microsoft/deberta-v3-small · zhihuiwu123/deberta-v3,
+   https://huggingface.co/zhihuiwu123/deberta-v3-small/commit/48279c1729ce2750
+   b3bfbf74df6054433b701231
+60. 为什么bge-m3-zeroshot-v2.0 能读懂8192 tokens？上下文窗口与长,
+   https://blog.csdn.net/gitblog_00218/article/details/168659561
+61. [Performance] WebGPU EP: Conv3D uses a naive per-element,
+   https://github.com/microsoft/onnxruntime/issues/34087
+62. When Your AI Says “I'm Sure,” Check Whose Sure It Is - Medium,
+   https://medium.com/@mbonsign/when-your-ai-says-im-sure-check-whose-sure
+   -it-is-1900834561a5
+63. https://blog.csdn.net/gitblog_00647/article/details/168884086
+64. Implement experimental DP4a in Tint [42250522] - Chromium Issue,
+   https://issues.chromium.org/42250522
+65. [Web] WebGPU DP4A MatMulNBits gives wrong FP16 results on,
+   https://github.com/microsoft/onnxruntime/issues/34078
+66. [Web] I wonder why wgsl matmul kernel does not use subgroup,
+   https://github.com/microsoft/onnxruntime/issues/26790
+67. bug: Metal backend produces garbage output on AMD discrete,
+   https://github.com/ggml-org/llama.cpp/issues/19563
+68. Subgroup functionality should require the subgroups enable,
+   https://github.com/gfx-rs/wgpu/issues/8202
+69. Subgroup Implementation Tracking Issue · Issue #5555 · gfx-rs/wgpu,
+   https://github.com/gfx-rs/wgpu/issues/5555
+70. Learning wgpu-hal - help - The Rust Programming Language Forum,
+   https://users.rust-lang.org/t/learning-wgpu-hal/127531
+71. How should I pass f32 push constants? #524 - gfx-rs/wgpu-rs - GitHub,
+   https://github.com/gfx-rs/wgpu-rs/issues/524
+72. Use &[u8] instead of &[u32] for push constants #544 - wgpu-rs - GitHub,
+   https://github.com/gfx-rs/wgpu-rs/issues/544
+73. wgpu - Rust - Docs.rs, https://docs.rs/wgpu/
+74. GitHub - ashutosh-rath02/sys1: A small, open 'System One' model,
+   https://github.com/ashutosh-rath02/sys1
+75. ggml-org/llama.cpp b8190 on GitHub - NewReleases.io,
+   https://newreleases.io/project/github/ggml-org/llama.cpp/release/b8190
+76. llama-cpp-pydist · PyPI, https://pypi.org/project/llama-cpp-pydist/
+77. README.md · LJTSG/gemma-webgpu at main - Hugging Face,
+   https://huggingface.co/LJTSG/gemma-webgpu/blame/main/README.md
+78. ssm_conv.wgsl - GitHub,
+   https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-webgpu/wgsl-
+   shaders/ssm_conv.wgsl
+79. https://blog.csdn.net/gitblog_00398/article/details/141076828
+
+===== PAGE 48 =====
+80. Vulkan: vkCreateComputePipelines fails (VK_ERROR_UNKNOWN,
+   https://github.com/ggml-org/llama.cpp/issues/28635
+81. whisper.cpp Vulkan 后端源码解析：一份构建覆盖四大GPU 厂商的,
+   https://blog.csdn.net/gitblog_00374/article/details/151912073?utm_source=gitcod
+   e_aigc_v1_t0&index=next&type=card&
+82. Repository Wiki — generated by GitNexus - GitHub Gist,
+   https://gist.github.com/983033995/658503cd48866b4915c7c7d80f73d79e
+83. llama.cpp-dev/README-todo-counts.md at master · ggml ... - GitHub,
+   https://github.com/ggml-org/llama.cpp-dev/blob/master/README-todo-counts.m
+   d
+84. norm.comp - GitLab,
+   https://gitlab.futo.org/keyboard/transcribe.cpp/-/blob/v0.0.2/ggml/src/ggml-vulka
+   n/vulkan-shaders/norm.comp?ref_type=tags
+85. Vulkan backend, glslc shader compilation errors (Ubuntu 24.04.3),
+   https://github.com/ggml-org/llama.cpp/issues/16860
+86. ollama v0.20.7 最新版更新详解：ROCm 7.2.1、Gemma4 渲染修复与,
+   https://blog.csdn.net/weixin_48502062/article/details/160191540
+87. PowerInfer/ggml-metal.metal at main - GitHub,
+   https://github.com/Tiiny-AI/PowerInfer/blob/main/ggml-metal.metal
+88. compile upstream's kernels as they ship · marcsun13/ggml-attn at,
+   https://huggingface.co/marcsun13/ggml-attn/commit/062729c9f47bb7265e0069
+   edc24e3ca3913572fa
+89. You probably shouldn't train a language model in your browser,
+   https://vin.how/blog/train-a-language-model-in-your-browser
+90. 深度探索Ratchet量化技术：浏览器端高效模型部署的关键-CSDN博客,
+   https://blog.csdn.net/gitblog_01145/article/details/151778554
+91. Releases · Looong01/onnxruntime-rocm-build - GitHub,
+   https://github.com/Looong01/onnxruntime-rocm-build/releases
+92. Vulkan confused by push_constants binding with separate ... - GitHub,
+   https://github.com/gfx-rs/wgpu/issues/6562
+93. Testing – wgpu wiki - Factory.ai,
+   https://factory.ai/open-source-wikis/wgpu?page=how-to-contribute%2Ftesting.
+   md
+94. wgpu/CHANGELOG.md at trunk - gfx-rs - GitHub,
+   https://github.com/gfx-rs/wgpu/blob/trunk/CHANGELOG.md
+95. Vulkan backend is much slower than dx12 (consumed time is 6x!),
+   https://github.com/gfx-rs/wgpu/discussions/9020
+96. Create an IR based MSL Generator [42251016] - Chromium Issue,
+   https://issues.chromium.org/issues/42251016
+97. Limits in wgpu - Rust, https://doc.qu1x.dev/bevy_trackball/wgpu/struct.Limits.html
