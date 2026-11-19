@@ -9,8 +9,8 @@
 
 [![Status](https://img.shields.io/badge/status-RFC%20%2F%20blueprint-22d3ee.svg)](#status)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue.svg)](LICENSE)
-[![Plataforma](https://img.shields.io/badge/plataforma-WebGPU%20%2B%20Wasm32-7c3aed.svg)](#2-a-arquitetura-em-uma-p%C3%A1gina)
-[![Linguagem](https://img.shields.io/badge/n%C3%BAcleo-Rust%20%2B%20WGSL-b7410e.svg)](#6-blueprint-de-implementa%C3%A7%C3%A3o)
+[![Plataforma](https://img.shields.io/badge/plataforma-WebGPU%20%2B%20Wasm32-7c3aed.svg)](#arquitetura)
+[![Linguagem](https://img.shields.io/badge/n%C3%BAcleo-Rust%20%2B%20WGSL-b7410e.svg)](#blueprint)
 [![Documentação](https://img.shields.io/badge/docs-pt--BR-0ea5e9.svg)](#sumario)
 [![PRs](https://img.shields.io/badge/PRs-bem--vindos-22c55e.svg)](CONTRIBUTING.md)
 
@@ -22,7 +22,7 @@
 
 > ### Status deste repositório
 >
-> **RFC / blueprint — v0.1.0 · 2026-11-18.**
+> **RFC / blueprint — documento v0.1.0 · 2026-11-18.** A versão numera **este documento**; não há tag nem release de runtime nesta fase. O runtime será versionado a partir da v0.1.0 real, na Fase 4 do roadmap.
 > Este repositório contém (a) a **memória CoALA local** do projeto e (b) este **documento de arquitetura autossuficiente**, que consolida dois relatórios de pesquisa sobre o motor. **O runtime ainda não foi implementado.** Tudo o que aqui aparece marcado como “proposto”, “alvo” ou “segundo o relatório” é desenho e evidência compilada — não uma API estável nem uma especificação W3C.
 >
 > O objetivo desta fase é permitir que qualquer pessoa entenda, critique e implemente o motor **sem precisar dos PDFs originais**. O código nascerá nas fases seguintes do [roadmap](#roadmap).
@@ -51,6 +51,7 @@
 - [4. Catálogo de modelos SOM](#modelos)
   - [4.1 Matriz comparativa](#matriz)
   - [4.2 Fichas técnicas](#fichas)
+    - [Ettin-150M](#ettin) · [Laya](#laya) · [Von-1.3](#von) · [d1-omni](#d1) · [DeBERTa-v3](#deberta)
   - [4.3 Como escolher um modelo](#escolher)
   - [4.4 Licenças dos modelos](#licencas-modelos)
 - [5. Números: o que a pesquisa mediu](#numeros)
@@ -71,11 +72,14 @@
   - [6.8 Erros, recuperação e privacidade](#erros)
 - [7. Riscos, armadilhas e mitigações](#riscos)
 - [8. Roadmap](#roadmap)
+  - [Fase 0](#fase-0) · [Fase 1](#fase-1) · [Fase 2](#fase-2) · [Fase 3](#fase-3) · [Fase 4](#fase-4) · [Fase 5](#fase-5)
 - [9. Como contribuir](#contribuir)
+  - [9.1 Agora](#contribuir-agora) · [9.2 Código](#contribuir-codigo) · [9.3 Benchmarks](#contribuir-bench) · [9.4 CoALA](#contribuir-coala) · [9.5 Bons primeiros problemas](#contribuir-issues)
 - [10. FAQ](#faq)
 - [11. Glossário](#glossario)
 - [12. Referências](#referencias)
 - [13. Apêndices](#apendices)
+  - [13.A Configuração](#apendice-a) · [13.B Equações](#apendice-b) · [13.C Figuras](#apendice-c) · [13.D Divergências](#divergencias) · [13.E Licença](#apendice-e) · [13.F Tabela 3](#apendice-f)
 
 ---
 
@@ -88,7 +92,7 @@
 | **O que ele faz?** | Recebe um estado, uma pergunta e opções; devolve uma **decisão tipada** (`choice`, `score`, `noul`) calibrada, em **uma única passada** não autorregressiva. |
 | **O que ele não faz?** | Não gera texto token a token, não mantém KV-Cache, não precisa de servidor, não envia dados do usuário para a nuvem. |
 | **Por que agora?** | WebGPU atingiu ~89% de cobertura; modelos SOM de 150M–600M cabem em 80–400 MB; o gargalo deixou de ser memória e passou a ser **computação e estabilidade do driver**. |
-| **Qual o alvo de latência?** | **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo SLA. |
+| **Qual o alvo de latência?** | **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo alvo de p95. |
 | **Como?** | Streaming direto OPFS → VRAM, embeddings fora da GPU, quantização Q8_0/Q4_0, 6 shaders WGSL, calibração in-shader e **micro-readback de 64–256 bytes**. |
 | **Estado?** | **RFC/blueprint.** Memória CoALA + este README. Código ainda não escrito. |
 | **Licença?** | **Apache-2.0** para o código/documentação. Os pesos dos modelos têm licenças próprias. |
@@ -140,7 +144,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 ### 1.2 Nossos pilares
 
 - **Custo marginal zero.** Sites pessoais, ONGs, projetos sem monetização e pequenos negócios devem poder usar inteligência local sem faturas de nuvem.
-- **Operação 100% offline (local-first).** Uma vez que o site e o modelo são armazenados no navegador, a inteligência funciona no meio do oceano ou em modo avião, com privacidade absoluta.
+- **Operação 100% offline (local-first).** Uma vez que o site e o modelo são armazenados no navegador, a inteligência funciona no meio do oceano ou em modo avião, com privacidade absoluta. **Ressalva honesta:** isso vale quando `privacy: 'local-only'`; o fallback remoto é opt-in, emite evento e quebra a promessa — nunca é silencioso.
 - **Um catalisador para a web.** Criamos esta solução no presente para demonstrar aos comitês de padrões (W3C, WHATWG) e aos fabricantes de navegadores que a **inferência de decisão em passada única precisa virar uma API padrão embutida no navegador**, abrindo no futuro o acesso transparente e desimpedido às NPUs e aceleradores do silício.
 - **Engenharia honesta.** Nada de “AGI no browser”. O escopo é deliberadamente estreito: decisões tipadas, modelos compactos, uma passada, latência previsível. O que não couber nesse contrato fica de fora.
 
@@ -214,7 +218,7 @@ flowchart LR
     UI["DOM / UI Thread<br/>som.decide() · som.eval()"] --> W["Web Worker<br/>tokenizer · OPFS · scheduler"]
     W --> F[("OPFS<br/>.sombin em chunks de 8 MiB")]
     W --> R["Rust + wgpu<br/>Wasm32"]
-    R --> G["WebGPU<br/>ComputePass único"]
+    R --> G["WebGPU<br/>3 ComputePasses (chunked)"]
     G --> S1["01 embed_norm_pack"]
     S1 --> S2["02 qkv_rope_quant"]
     S2 --> S3["03 flash_attn_block_diag"]
@@ -232,8 +236,8 @@ flowchart LR
 2. **O Web Worker tokeniza e empacota.** O estado, a pergunta e as opções viram uma sequência única, sem padding, com metadados por token: `option_id` e `effective_pos_id`.
 3. **O OPFS entrega os pesos.** Na primeira visita, o `.sombin` é baixado em chunks de 8 MiB, verificado por BLAKE3 e gravado no OPFS. Nas visitas seguintes, os slabs são lidos do disco local em dezenas de milissegundos.
 4. **O Wasm32 orquestra.** O crate Rust (wgpu apenas com a feature `webgpu`) monta um `CommandEncoder` e um `ComputePass`, usando bind groups pré-alocados e dynamic offsets por camada.
-5. **A GPU executa 6 famílias de kernels.** Embedding + norma, QKV + RoPE + quantização, FlashAttention-2 bidirecional (global ou local), fusão pós-atenção, FFN GeGLU fundida e, por fim, a cabeça de decisão + calibração.
-6. **Só 64–256 bytes voltam.** O último shader faz `LogSumExp`, entropia, temperatura, softmax, `argmax`,confiança e `DecisionPacket`. A CPU lê um único buffer mapeado; não há tensor de logits de megabytes.
+5. **A GPU executa seis shaders (quatro famílias de kernels).** Embedding + norma, QKV + RoPE + quantização, FlashAttention-2 bidirecional (global ou local), fusão pós-atenção, FFN GeGLU fundida e, por fim, a cabeça de decisão + calibração.
+6. **Só 64–256 bytes voltam.** O último shader faz `LogSumExp`, entropia, temperatura, softmax, `argmax`, confiança e `DecisionPacket`. A CPU lê um único buffer mapeado; não há tensor de logits de megabytes.
 7. **A Promise resolve.** O site recebe `{ choice, confidence, probabilities, temperature, latencyMs }` e segue o fluxo — offline, privado, sem fatura.
 
 Em forma de sequência:
@@ -260,15 +264,15 @@ sequenceDiagram
 <a id="fisica"></a>
 ### 2.3 Por que passada única muda a física
 
-Um LLM autorregressivo, no `decode`, processa **1 token por passo** (`S = 1`). A GPU precisa ler todos os pesos para fazer `2 × N_params` FLOPs: é **memory-bound**. Um SOM processa o estado, a pergunta e as opções **de uma vez** (`S = 64…2.048`). As projeções lineares viram **GEMM denso**: cada bloco de pesos carregado na memória partilhada é reutilizado `S` vezes. Para `S ≥ 64`, o regime é **compute-bound**.
+Um LLM autorregressivo, no `decode`, processa **1 token por passo** (`S = 1`). A GPU precisa ler todos os pesos para fazer `2 × N_params` FLOPs: é **memory-bound**. Um SOM processa o estado, a pergunta e as opções **de uma vez** (`S = 128…1.024` no envelope desta v0.1; `L2048` é stress test; `S = 64` é o mínimo para estados curtos). As projeções lineares viram **GEMM denso**: cada bloco de pesos carregado na memória compartilhada é reutilizado `S` vezes. Para `S ≥ 128`, o regime é claramente **compute-bound** (a partir de 64 já tende a ser).
 
-| Modelo (S = 256) | FLOPs lineares | FLOPs de atenção | Total | Intensidade Q4_K | Intensidade Q8_0 | Tempo só de matemática (GPU móvel ~1,2 TFLOPS) |
+| Modelo (S = 256) | FLOPs lineares | FLOPs de atenção | Total | Intensidade Q4_K (reportada) | Intensidade Q8_0 (reportada) | Tempo só de matemática (GPU móvel ~1,2 TFLOPS) |
 |---|---:|---:|---:|---:|---:|---:|
 | Ettin-150M | 57,00 GFLOPs | 3,02 GFLOPs | **60,02 GFLOPs** | 524,1 FLOPs/byte | 352,7 FLOPs/byte | ~50 ms |
 | Von-1.3 (395M) | — | — | **180,93 GFLOPs** | 643,3 FLOPs/byte | — | ~151 ms |
-| d1-omni-600M (tronco) | — | — | **162,75 GFLOPs** | 680,0 FLOPs/byte | — | ~136–154 ms |
+| d1-omni-600M (tronco) | — | — | **162,75 GFLOPs** | 680,0 FLOPs/byte | — | ~139–154 ms |
 
-> Ponto de equilíbrio roofline numa GPU móvel intermediária: **~34 FLOPs/byte** (≈1,2 TFLOPS ÷ ≈35 GB/s). Como os SOMs operam em 350–680 FLOPs/byte, **a largura de banda não é o gargalo** — a ALU, os registos e a estabilidade do driver são. Isso muda todas as decisões de engenharia: quantização, tiling, fusão de kernels e granularidade de submissão.
+> Ponto de equilíbrio roofline numa GPU móvel intermediária: **~34 FLOPs/byte** (≈1,2 TFLOPS ÷ ≈35 GB/s). Como os SOMs operam na casa das **centenas de FLOPs/byte**, a largura de banda não é o gargalo — a ALU, os registos e a estabilidade do driver são. As intensidades acima são as **reportadas**; recalcular com os footprints da Tabela 1 muda os valores (ver nota em [5.1](#roofline)), mas não a tese. Isso muda todas as decisões de engenharia: quantização, tiling, fusão de kernels e granularidade de submissão.
 
 **Corolário prático:** o SLA de 50 ms não é uma promessa genérica. Ele é atingível para modelos de ~150M em sequências de até ~240 tokens em GPUs móveis intermediárias; modelos de 380–395M só cabem no mesmo SLA com ~80–88 tokens. Para sequências maiores, o produto precisa degradar de forma explícita (modelo semente, fallback CPU, ou resposta “não decidir agora”).
 
@@ -335,6 +339,8 @@ Esta seção é o coração do documento. Ela descreve **o que construir**, **po
 | `maxStorageBufferBindingSize` | 100% | 98% | **95%** | 93% | 79% | **16%** |
 | `maxBufferSize` | 100% | 100% | 100% | 99% | 87% | **78%** |
 
+> **Patamares diferentes.** O texto do relatório 1 mede `maxBufferSize` em 100% ≥512 MiB, 97% ≥805 MiB e 78% ≥2 GiB; e `maxStorageBufferBindingSize` em 98% ≥256 MiB, 95% ≥322 MiB, 92% ≥805 MiB e 16% ≥2 GiB. A figura 2 usa os patamares de 128/256/322/644 MiB/1,25/2 GiB. Os números **não são diretamente comparáveis** entre si; o que ambos concordam é: 95% em 322 MiB de binding, 78% em 2 GiB de buffer e o corte de 16% em 2 GiB de binding por D3D12.
+
 A queda para 16% em `maxStorageBufferBindingSize ≥ 2 GiB` tem causa física: os drivers D3D12 no Windows (NVIDIA/AMD) limitam as *Shader Resource Views* de raw buffers logo abaixo de `INT32_MAX` (~2 GiB), mesmo quando `maxBufferSize` é 4 GiB. Por arquitetura:
 
 | Classe | Binding típico | Buffer típico |
@@ -347,9 +353,9 @@ A queda para 16% em `maxStorageBufferBindingSize ≥ 2 GiB` tem causa física: o
 
 **Estratégia: arena de slabs com dynamic offsets.** Em vez de um bind group por camada (28 objetos validados a cada passo) ou de um único buffer que viola o limite de 128 MiB, o runtime usa:
 
-1. **2–3 slabs físicos.** Cada `wgpu::Buffer` tem `STORAGE | COPY_DST` e contém um subconjunto fixo de camadas. Exemplo para Von-1.3 em Q4_K (tronco ~184,1 MB): Slab A = camadas 0–13 (~92,05 MB), Slab B = camadas 14–27 (~92,05 MB), Slab 0 estático = embeddings + cabeça (~28,2 MB). Em Q8_0 (401,09 MB): 3 slabs de ~115 MB.
+1. **2–3 slabs físicos.** Cada `wgpu::Buffer` tem `STORAGE | COPY_DST` e contém um subconjunto fixo de camadas. Exemplo para Von-1.3 em Q4_K de origem, reempacotado para Q4_0 (tronco ~184,1 MB): Slab A = camadas 0–13 (~92,05 MiB), Slab B = camadas 14–27 (~92,05 MiB), Slab 0 estático = `embed_norm` + cabeça (~28,2 MiB); embeddings ficam na Seção A (OPFS). Em Q8_0 (401,09 MiB): 3 slabs de ~115 MiB. **128 MiB é teto, não tamanho fixo.**
 2. **Alinhamento estrito a 256 B.** O bloco de pesos de cada camada (`attn_norm`, `Wqkv`, `Wo`, `mlp_norm`, `Wi`, `Wo`) é concatenado e arredondado para o próximo múltiplo de 256: `layer_stride_bytes`.
-3. **Um bind group por slab, com `has_dynamic_offset: true`.** O binding cobre `layer_stride_bytes`; `min_binding_size` é `layer_stride_bytes` (ex.: ~6,58 MB em Q4_K), muito abaixo de 128 MiB.
+3. **Um bind group por slab, com `has_dynamic_offset: true`.** O binding cobre `layer_stride_bytes`; `min_binding_size` é `layer_stride_bytes` (ex.: ~6,58 MiB em Q4_0/Q4_K de origem), muito abaixo de 128 MiB.
 4. **Travessia sem trocar descritores.** Para a camada `l` no slab `s`, índice local `k = l - l_start(s)`:
    `cpass.set_bind_group(1, &slab_bind_groups[s], &[(k * layer_stride_bytes) as u32])`.
    O navegador apenas soma o offset ao ponteiro base — sem alocação nem revalidação de tabela.
@@ -360,26 +366,47 @@ A queda para 16% em `maxStorageBufferBindingSize ≥ 2 GiB` tem causa física: o
 - se não couber (2–5% de GPUs ARM Mali no piso de 128 MiB), ativa automaticamente a **segmentação em 2–3 slabs** com dynamic offsets;
 - se `requiredLimits` não estiver disponível ou o dispositivo rejeitar, cai para o piso W3C sem falhar.
 
+**Decisões de limites e formatos (o que muda código):**
+
+| Tema | Evidência | Decisão |
+|---|---|---|
+| `maxComputeWorkgroupStorageSize` | 99% ≥32.766 B (~32 KiB); apenas 6% ≥48 KiB | Pedir **32 KiB** no `requiredLimits`; fallback 16 KiB. O shader 03 usa ~8 KiB, mas o GEMM com duplo buffer pode precisar de mais |
+| `maxStorageBuffersPerShaderStage` | 100% ≥8; 99% ≥10; 81% ≥16 | Pedir **16** quando disponível; manter o layout em ≤8 para o piso |
+| Limites desconhecidos no Chrome 133+ | Um limite desconhecido pode ir como `undefined` em `requiredLimits` sem quebrar `requestDevice()` | Não falhar se o navegador não reconhecer um limite; validar depois com `adapter.limits` |
+| FP8 (E4M3/E5M2) | WGSL v1 só tem f32/i32/u32/f16; sem tipos ou instruções de matriz FP8 | **Descartar FP8**; não está no caminho de execução |
+| K-quant em mobile | Dimensity 7300: **43 tok/s** em prompt com K-quant vs **121 tok/s** em Q4_0 (2,8×); Pooled.run converte K-quant→Q8_0 no load | Q8_0/Q4_0 no runtime; Q4_K só como origem |
+| Repack Q4_0 | Nibbles em `u32` contíguos + escalas f16: leituras coalesced de 128 bits por faixa de 64 threads = **2,2×** e **−10%** de tráfego | Implementar o repack no conversor, não no shader |
+| Tensores sensíveis | ShortConv, todos os RMSNorm (`operatorNorm`, `ffnNorm`, `qNorm`, `kNorm`, `embeddingNorm`) e os 2 blocos de decisão | Manter em **Q8_0/FP16**, nunca Q4 |
+| Memória UMA | Tiger Lake: 5,1 GB → **3,2 GB** ao escrever direto no `GPUBuffer`, com ~150 B de handle no Wasm | Streaming direto; nunca materializar pesos no heap Wasm |
+| VRAM observável | A spec **não expõe** VRAM total/livre (anti-fingerprinting; `gpuweb#5505` aberta; `requestAdapterInfo().memoryHeaps[]` experimental) | Orçamentos da tabela são **empíricos**; `navigator.deviceMemory` é RAM do dispositivo, não VRAM |
+| Relaxed SIMD | Chrome 114+, Edge, Firefox 128+ (incl. Android 154); Safari atrás de flag em 2026 | Escolher build `relaxed-simd` em Chrome/Firefox e `simd128` em Safari |
+| Autotune | CubeCL/Pooled.run escolhem `workgroup_size` no arranque | Medir 2–3 variantes por dispositivo na primeira execução e cachear o resultado |
+| Candle | Sem backend WebGPU; no browser só CPU Wasm (2–5 tok/s em LLM; 50–100 ms em BERT pequeno) | Não é concorrente direto; citar como limite do ecossistema Rust |
+
 **O offload de embeddings, em números.** Num SOM de passada única **não existe LM Head** sobre todo o vocabulário: a tabela de embeddings é consultada uma única vez, antes da camada 0, para converter os `S` IDs em vetores de dimensão `H`. Manter `vocab_size × H` na VRAM é desperdício puro.
 
 | Modelo | Vocabulário | Embeddings | % dos pesos | VRAM economizada | Backbone em Q8_0 |
 |---|---:|---:|---:|---:|---:|
-| Ettin-150M | 50.368 | 38,68M | 25,8% | ~39 MB | **112,8 MB** |
-| Laya-Multilingual | **256.000** | **196,61M** | **61,1%** | **~199 MB** | **127,1 MB** |
-| Von-1.3 | 50.368 | 51,58M | 13,1% | ~52 MB | 348,0 MB (com cabeça) |
-| d1-omni-600M (tronco) | 65.536 | 67,11M | 17,6% | ~65 MB | 317,8 MB (com cabeça) |
+| Ettin-150M | 50.368 | 38,68M | 25,8% | ~39 MiB | **112,8 MiB** |
+| Laya-Multilingual | **256.000** | **196,61M** | **61,1%** | **~199 MiB** | **127,1 MiB** |
+| Von-1.3 | 50.368 | 51,58M | 13,1% | ~52 MiB | 348,0 MiB (com cabeça) |
+| d1-omni-600M (tronco) | 65.536 | 67,11M | 17,6% | ~68 MiB | 317,8 MiB (com cabeça) |
 
-O efeito transformador: **Laya e Ettin passam a caber inteiros em um único slab de 128 MiB em Q8_0**, eliminando a necessidade de Q4_K e preservando a calibração. Para `S ≤ 512`, o micro-tensor de embeddings ativos é `512 × 768 × 2 B = 768 KB` — ruído perto dos 127 MB do backbone.
+O efeito transformador: **o backbone + cabeça do Laya e o backbone do Ettin cabem num único slab de 128 MiB em Q8_0**, eliminando a necessidade de Q4_K e preservando a calibração. A tabela de embeddings **continua no OPFS/Worker**; só os `S` vetores ativos sobem. Para `S ≤ 512`, o micro-tensor é `512 × 768 × 2 B = 768 KB` — ruído perto dos 127 MiB do backbone. **Cuidado com a margem:** 127,1 MiB = 133,2 MB, apenas **0,74%** abaixo de 128 MiB (134.217.728 B); qualquer padding de 256 B por tensor pode consumir essa folga. O Laya está *no limite*, não confortável.
 
-**Buffers de ativação (pré-alocados, sem alocação por inferência):**
+> **Unidades.** As colunas “MB” das tabelas de footprint são **MiB** (1 MiB = 1.048.576 B), salvo indicação. O limite W3C é 128 MiB = 134.217.728 B. Onde a fonte diz “150,99 MB” para o Ettin completo, isso é 150,99 MiB; o cálculo a partir de 149,01M parâmetros × 1,0625 B/param dá 158,3 MB = 151,0 MiB. A Tabela 1 ([5.2](#vram)) é a canônica; a Tabela 2 é a leitura da figura e tem ~10% de diferença no Q4_K do Ettin (ver [13.D](#divergencias)).
+
+**Buffers de ativação (pré-alocados, sem alocação por inferência; `S_max = 1.024`):**
 
 | Buffer | Tamanho | Uso |
 |---|---:|---|
-| `act_buf_a` | `N_max × H × 4 B` (ex.: 8192 × 1024 × 4 = **32 MiB**) | Residual principal do Transformer |
-| `act_buf_b` | idem | Saída normalizada / saída da atenção |
-| `qkv_workspace` | `N_max × 3H × 2 B` (ex.: 8192 × 3072 × 2 = **48 MiB** em f16) | Q, K, V rotacionados por RoPE |
-| `decision_gpu_buf` | **64–256 B** | `DecisionPacket` |
-| `staging_ring[4]` | **256 B cada** | `COPY_DST` + `MAP_READ`; 4 buffers para pipeline de leitura |
+| `act_buf_a` | `1.024 × 1.024 × 4 B` = **4 MiB** | Residual principal do Transformer |
+| `act_buf_b` | idem = **4 MiB** | Saída normalizada / saída da atenção |
+| `qkv_workspace` | `1.024 × 3.072 × 2 B` = **6 MiB** (f16) | Q, K, V rotacionados por RoPE |
+| `decision_gpu_buf` | **1.056 B** (capacidade; pacote comum de 64 B) | `DecisionPacket` completo para Choice até 255 |
+| `staging_ring[4]` | **1.056 B cada** (~4,2 KiB) | `COPY_DST` + `MAP_READ`; 4 buffers para pipeline de leitura |
+
+> **Escopo de sequência.** O `S_max` normativo desta v0.1 é **1.024 tokens** (estado + pergunta + opções). Os buffers acima são dimensionados para isso. Benchmarks com L2048 são **stress tests fora do envelope** e exigem um perfil `S_max=2.048` (8 + 8 + 12 MiB de ativações) ou realocação explícita. O `DecisionPacket` de 1.056 B cobre as 255 opções do contrato JEV; o ring de 256 B do blueprint original só cobria 56 — foi corrigido.
 
 **Orçamentos de VRAM por aba (segundo o relatório):**
 
@@ -407,7 +434,7 @@ O motor precisa de **quatro famílias de kernels** (materializadas em **seis arq
 | **GEMM + fusões** | `02`, `04`, `05` | Projeções lineares e FFN | Tiling 64×64, sub-tiles 4×4/2×4, epilogue fusion |
 | **Cabeça de decisão** | `06_calibrate_readout.wgsl` | Fim do passe | `[MASK]` gather, OptionMarkerScorer, temperatura, softmax, `DecisionPacket` |
 
-**FlashAttention-2 bidirecional.** Para SOMs, a implementação mais eficiente em WGSL é a FA2 adaptada para tiling cooperativo em `var<workgroup>` com **online softmax** em registos. O Flash-Decoding (Split-K) só faz sentido quando `L_Q = 1`; num SOM, `L_Q = S` (64–1.024) × 12–16 cabeças já gera centenas de workgroups e satura a GPU. A atenção clássica materializa `[B, H, S, S]` na VRAM e, em `S = 512`, desperdiça ~67 MB de tráfego global **por camada**; a FA2 evita isso.
+**FlashAttention-2 bidirecional.** Para SOMs, a implementação mais eficiente em WGSL é a FA2 adaptada para tiling cooperativo em `var<workgroup>` com **online softmax** em registos. O Flash-Decoding (Split-K) só faz sentido quando `L_Q = 1`; num SOM, `L_Q = S` (128–1.024) × 12–16 cabeças já gera centenas de workgroups e satura a GPU. A atenção clássica materializa `[B, H, S, S]` na VRAM e, em `S = 512`, desperdiça ~67 MB de tráfego global **por camada**; a FA2 evita isso.
 
 Pseudocódigo do núcleo (por tile de Query, por cabeça):
 
@@ -430,7 +457,7 @@ for (var tile_j = 0u; tile_j < num_kv_tiles; tile_j++) {
 // 5. acc_o /= l_i; escreve em act_buf_b
 ```
 
-Com `head_dim = 64`, o estado por thread exige apenas ~34 floats (face a `array<f32, 1024>` numa implementação FA1), cabendo nos registos sem *spilling*. Nas camadas GQA do d1-omni (16 cabeças Q / 8 KV), duas cabeças Q partilham a mesma KV: `kv_head = q_head >> 1u`.
+Com `head_dim = 64`, o estado por thread exige apenas ~18 floats (16 de saída + 2 escalares) na geometria canônica de Q_tile=16/K_tile=16; se o tile de Query também ficar em registos, ~34. Cabe nos registos sem *spilling* (face a `array<f32, 1024>` numa implementação FA1). Nas camadas GQA do d1-omni (16 cabeças Q / 8 KV), duas cabeças Q compartilham a mesma KV: `kv_head = q_head >> 1u`.
 
 **Máscara bloco-diagonal (invariância à ordem).** O SOM avalia `K` opções no mesmo passe. Para que cada opção não “veja” as outras:
 
@@ -463,25 +490,27 @@ out = out_proj(y) + x                      // residual
 
 O kernel WGSL mantém `B`, `C`, `x_in` e o estado da convolução em `var<workgroup>`; `operatorNorm`, `RMSNorm`, a convolução e as projeções são fundidas para evitar ida e volta à VRAM.
 
-**GEMM tiled 64×64.** Cada workgroup `@workgroup_size(16, 16)` calcula um bloco 64×64 da saída, carregando cooperativamente fatias `64×16` de A e `16×64` de B para `var<workgroup>`, sincronizadas por `workgroupBarrier()`. Cada carga da memória partilhada alimenta ~16 multiplicações-acumulações em registos.
+**GEMM tiled 64×64.** Cada workgroup `@workgroup_size(16, 16)` calcula um bloco 64×64 da saída, carregando cooperativamente fatias `64×16` de A e `16×64` de B para `var<workgroup>`, sincronizadas por `workgroupBarrier()`. Cada carga da memória compartilhada alimenta ~16 multiplicações-acumulações em registos.
 
 - **Sub-tiles 4×4 ou 2×4**, nunca 8×8. Benchmarks (posttrainllm, 2026): 4×4 → 8×8 piora de 1,78 ms para 1,96 ms em 1024×1024 e de 10,15 ms para 11,52 ms em 2048×2048, porque 64 acumuladores estouram o orçamento de registos em GPUs Apple/móveis, causam *spilling* e exigem 16 KB de `var<workgroup>` em vez de 4 KB. Em GPUs onde a ocupação de warps domina, 2×4 supera 4×4.
 - **Acumuladores escalares nomeados**, nunca `array<f32, 16>` indexado por variável. O indexamento variável causou **3× de atraso** por *spilling* no Pooled.run e é o gatilho direto do bug `DXGI_ERROR_DEVICE_HUNG` em NVIDIA Lovelace sob D3D12.
 - **Cargas vetoriais de 128 bits** (`vec4<f32>`): 1,37× mais rápidas que cargas escalares em matrizes 2048×2048.
+
+**Subgrupos e packing de int8.** Com `enable subgroups;` (Chrome 134+), use `subgroupAdd`, `subgroupMax`, `subgroupBroadcastFirst` e `subgroupShuffleXor` para reduções de norma/softmax e broadcast de escalas; o ganho medido é **2,3×–2,9×** em GEMV/reduções face a implementações sem subgrupos. Para quantizar o bloco de ativação de 32 valores em 8 palavras `u32`, use `pack4xI8Clamp`/`pack4xI8`/`unpack4xI8`; os pesos Q8_0 já chegam como 8 `u32` e o loop interno faz 8 `dot4I8Packed`, acumulando em `i32` e escalando por `scale_act * scale_weight` em f32. **Nunca** chame `subgroupMax`/`subgroupAdd` sobre `vec4<f16>` (bug AMD RDNA1); reduza in-lane para f32 escalar primeiro.
 
 **Cabeça de decisão e calibração in-shader.** O último shader recolhe as representações nas posições dos marcadores `[MASK]` (Laya/Von) ou aplica os 2 blocos de decisão (d1-omni), calcula os logits de cada opção, divide pela temperatura específica do tipo de pergunta embutida nos metadados do `.sombin`, executa o softmax em **f32 estrito** e escreve os 64–256 bytes finais.
 
 **Quatro armadilhas de portabilidade entre Tint (Chromium), Naga (Firefox/wgpu) e WebKit MSL (Safari):**
 
 1. **Correspondência estrita de modo de acesso.** `var<storage, read>` no shader com um layout `buffer: { type: "storage" }` (leitura-escrita) no host **não** gera erro de validação no Chromium/Metal; retorna dados corrompidos silenciosamente. O layout tem de declarar `read_only` exatamente como o shader.
-2. **Proibição de escritas parciais em `var<workgroup> array<vec4<f32>>` no Metal.** Escrever um componente individual de um `vec4` em memória partilhada apaga as escritas de threads vizinhas em GPUs Apple. Escreva o `vec4` completo ou use arrays escalares.
+2. **Proibição de escritas parciais em `var<workgroup> array<vec4<f32>>` no Metal.** Escrever um componente individual de um `vec4` em memória compartilhada apaga as escritas de threads vizinhas em GPUs Apple. Escreva o `vec4` completo ou use arrays escalares.
 3. **Sem ponteiros de storage em argumentos de função.** Passar ponteiros de storage buffer como parâmetros é inseguro no Safari; gere funções auxiliares por buffer no template WGSL.
 4. **`enable subgroups;` não é portátil.** O Naga nativo (wgpu) rejeita a diretiva mesmo com `Features::SUBGROUP` ativo; o Dawn/Firefox exige a linha. O carregador remove ou mantém a linha conforme `cfg!(target_arch = "wasm32")`. Subgroups são **otimização opcional** (69,54% de suporte; Safari não expõe), nunca requisito.
 
 <a id="calibracao"></a>
 ### 3.4 Calibração no shader e micro-readback
 
-**O problema do readback.** Em motores convencionais, a GPU transfere o tensor de saída do encoder (`[N, H] = 1024 × 1024 × 4 = 4 MiB`) para a CPU, que extrai os `[MASK]`, executa a cabeça e aplica softmax/calibração. No navegador, `mapAsync` custa **~2 ms por leitura no Chrome** (até ~11 ms em pipelines não otimizados) e cada transferência atravessa o IPC Renderer ↔ GPU. Ler 4 MiB por decisão é inviável.
+**O problema do readback.** Em motores convencionais, a GPU transfere o tensor de saída do encoder (`[N, H] = 1024 × 1024 × 4 = 4 MiB`) para a CPU, que extrai os `[MASK]`, executa a cabeça e aplica softmax/calibração. No navegador, `mapAsync` custa **~2 ms por leitura no Chrome** (até ~11 ms em pipelines não otimizados) e cada transferência atravessa o IPC Renderer ↔ GPU. Ler 4 MiB por decisão custa **~15 ms** só de transferência/IPC (relatório 2) — é inviável para o SLA.
 
 **A solução.** Todo o pós-processamento ocorre no **shader 06**, despachado com `dispatch_workgroups(1, 1, 1)` (1 workgroup de 256 threads):
 
@@ -523,7 +552,7 @@ O kernel WGSL mantém `B`, `C`, `x_in` e o estado da convolução em `var<workgr
   ```
   Com `--noul-decision raw`, retorna a posterior calibrada sem banda.
 - **Laya.** A temperatura do bucket `choice:11+` vem como **0.1006** e exige `clamp(T, 0.5, 5.0)`; `act_probability` está saturada em 1,0 (issue #185; AUROC 0,30) e deve ser ignorada. A confiança é `p1 - p2`.
-- **d1-omni-600M.** Temperaturas por formato embutidas no GGUF: `choice` 1,7465 a 1,1751; `noul` 1,6663; `score` 1,7301 / 1,0. Aplicar a temperatura correta por bucket é obrigatório; a média global degrada o ECE.
+- **d1-omni-600M.** Temperaturas por bucket no `config.json` oficial (consultado em 2026-11-19): `choice:2 = 1.7465`, `choice:3-5 = 1.3999`, `choice:6-10 = 1.1751`, `choice:11+ = 1.3725`; `noul:2 = 1.6663`; `score:3-5 = 1.7301`, `score:6-10 = 1.0`. O relatório 2 listava apenas “1,7465 a 1,1751”; a lista completa está no config. Aplicar a temperatura correta por bucket é obrigatório; a média global degrada o ECE.
 - **Ettin/TS-Ettin.** Cabeça tipada sobre pooled/span outputs; a calibração é a da cabeça (não há temperatura dinâmica obrigatória). A referência INT8 preserva a decisão: 0,704 de acurácia vs. 0,709 em FP32.
 
 > **Regra:** nunca use `f16` para acumuladores de produto escalar, RMSNorm ou reduções de softmax. O f16 é para **armazenamento e transferência**; a acumulação é **f32**. A equipe do Pooled.run comprovou que a acumulação em f16 corrompe os resultados; o d1-omni altera a resposta de topo em 0,8% (texto) e 1,7% (áudio) só por trocar f16 por bfloat16.
@@ -547,6 +576,7 @@ Conclusão: **a contagem de dispatches é um gargalo de primeira ordem**. É por
 
 - acumule diretamente no residual (`y += W * x`) nas projeções de saída de atenção/convolução e FFN down;
 - funda as projeções `gate` e `up` com a ativação GeGLU/SwiGLU **antes** de escrever na memória global;
+- na FFN do ModernBERT-large (`N=1024`, `I=2624`), materializar `[1024, 5248]` custa **21,5 MB em FP32 / 10,75 MB em FP16 por camada**; a fusão GeGLU+Wo corta **> 2/3** do tráfego da FFN;
 - no Pooled.run, isso eliminou **128 dispatches por passo** e acelerou 1,4× no Vulkan.
 
 **Chunked submit em 3 blocos.** Mesmo com fusão, um único `queue.submit()` com ~90 dispatches é perigoso. Divida o passe em **3 submissões** (uma a cada 7–8 camadas). Isso resolve três falhas ao mesmo tempo:
@@ -555,12 +585,14 @@ Conclusão: **a contagem de dispatches é um gargalo de primeira ordem**. É por
 2. **`DXGI_ERROR_DEVICE_HUNG` no D3D12.** Um kernel que retém **> 1.652 inteiros de 32 bits (6.608 bytes) por thread** em arrays de escopo de função/`var<private>` indexados dinamicamente, seguido de outro dispatch no mesmo `submit()`, reseta o driver em GPUs NVIDIA Lovelace (RTX 4050/4070). Inserir uma fronteira de `queue.submit()` após o kernel pesado impede 100% da falha.
 3. **Compositor starvation.** Agrupar tudo monopoliza a GPU e impede o compositor de intercalar a renderização: o pior frame salta de **9,40 ms** para **166,60 ms**, congelando scroll, animações CSS e toque. Com 3 submits, o navegador desenha frames intermédios a 60 FPS.
 
-**Ring de readback.** Um buffer em `mapAsync()` não pode ser reutilizado pela GPU até `unmap()`. O runtime pré-aloca um **anel de 4 staging buffers de 256 bytes** (`COPY_DST | MAP_READ`), permitindo enfileirar uma nova decisão enquanto a anterior ainda está sendo lida pelo JavaScript.
+> **Decisão de arquitetura: 3 submits, um `ComputePass` por chunk.** O relatório 2 descreve o ideal de overhead como **um único** `CommandEncoder`/`ComputePass`/`queue.submit()` com barreiras automáticas entre dispatches. O relatório 1 documenta três falhas de produção desse modelo (device lost, D3D12 hang e compositor starvation). Este projeto adota **3 submissões** (7–8 camadas cada) e um `ComputePass` por chunk. O custo extra é de ~2 × 30–95 µs de dispatch — desprezível face a 50–150 ms de matemática — e compra estabilidade. O modo `single-submit` pode existir como opt-in de benchmark em desktop, **nunca como default**. Ver [13.D](#divergencias).
+
+**Ring de readback.** Um buffer em `mapAsync()` não pode ser reutilizado pela GPU até `unmap()`. O runtime pré-aloca um **anel de 4 staging buffers de 1.056 bytes** (`COPY_DST | MAP_READ`; o pacote comum de 64–256 B ocupa só o prefixo), permitindo enfileirar uma nova decisão enquanto a anterior ainda está sendo lida pelo JavaScript.
 
 **Proibição de `createBuffer` em runtime.** Criar/destruir um `GPUBuffer` a cada leitura ou frame custa **0,3–1,2 ms por alocação** e causa fugas invisíveis de VRAM que o GC do JS não recolhe até `buffer.destroy()`. Pré-aloque no arranque:
 
 - pool estático de ativações em **ping-pong** (`[S_max, H]`), custo de alocação ~0,01 ms;
-- ring de 3–4 staging buffers de 256 B;
+- ring de 3–4 staging buffers de 1.056 B;
 - slabs de pesos imutáveis.
 
 **Upload sem tocar no heap Wasm.** No carregamento inicial, leia cada chunk de 8 MiB do OPFS diretamente para um `Uint8Array` pré-alocado no JS (ou use `mappedAtCreation: true` na criação do slab), e chame `device.queue.writeBuffer()` sem copiar os 8 MiB para `WebAssembly.Memory`. Em dispositivos UMA, isso evita duplicar a pegada e é a diferença entre rodar e ser morto pelo Jetsam.
@@ -578,6 +610,8 @@ Conclusão: **a contagem de dispatches é um gargalo de primeira ordem**. É por
 - `Features::PUSH_CONSTANTS` (128 B) para injetar `layer_idx`, `seq_len`, `state_len`, `num_options`, `is_global_layer`, `rope_theta`, `norm_eps`, `weight_base_offset` sem `UniformBuffer` por dispatch;
 - `Features::BUFFER_BINDING_ARRAY` / bindless para um slab monolítico;
 - `SPIRV_SHADER_PASSTHROUGH` (Vulkan) e kernels MSL (`simdgroup_matrix`) para Tensor Cores/WMMA, quando disponíveis.
+
+**Cooperative matrix, em concreto.** No caminho Vulkan, inspecione `wgpu::CooperativeMatrixProperties`, compile `mul_mm_cm2.comp` e `flash_attn_cm2.comp` (portados do `ggml-vulkan`) com `glslc` e `GL_KHR_cooperative_matrix`, e carregue os bytes com `device.create_shader_module_spirv(&ShaderModuleDescriptorSpirV { ... })`. No caminho Apple (Apple7+/M1–M5), use `simdgroup_half8x8` e `simdgroup_multiply_accumulate` (como no `kernel_mul_mm` do `ggml-metal.metal`) para multiplicar submatrizes 8×8 em registos. Esses caminhos são **opt-in** e só entram quando `adapter.features()` confirma o suporte; o fallback WGSL puro continua sendo o default.
 
 <a id="carregamento"></a>
 ### 3.6 Carregamento, Core Web Vitals e fallback
@@ -609,55 +643,62 @@ Um SOM não é “um BERT com uma cabeça”. As famílias abaixo têm topologia
 |---|---:|---|---|---|
 | **ModernBERT-base / Ettin-150M** | **150,0M** (38,68M / 111,32M) | 22 camadas · H=768 · I=1.152 (GeGLU) · 12 cabeças (d_h=64) · RoPE θ=160.000 · vocab 50.368 · G-L-L: **8 globais** (0,3,6,9,12,15,18,21) + **14 locais** W=128 · contexto 8.192 | Cabeça tipada (TS-Ettin-150M ou reranker) sobre pooled/span outputs para `choice`, `noul`, `score` | **Ativo e recomendado** · Apache-2.0 / MIT · variantes 17M, 32M, 68M para cold-start |
 | **Laya-Multilingual (mmBERT-base)** | **322,0M** (196,61M / 125,39M) | 22 camadas mmBERT-base · H=768 · I=1.152 · G-L-L 8 globais / 14 locais W=128 · **vocab 256.000** (Gemma 2) · +2 camadas Transformer de decisão | Marcadores `[MASK]` por opção (`[CLS] question [SEP] [MASK] opt1 … [SEP] state [SEP]`) · `head_max_len=256` · temperatura `choice:11+` = 0.1006 → **clamp [0.5, 5.0]** · `act_probability` saturada (issue #185; AUROC 0,30) | Ativo · Apache-2.0 · 100+ idiomas |
-| **Von-1.3 (ModernBERT-large)** | **395,0M** (51,58M / 343,42M) | 28 camadas · H=1.024 · I=2.624 (GeGLU) · 16 cabeças (d_h=64) · vocab 50.368 · G-L-L: **10 globais** + **18 locais** W=128 · contexto 512 (janela 8.192) | Option-Marker (`[MASK]` antes de cada opção) · perda dual RLCD · temperature scaling pós-treino · calibração dinâmica por entropia | **Descontinuado** · pesos arquivados (`wfzyx/von`) · sofre colapso de modo fora da distribuição |
-| **LiquidAI d1-omni-600M (tronco)** | **380,73M** no tronco (67,11M / 313,62M); **587M** com visão+áudio | LFM2.5-Encoder-350M · **16 camadas** · H=1.024 · SwiGLU com `ff_dim=4608` · vocab 65.536 · contexto 16.384 · **10 LFM2BiShortConv** + **6 GQA** (8 cabeças KV) · qNorm/kNorm RMSNorm · 2 blocos de decisão | 2 blocos dedicados (`lfm2.decision.block_count=2`) · temperaturas por formato no GGUF: `choice` 1,7465→1,1751; `noul` 1,6663; `score` 1,7301/1,0 · 0 tokens gerados | **Ativo (SOTA multimodal)** · LFM Open License v1.0 · **não suporta bfloat16** em GPU |
+| **Von-1.3 (ModernBERT-large)** | **395,0M** (51,58M / 343,42M) | 28 camadas · H=1.024 · I=2.624 (GeGLU) · 16 cabeças (d_h=64) · vocab 50.368 · G-L-L: **10 globais** + **18 locais** W=128 · **contexto de treino 512**; backbone suporta 8.192 | Option-Marker (`[MASK]` antes de cada opção) · perda dual RLCD · temperature scaling pós-treino · calibração dinâmica por entropia | **Descontinuado** · pesos arquivados (`wfzyx/von`) · sofre colapso de modo fora da distribuição |
+| **LiquidAI d1-omni-600M (tronco)** | **380,73M** no tronco (67,11M / 313,62M); **587M** com visão+áudio | LFM2.5-Encoder-350M · **16 camadas** · H=1.024 · SwiGLU com `ff_dim=4608` · vocab 65.536 · contexto 16.384 · **10 LFM2BiShortConv** + **6 GQA** (8 cabeças KV) · qNorm/kNorm RMSNorm · 2 blocos de decisão | 2 blocos dedicados (`lfm2.decision.block_count=2`) · temperaturas por bucket no `config.json`: `choice:2=1.7465`, `choice:3-5=1.3999`, `choice:6-10=1.1751`, `choice:11+=1.3725`; `noul:2=1.6663`; `score:3-5=1.7301`, `score:6-10=1.0` · 0 tokens gerados | **Ativo (SOTA multimodal)** · LFM Open License v1.0 · **não suporta bfloat16** em GPU |
 | **DeBERTa-v3-base** | **183,83M** (98,77M / 85,06M) | 12 camadas · H=768 · I=3.072 (GELU) · 12 cabeças · **atenção desemaranhada** (c2p+p2c) · vocab SentencePiece 128.100 | Cabeça customizável; atenção relativa exige gathers por par (i,j) | Viável, mas **preterido** · MIT · 53,7% dos pesos são embeddings |
 | **DeBERTa-v3-large** | **434,01M** (131,70M / 302,31M) | 24 camadas · H=1.024 · I=4.096 · 16 cabeças · atenção desemaranhada | idem | **Preterido** para WebGPU · atenção 154,62 GFLOPs (~3× a híbrida) |
-| **Kev-0.8B** | ~0,8B | Qwen3.5-0.8B + LoRA rank-16 + pointer head | Ponteiro sobre tokens das opções; `T=2,35` | Viável local (~1,5 GB em precisão reduzida) · licença do modelo base |
-| **Bespoke Nimble 9B/27B** | 9B / 27B | Qwen3.5 + LoRA rank-16 | Códigos de token único por opção | **Inviável** para browser/mobile (9,53 GB em Q8_0; 16 GB+ RAM) |
+| **Kev-0.8B** | ~0,8B | Qwen3.5-0.8B + LoRA rank-16 + pointer head | Ponteiro sobre tokens das opções; `T=2,35` | Viável local (~1,5 GB em precisão reduzida; ~3,28 GiB em MXFP8) · licença do modelo base |
+| **Kev 4B / 9B / 27B** | 4B / 9B / 27B | Qwen3.5 + LoRA rank-16 + pointer head | idem | **Inviável** para browser: 9B = 19,59 GiB BF16 / 5,6–6,7 GB nvfp4; 27B = 51–55,56 GiB; alvo L40S/H100/B200 |
+| **Bespoke Nimble 9B/27B** | 9B / 27B | Qwen3.5 + LoRA rank-16 | Códigos de token único por opção | **Inviável** (9,53 GB em Q8_0; 16 GB+ RAM; ~18 GB BF16; 64 GB de RAM no Mac para fusão) |
 
 > **Nota:** “G-L-L” = padrão Global-Local-Local. No ModernBERT, a cada 3 camadas, 1 é global e 2 são locais. No Von-1.3, 10 globais e 18 locais. O número de camadas varia entre as fontes (22 para o base; 28 para o large) — o `.sombin` carrega `num_layers`, `global_attn_every_n` e a lista de camadas globais, em vez de assumir um valor fixo.
 
 <a id="fichas"></a>
 ### 4.2 Fichas técnicas
 
+<a id="ettin"></a>
 #### 4.2.1 Ettin-150M / ModernBERT-base — o “padrão de ouro” para começar
 
 - **Geometria:** 22 camadas, `H=768`, `I=1152` (GeGLU), 12 cabeças de 64 dimensões, vocabulário 50.368, contexto 8.192, RoPE com θ global 160.000 e local 10.000.
 - **Atenção:** 8 camadas globais (0, 3, 6, 9, 12, 15, 18, 21) e 14 locais com janela W=128 (um token vê no máximo 129 posições inclusivas, ±64).
-- **Detalhe de implementação:** o ModernBERT usa **Pre-Norm**, mas a **camada 0 omite a normalização pré-atenção** (`layer_0.attn_norm = None`), porque o tensor já sai normalizado de `embed_norm(tok_embeddings(ids))`. Nas camadas 1–27: `h = h + Attn(attn_norm(h))`; `h = h + MLP(mlp_norm(h))`; no topo, `final_norm(h)`.
+- **Detalhe de implementação:** o ModernBERT usa **Pre-Norm**, mas a **camada 0 omite a normalização pré-atenção** (`layer_0.attn_norm = None`), porque o tensor já sai normalizado de `embed_norm(tok_embeddings(ids))`. Nas camadas 1–21: `h = h + Attn(attn_norm(h))`; `h = h + MLP(mlp_norm(h))`; no topo, `final_norm(h)`.
 - **FFN:** `mlp.Wi` projeta de 768 para 2×1152 = 2304 canais, divide em `x_val` e `gate` de 1152, calcula `GeGLU(x_val, gate) = GELU(x_val) * gate` e projeta de volta para 768 via `mlp.Wo`.
-- **Por que é o padrão:** o backbone de 111,32M parâmetros ocupa **112,8 MB em Q8_0** — cabe inteiro num slab de 128 MiB, sem Q4_K, preservando a calibração e maximizando o prefill. A família Ettin cobre 17M/32M/68M/150M/400M/1B com a mesma receita; o Ettin-17M é o modelo semente ideal.
-- **Qualidade:** a suíte Ettin supera o ModernBERT em GLUE (88,9 vs. 88,4 no Base; 90,8 vs. 90,4 no Large) e já serve de base a SOMs abertos (`openjev-flash`, `mola-150m`).
+- **Por que é o padrão:** o backbone de 111,32M parâmetros ocupa **112,8 MiB em Q8_0** — cabe inteiro num slab de 128 MiB, sem Q4_K, preservando a calibração e maximizando o prefill. A família Ettin cobre 17M/32M/68M/150M/400M/1B com a mesma receita; o Ettin-17M é o modelo semente ideal.
+- **Qualidade:** a suíte Ettin (treinada em **2 biliões de tokens abertos** pela Johns Hopkins CLSP) supera o ModernBERT em GLUE (88,9 vs. 88,4 no Base; 90,8 vs. 90,4 no Large) e já serve de base a SOMs abertos (`openjev-flash`, `mola-150m`).
 - **Risco:** a cabeça TS-Ettin é um artefato separado; o `.sombin` precisa empacotar `option_marker.pt`/head weights e a calibração correspondente. Sem a cabeça correta, o backbone é só um encoder.
 
+<a id="laya"></a>
 #### 4.2.2 Laya-Multilingual — o caso de estudo do offload de embeddings
 
 - **Checkpoints:** `laya` (inglês, 421M, ~808 MB em disco), `laya-typed-decisions` (inglês + RLCD, 421M) e `laya-multilingual` (100+ idiomas, 322M, ~647 MB em disco). Licença Apache-2.0.
 - **Cabeça (inglês):** backbone ModernBERT-large (395M) + **26M** de cabeça construída de raiz: `type_emb` para `choice`/`score`/`noul`, **2 camadas Transformer de decisão** (FFN com ReLU, herdada de `nn.TransformerEncoderLayer`), `OptionMarkerScorer` e `act_head` que consome 4 features: probabilidade Top-1, margem Top-1 − Top-2, entropia normalizada e número de opções K.
 - **Multilíngue:** troca o backbone por **mmBERT-base** (22 camadas, H=768, vocab 256.000, contexto 8.192 via RoPE) e é **2,2× mais rápido** (32,8 ms numa T4; 7,4–13,4 ms num M3 Max via Metal).
-- **O problema:** 256.000 × 768 = **196,61M** parâmetros só de embeddings = **61,1%** do modelo. Na VRAM, isso são ~199 MB para ler algumas centenas de linhas por inferência. Com offload para OPFS/Worker, o backbone + cabeça (125,39M) cabe em **127,1 MB em Q8_0** — um único slab.
+- **O problema:** 256.000 × 768 = **196,61M** parâmetros só de embeddings = **61,1%** do modelo. Na VRAM, isso são ~199 MiB para ler algumas centenas de linhas por inferência. Com offload para OPFS/Worker, o backbone + cabeça (125,39M) cabe em **127,1 MiB em Q8_0** — um único slab.
 - **Armadilha de calibração:** a temperatura do bucket `choice:11+` é **0.1006**; sem `clamp(T, 0.5, 5.0)`, o softmax vira um argmax quase duro e a confiança deixa de ser calibrável. `act_probability` está saturada em 1,0 (issue #185; AUROC 0,30) e deve ser ignorada.
 - **Layout de tokens:** `[CLS] question [SEP] [MASK] opt1 … [SEP] state [SEP]`; a janela de 1.024 tokens é particionada em `head_max_len=256` para a pergunta/opções e o restante para o estado.
+- **Estados longos:** para > 8.192 tokens, o `laya_mlx` trunca **60% da cabeça / 40% da cauda** (`laya_mlx/common.py`); o mesmo padrão existe no Von. Sem isso, o comportamento acima de `max_seq_len` é indefinido.
 
+<a id="von"></a>
 #### 4.2.3 Von-1.3 — a referência histórica (e por que saiu da matriz)
 
-- **Geometria:** 28 camadas, H=1024, I=2624 (GeGLU), 16 cabeças de 64, vocabulário 50.368, contexto 8.192, sem bias em todas as projeções e LayerNorms (ε=1e-5). Pre-Norm, camada 0 sem `attn_norm`, G-L-L 10 globais (0,3,…,27) + 18 locais W=128.
+- **Geometria:** 28 camadas, H=1024, I=2624 (GeGLU), 16 cabeças de 64, vocabulário 50.368, contexto de treino **512** (`max_position_embeddings`); o backbone ModernBERT suporta até 8.192, mas o checkpoint foi treinado em 512. Sem bias em todas as projeções e LayerNorms (ε=1e-5). Pre-Norm, camada 0 sem `attn_norm`, G-L-L 10 globais (0,3,…,27) + 18 locais W=128.
+- **Histórico:** o `von-1.0` era um classificador NLI derivado do `ModernBERT-large-nli`, com **134 cabeças** de classificação e temperaturas fixas `T=1,0367` (Noul) / `T=1,1692` (Choice). O `von-1.2/1.3` trouxe o Option-Marker com atenção invariante à ordem. O `von-1.3.0` está congelado; os pesos têm SHA `5df8185a4f2327ad0a7cd117cc4f701ac557b9ae`.
 - **Option-Marker em 4 etapas:**
   1. **Pack:** dígitos separados caractere a caractere (`"2026"` → `"2 0 2 6"`) para evitar distorções de magnitude no BPE; literais `[MASK]`/`[SEP]` do usuário neutralizados com zero-width joiners; formato `[CLS] <premissa: state + question> [SEP] [MASK] <opção 0> [MASK] <opção 1> … [SEP]`.
   2. **Máscara + reset de Position IDs** (`independent_options: true`): tokens de uma opção só veem a premissa e a própria opção; são mascarados contra as outras opções e contra o `[SEP]` final. O `position_id` reinicia após a premissa (`pos_id = L_prem` para o `[MASK]`, `L_prem+1` para o primeiro token, etc.), garantindo que as distâncias relativas do RoPE sejam idênticas independentemente da posição da opção. Isso reduziu a inversão de resposta sob permutação no JevBench Hard de **49,5%** (von-1.1) para **0%** (von-1.2/1.3).
-  3. **Extração:** após as 28 camadas, recolhe apenas os K vetores de 1024 dimensões nas posições `[MASK]`. A cabeça `OptionMarkerScorer` aplica `LayerNorm → Linear → GELU → Linear → 1 logit` por vetor.
+  3. **Extração:** após as 28 camadas, recolhe apenas os K vetores de 1024 dimensões nas posições `[MASK]`. A cabeça `OptionMarkerScorer` (~1M parâmetros) aplica `LayerNorm → Linear → GELU → Linear → 1 logit` por vetor.
   4. **Calibração:** entropia normalizada + temperatura dinâmica (fórmula em [3.4](#calibracao)), confiança `p1-p2`, banda de `Noul`.
 - **Status:** o repositório oficial (`wfzyx/von`) arquivou os pesos e recomenda migrar para `LiquidAI/d1-omni-600M`. O Von sofre **colapso de modo** em domínios fora da distribuição. Ele permanece no catálogo como referência e para validação de kernels; **não é alvo de longo prazo**.
 
+<a id="d1"></a>
 #### 4.2.4 LiquidAI d1-omni-600M — o alvo multimodal
 
-O d1-omni é um SOM multimodal de passada única com **587M** parâmetros totais, divididos em três módulos que partilham o tronco de decisão:
+O d1-omni é um SOM multimodal de passada única com **587M** parâmetros totais, divididos em três módulos que compartilham o tronco de decisão:
 
 | Módulo | Parâmetros | Arquitetura | Saída |
 |---|---:|---|---|
 | **Tronco + cabeça de decisão** | **381M** | LFM2.5-Encoder-350M convertido em encoder bidirecional: 16 camadas, H=1024, SwiGLU `ff_dim=4608`, vocab 65.536, contexto 16.384; **10 LFM2ShortConv** + **6 GQA** (16 Q / 8 KV); qNorm/kNorm; 2 blocos de decisão | Logits por opção, 0 tokens gerados |
-| **Torre de visão** | **94M** | SigLIP2: H=768 → MLP 3072 (GELU tanh + LayerNorm) + projetor espacial (`pixel_unshuffle`, 2 lineares 2560→1024) | `[1, 256, 1024]` por crop |
+| **Torre de visão** | **94M** | SigLIP2: H=768 → MLP 3072 (GELU tanh + LayerNorm) + projetor espacial (`pixel_unshuffle`, 2 lineares **2048→1024**; `projector_hidden_size=2048` no config oficial) | `[1, 256, 1024]` por crop |
 | **Torre de áudio** | **112M** | Log-Mel 128 bins + FastConformer de 17 camadas + adaptador linear | `[1, P, 1024]` a cada 80 ms; até 30 s mono 16 kHz |
 
 **Operadores que o WGSL precisa implementar:**
@@ -667,10 +708,11 @@ O d1-omni é um SOM multimodal de passada única com **587M** parâmetros totais
 - `LFM2Attention` (GQA): Q 1024→1024 (16 cabeças D=64), K/V 1024→512 (8 cabeças KV D=64), `q_layernorm`/`k_layernorm` por cabeça antes do RoPE, `out_proj` + residual.
 - `LFM2MLP` (SwiGLU): `ffn_norm` → `w1`/`w3` → `SiLU(w1) * w3` → `w2`; `intermediate_size=6656` com `auto_adjust_ff_dim` resulta em `ff_dim=4608` e ~14,16M parâmetros de MLP por camada; tronco base ~354,46M, ~381M com a cabeça.
 
-**Precisão e custo:** a Liquid AI recomenda **não usar bfloat16** (altera a resposta vencedora em 0,8% do texto / 1,7% do áudio); use **float16 com acumulação float32** ou Q8_0. No ONNX WebGPU: grafo textual completo 410 MB em Q8 / 240 MB em Q4; visão FP16 190 MB; áudio Q8 170 MB; `embed_tokens` FP16 130 MB; stack completa ~670 MB, com **50 ms para áudio + 60 ms por pergunta** num M3 Pro.
+**Precisão e custo:** a Liquid AI recomenda **não usar bfloat16** (altera a resposta vencedora em 0,8% do texto / 1,7% do áudio); use **float16 com acumulação float32** ou Q8_0. No ONNX WebGPU: grafo textual completo 410 MB em Q8 / 240 MB em Q4; **visão FP16 190 MB** (quantizar a visão para 8 bits desvia as probabilidades em até **0,08**); áudio Q8 170 MB; `embed_tokens` FP16 130 MB; stack completa ~670 MB, com **50 ms para áudio + 60 ms por pergunta** num M3 Pro. O `norm_eps` do LFM2 é 1e-5/1e-6 e o `ff_dim` efetivo é `int(2·6656/3)` alinhado a múltiplos de 256 = **4608**.
 
 **Por que é atraente:** cobre `choice`, `noul`, `score` e modalidades (texto, imagem, áudio) com um único tronco; é o sucessor oficial recomendado do Von. **Por que é difícil:** 16 camadas híbridas, três torres, precisão sensível e 587M de parâmetros — o browser mal cabe no orçamento de 1–2 GB numa aba mobile. A estratégia é começar pelo **tronco textual** (380,73M) e adicionar as torres depois.
 
+<a id="deberta"></a>
 #### 4.2.5 DeBERTa-v3 — o contraexemplo didático
 
 - **Base:** 183,83M totais, 85,06M no tronco; 12 camadas, H=768, I=3072, 12 cabeças; vocab SentencePiece 128.100 → **98,77M** de embeddings (53,7% do modelo).
@@ -686,7 +728,7 @@ flowchart TD
     A -->|Não| C{Multilíngue / vocabulário grande?}
     C -->|Sim| D[Laya-Multilingual 322M<br/>offload de embeddings obrigatório]
     C -->|Não| E{Qual o alvo de latência?}
-    E -->|"< 50 ms mobile"| F[Ettin-150M Q8_0<br/>112,8 MB]
+    E -->|"< 50 ms mobile"| F[Ettin-150M Q8_0<br/>112,8 MiB]
     E -->|"< 1 s, primeira visita"| G[Ettin-17M semente<br/>~9,5 MB]
     E -->|"Qualidade máxima, desktop"| H[Ettin-400M / Laya-EN 421M]
     F --> I[Se precisar de mais contexto:<br/>reduzir S ou usar fallback]
@@ -697,7 +739,7 @@ flowchart TD
 
 - **Comece pelo Ettin-150M em Q8_0.** É o menor modelo que ainda tem qualidade de encoder moderno, cabe em 128 MiB sem embeddings e tem cabeça tipada pronta.
 - **Use o Ettin-17M como semente.** A primeira decisão chega em < 1 s; o modelo principal baixa em segundo plano. A API deve expor `seedReady` e `fullReady`.
-- **Só ative o offload de embeddings se `vocab_size × H` for > ~15% dos pesos.** No Ettin, o ganho é modesto (~39 MB); no Laya, é transformador (~199 MB).
+- **Só ative o offload de embeddings se `vocab_size × H` for > ~15% dos pesos.** No Ettin, o ganho é modesto (~39 MiB); no Laya, é transformador (~199 MiB).
 - **Não use Q4_K no browser.** O custo de desempacotar escalas de 6 bits em regime compute-bound anula o ganho de memória. Prefira Q8_0 e, quando precisar, Q4_0 reempacotado.
 - **Von-1.3: apenas para pesquisa/compatibilidade.** Pesos arquivados, colapso de modo, sem suporte de longo prazo.
 - **d1-omni: comece pelo tronco textual.** As torres de visão/áudio adicionam 206M de parâmetros e 370 MB; não são necessárias para `choice`/`score`/`noul` de texto.
@@ -734,15 +776,17 @@ Q4_K: 144 B / 256 pesos = 0,5625 B/param
 Q8_0:  34 B /  32 pesos = 1,0625 B/param
 ```
 
-| Modelo | FLOPs @ S=256 | Intensidade Q4_K | Intensidade Q8_0 | FLOPs @ S=1.024 | Tempo de matemática @ S=256 (1,2 TFLOPS) |
+| Modelo | FLOPs @ S=256 | Intensidade Q4_K (reportada) | Intensidade Q8_0 (reportada) | FLOPs @ S=1.024 (não reconciliado) | Tempo de matemática @ S=256 (1,2 TFLOPS) |
 |---|---:|---:|---:|---:|---:|
 | Ettin-150M | **60,02 GFLOPs** (57,00 + 3,02) | **524,1** | **352,7** | 257,30 GFLOPs (225,89 + 31,41) | ~50 ms |
 | Von-1.3 (395M) | **180,93 GFLOPs** | **643,3** | — | 755,38 GFLOPs (702,76 + 52,61) | ~151 ms |
-| d1-omni-600M (tronco) | **162,75 GFLOPs** | **680,0** | — | 614,29 GFLOPs (549,86 + 64,42) | ~136–154 ms |
+| d1-omni-600M (tronco) | **162,75 GFLOPs** | **680,0** | — | 614,29 GFLOPs (549,86 + 64,42) | ~139–154 ms |
 | Laya-Multilingual | — | — | — | 257,30 GFLOPs (225,89 + 31,41) | — |
 | DeBERTa-v3-large | — | — | — | 824,63 GFLOPs (670,01 + 154,62) | — |
 
-**O ponto de equilíbrio.** Uma GPU móvel intermediária entrega ~1,2 TFLOPS efetivos e ~35 GB/s de banda; o *ridge point* roofline é ~34 FLOPs/byte. Como os SOMs operam em **350–680 FLOPs/byte**, a GPU está **10–20× acima do joelho da curva**: o gargalo é ALU/FMA, não DRAM.
+> **Nota de reconciliação (importante).** A coluna `S=1.024` vem da Tabela 1 do relatório 2 e **não é aritmeticamente consistente**: para o d1-omni, 614,29 GFLOPs é menor que `4 × 162,75 = 651,0`, embora todo termo cresça com `S`; no Ettin, `225,89/57,00 = 3,96` (esperado 4) e `31,41/3,02 = 10,4` (esperado ~16). As intensidades 524,1/352,7/643,3/680,0 também não saem de `FLOPs ÷ bytes` com os footprints da Tabela 1 (recalculando com os pesos, o Ettin fica em ~716/379 FLOPs/byte). **Use a coluna `S=256` e a tese “centenas de FLOPs/byte”; não use as intensidades nem `S=1.024` para dimensionar.** Ver [13.D](#divergencias).
+
+**O ponto de equilíbrio.** Uma GPU móvel intermediária entrega ~1,2 TFLOPS efetivos e ~35 GB/s de banda; o *ridge point* roofline é ~34 FLOPs/byte. Como os SOMs operam na casa das **centenas de FLOPs/byte**, a GPU está bem acima do joelho da curva: o gargalo é ALU/FMA, não DRAM. O número exato de FLOPs/byte deve ser recalculado por modelo/dispositivo antes de qualquer decisão de tiling.
 
 **Consequência para o SLA.** Em `S = 256`, mesmo com banda infinita, uma GPU móvel de 1,2 TFLOPS leva ~50 ms só de matemática para o Ettin-150M (~53,6 ms com overhead de dispatch). Para o d1-omni e o Von, ~139–154 ms. Logo:
 
@@ -753,32 +797,44 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 
 **Implicação de produto:** o SLA sub-50 ms é uma promessa **condicional**. O SDK deve medir o dispositivo no preflight e escolher: modelo semente, redução de contexto, fallback CPU ou “não decidir agora”. Prometer 50 ms para qualquer modelo e qualquer contexto é desonesto.
 
+**Tabela 1b — classes de dispositivo e orçamentos** (fonte: relatório 2; bandas são estimativas de arquitetura, não medições do runtime):
+
+| Classe | Banda de memória | VRAM no browser (por aba) | VRAM nativa | Ridge point (1,2–6 TFLOPS) |
+|---|---|---|---|---|
+| **Mobile** (Safari iOS, Chrome Android; S26) | 25–50 GB/s (LPDDR4X/5) a 68–85 GB/s (LPDDR5X flagship) | **~1,5–2,0 GB** antes de OOM/Jetsam | 2–4 GB compartilhados (UMA) | ~14–57 FLOPs/byte |
+| **Notebook iGPU / Apple Silicon UMA** (M1–M4, Iris Xe, Radeon 780M) | 68–120 GB/s (M1/M3 base, DDR5) a 273–546 GB/s (M3 Pro/Max, M4 Max) | **3–4 GB** por aba | 60–75% da RAM unificada (10–12 GB num Mac de 16 GB) | ~10–80 FLOPs/byte |
+| **Desktop dGPU** (RTX 3060–4090, A10G, RX 7900 XTX) | 300–504 GB/s (média/T4/A10G) a 1.008 GB/s (RTX 4090 GDDR6X) | **~4 GB por buffer/aba** | 8–24 GB dedicados | ~6–20 FLOPs/byte |
+
+> O *ridge point* muda com a classe: o número “~34 FLOPs/byte” é o do mobile intermediário (1,2 TFLOPS / 35 GB/s), não uma constante universal. Um desktop com 6 TFLOPS e 150 GB/s tem ridge ~40; uma RTX 4090 com 1.008 GB/s tem ridge muito maior. A conclusão “SOM é compute-bound” vale para os modelos e sequências desta análise, mas **deve ser recalculada por dispositivo**.
+
 <a id="vram"></a>
 ### 5.2 Pegada de VRAM por quantização
 
 **Tabela 1 — parâmetros, FLOPs e footprint a 1.024 tokens** (fonte: relatório 2; `FP16 = 2,0 B/param`, `Q8_0 = 1,0625 B/param`, `Q4_K = 0,5625 B/param`):
 
-| Modelo / backbone | Camadas e topologia | H / I / cabeças | Parâmetros totais (tronco) | FLOPs @1.024 (linear + attn) | FP16 | Q8_0 | Q4_K |
+| Modelo / backbone | Camadas e topologia | H / I / cabeças | Parâmetros totais (tronco) | FLOPs @1.024 (linear + attn) | FP16 (MiB) | Q8_0 (MiB) | Q4_K (MiB, referência) |
 |---|---|---:|---:|---:|---:|---:|---:|
-| ModernBERT-base / Ettin-150M | 22 (8 globais + 14 locais W=128) | 768 / 1152 / 12 | 149,01M (110,33M) | 257,30 (225,89 + 31,41) | 284,22 MB | 150,99 MB | **79,94 MB** |
-| DeBERTa-v3-base | 12 (12 globais disentangled c2p+p2c) | 768 / 3072 / 12 | 183,83M (85,06M) | 246,42 (188,44 + 57,98) | 350,63 MB | 186,27 MB | 98,61 MB |
-| Laya-Multilingual (mmBERT-base) | 22 (8 + 14) + 2 head | 768 / 1152 / 12 | 321,94M (125,33M) | 257,30 (225,89 + 31,41) | 614,05 MB | 326,21 MB | 172,70 MB |
-| LiquidAI d1-omni-600M (texto) | 16 (10 ShortConv + 6 GQA Nkv=8) | 1024 / 4608 / 16 | 381,00M (313,89M) | 614,29 (549,86 + 64,42) | 726,70 MB | 386,06 MB | 204,38 MB |
-| LiquidAI d1-omni-600M (multimodal) | 16 + SigLIP2 + 17 FastConformer | 1024 / 4608 / 16 | 587,00M (519,89M) | 614,29 (+ prefixo de mídia) | 1.119,61 MB | 594,79 MB | 314,89 MB |
-| Von-1.3 / ModernBERT-large / Ettin-400M | 28 (10 + 18) | 1024 / 2624 / 16 | 395,83M (343,20M) | 755,38 (702,76 + 52,61) | 754,99 MB | 401,09 MB | 212,34 MB |
-| Laya-English | 28 (10 + 18) + 2 head | 1024 / 2624 / 16 | 420,78M (369,20M) | 755,38 (+~18,5 head) | 802,58 MB | 426,37 MB | 225,72 MB |
-| DeBERTa-v3-large | 24 (24 globais disentangled) | 1024 / 4096 / 16 | 434,01M (302,31M) | 824,63 (670,01 + 154,62) | 827,81 MB | 439,78 MB | 232,82 MB |
+| ModernBERT-base / Ettin-150M | 22 (8 globais + 14 locais W=128) | 768 / 1152 / 12 | 149,01M (110,33M) | 257,30 (225,89 + 31,41) | 284,22 MiB | 150,99 MiB | **79,94 MiB** |
+| DeBERTa-v3-base | 12 (12 globais disentangled c2p+p2c) | 768 / 3072 / 12 | 183,83M (85,06M) | 246,42 (188,44 + 57,98) | 350,63 MiB | 186,27 MiB | 98,61 MiB |
+| Laya-Multilingual (mmBERT-base) | 22 (8 + 14) + 2 head | 768 / 1152 / 12 | 321,94M (125,33M) | 257,30 (225,89 + 31,41) | 614,05 MiB | 326,21 MiB | 172,70 MiB |
+| LiquidAI d1-omni-600M (texto) | 16 (10 ShortConv + 6 GQA Nkv=8) | 1024 / 4608 / 16 | 381,00M (313,89M) | 614,29 (549,86 + 64,42) | 726,70 MiB | 386,06 MiB | 204,38 MiB |
+| LiquidAI d1-omni-600M (multimodal) | 16 + SigLIP2 + 17 FastConformer | 1024 / 4608 / 16 | 587,00M (519,89M) | 614,29 (+ prefixo de mídia) | 1.119,61 MiB | 594,79 MiB | 314,89 MiB |
+| Von-1.3 / ModernBERT-large / Ettin-400M | 28 (10 + 18) | 1024 / 2624 / 16 | 395,83M (343,20M) | 755,38 (702,76 + 52,61) | 754,99 MiB | 401,09 MiB | 212,34 MiB |
+| Laya-English | 28 (10 + 18) + 2 head | 1024 / 2624 / 16 | 420,78M (369,20M) | 755,38 (+~18,5 head) | 802,58 MiB | 426,37 MiB | 225,72 MiB |
+| DeBERTa-v3-large | 24 (24 globais disentangled) | 1024 / 4096 / 16 | 434,01M (302,31M) | 824,63 (670,01 + 154,62) | 827,81 MiB | 439,78 MiB | 232,82 MiB |
 
-**Tabela 2 — pegada por estratégia de memória** (fonte: figura 1 do relatório 1; sequência de referência diferente da Tabela 1):
+**Tabela 2 — pegada por estratégia de memória** (fonte: figura 1 do relatório 1; valores arredondados; ver conflito abaixo):
 
-| Modelo | Q4_K completo | Q8_0 completo | Q8_0 backbone + offload de embeddings | Ganho vs. Q8_0 completo |
+| Modelo | Q4_K completo (MiB, referência) | Q8_0 completo (MiB) | Q8_0 backbone + offload (MiB) | Ganho vs. Q8_0 completo |
 |---|---:|---:|---:|---:|
-| Ettin-150M / ModernBERT-base | 88,5 MB | 152,0 MB | **112,8 MB** | **−26%** |
-| Laya-Multilingual (322M) | 172,7 MB | 326,3 MB | **127,1 MB** | **−61%** |
-| Von-1.3 (395M) | 211,9 MB | 400,2 MB | **348,0 MB** | **−13%** |
-| LiquidAI d1-omni-600M (tronco) | 204,2 MB | 385,8 MB | **317,8 MB** | **−18%** |
+| Ettin-150M / ModernBERT-base | 88,5 | 152,0 | **112,8** (backbone) | **−26%** |
+| Laya-Multilingual (322M) | 172,7 | 326,3 | **127,1** (backbone+cabeça) | **−61%** |
+| Von-1.3 (395M) | 211,9 | 400,2 | **348,0** (backbone+cabeça) | **−13%** |
+| LiquidAI d1-omni-600M (tronco) | 204,2 | 385,8 | **317,8** (backbone+cabeça) | **−18%** |
 
-**Leitura:** apenas **Ettin-150M (112,8 MB)** e **Laya-Multilingual (127,1 MB)** cabem inteiros num slab padrão de 128 MiB em Q8_0. Von (348 MB) e d1-omni (317,8 MB) exigem 2–3 slabs ou Q4_0/Q4_K — e, no caso do d1, as torres multimodais elevam a stack para 314,89 MB em Q4_K / 594,79 MB em Q8_0.
+> **Conflito de figura:** o Q4_K do Ettin aparece como 88,5 MiB nesta figura e como **79,94 MiB** na Tabela 1 (cálculo a partir de 149,01M × 0,5625 B/param). A diferença de ~10,7% não é explicada por sequência (footprint de pesos não depende de S). A Tabela 1 é a canônica; a Tabela 2 serve para ler a estratégia de offload, não para dimensionar o slab. As colunas são **MiB**.
+
+**Leitura:** o **backbone do Ettin-150M (112,8 MiB)** e o **backbone + cabeça do Laya (127,1 MiB)** cabem num slab padrão de 128 MiB em Q8_0 — as tabelas de embeddings ficam no OPFS. Von (348 MiB) e d1-omni (317,8 MiB) exigem 2–3 slabs ou Q4_0; o Q4_K da tabela é **referência de origem**, não um formato executável no browser. No caso do d1, as torres multimodais elevam a stack para 314,89 MiB em Q4_K / 594,79 MiB em Q8_0.
 
 <a id="latencia"></a>
 ### 5.3 Latência por dispositivo e comprimento de sequência
@@ -810,9 +866,11 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 | Laya-Multilingual | **7,4–13,4 ms** | Apple M3 Max, Metal |
 | Laya-English | **39,5 ms** | Tesla T4; 332 perguntas/s em batch |
 | Von-1.3 | **~18 ms** | Apple Silicon MPS |
+| Von-1.3 | **~200 ms** | Apple M1 base, FP32 (mesmo modelo, sem MPS/f16) |
 | Von-1.3 | **23,0 ms p50** (JevBench v1.4) / **32,8 ms p50** (Decision Index) | NVIDIA A10G |
 | d1-omni-600M (texto) | **60 ms** | Chrome WebGPU, M3 Pro |
 | d1-omni-600M (texto) | **11,5 ms** (L128) … **69,3 ms** (L1024) | M4 Max, Metal |
+| d1-omni-600M (texto) | **L4096 abortado** | GPU móvel, limite de memória (não é um número de latência) |
 | d1-omni-600M (áudio) | **50 ms** + 60 ms/pergunta | M3 Pro, stack completa 670 MB |
 
 **O que isso significa na prática:**
@@ -877,11 +935,11 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 | Operação | Custo | Comparação |
 |---|---:|---|
 | `mapAsync` + leitura de 64 B | ~2 ms no Chrome (até ~11 ms em pipeline não otimizado) | 1 leitura por decisão |
-| Tensor de logits completo | ~4 MiB (`1024×1024×4`) | 4.000× mais dados |
+| Tensor de logits completo | ~4 MiB (`1024×1024×4`) | **65.536×** mais dados que 64 B (ou 4.096× se a base for 1 MB / 256 B) |
 | `DecisionPacket` | **64–256 B** | **> 99,9% de redução** de tráfego |
 | Pooled.run (referência) | 16 B | Readback mínimo de uma decisão |
 
-**Por que o micro-readback é arquitetural, não uma otimização:** cada `mapAsync` é uma transição de estado assíncrona através do IPC Renderer ↔ GPU. Se o motor precisar ler 4 MiB por decisão, o readback domina a latência e o gains de GPU desaparecem. Ler 64 B uma vez no fim é o que permite o SLA.
+**Por que o micro-readback é arquitetural, não uma otimização:** cada `mapAsync` é uma transição de estado assíncrona através do IPC Renderer ↔ GPU. Se o motor precisar ler 4 MiB por decisão, o readback domina a latência e os ganhos de GPU desaparecem. Ler 64 B uma vez no fim é o que permite o SLA.
 
 <a id="comparativo"></a>
 ### 5.6 Comparativo com os motores de 2026
@@ -890,16 +948,17 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 
 | Motor / runtime | Binário Wasm | Compilação de shaders | Latência single-pass (desktop) | Arquitetura |
 |---|---:|---:|---:|---|
-| **Motor SOM customizado (Rust + wgpu)** | **0,4 MB** | **0,25 s** | **12,4 ms** (Ettin-150M) / **29,5 ms** (d1-omni) | ComputePass único + micro-readback 64–256 B |
+| **Motor SOM customizado (Rust + wgpu) — proposto, não medido** | **0,4 MB** (alvo) | **0,25 s** (alvo) | **12,4 ms** (Ettin-150M) / **29,5 ms** (d1-omni) — alvo | 3 ComputePasses (chunked) + micro-readback 64–256 B |
 | ruNNtime / custom ops WebGPU | 1,2 MB | 0,40 s | 45,0 ms | Kernels manuais JS/WGSL sob medida |
 | Burn (burn-wgpu v0.20 + CubeCL) | 2,5 MB | 1,80 s | 22,0 ms | Framework ML Rust com JIT CubeCL |
+| Candle (Hugging Face) | — | — | — (CPU Wasm) | Sem backend WebGPU; 2–5 tok/s em LLM e 50–100 ms em BERT pequeno |
 | ONNX Runtime Web v1.24 (Transformers.js v4) | 23,5 MB (3–8 MB mínimo) | **11,00 s** | 35,0 ms | C++ WebGPU EP + templates WGSL |
 | LlamaWeb (llama.cpp WebGPU) | 4,5 MB | 1,50 s | 42,0 ms | C++/GGML compilado para Wasm + WebGPU |
 | fusor-ai (AOT Wasm Relaxed-SIMD) | **0,3 MB** | **0,05 s** | 95,0 ms (CPU, 8 threads) | Wasm selado AOT sem grafo |
 
 **Onde cada um ganha:**
 
-- **Custom Rust/wgpu:** binário ~58× menor que o ORT padrão, arranque ~44× mais rápido, suporte nativo a blocos híbridos (ShortConv + atenção local) e calibração in-shader. **Custo:** manter os kernels WGSL e a estratégia de fallback.
+- **Custom Rust/wgpu:** no papel, binário ~58× menor que o ORT padrão e arranque ~44× mais rápido; suporte nativo a blocos híbridos (ShortConv + atenção local) e calibração in-shader. **Custo:** manter os kernels WGSL e a estratégia de fallback. Esses multiplicadores são **metas derivadas da figura 3**, não medições do runtime (que ainda não existe).
 - **ORT/Transformers.js:** ~200 arquiteturas prontas do Hugging Face, ótimo para prototipagem. **Custo:** 23,5 MB de binário, ~11 s de cold start, bugs de quantização INT8/INT4 sob WebGPU.
 - **Burn/CubeCL:** compartilha o mesmo código entre treino nativo (CUDA/Metal) e WebGPU; fusão automática e autotune. **Custo:** não tem streaming `.sombin` zero-copy nem kernels GGUF fundidos com calibração; o binário é 6× maior.
 - **LlamaWeb:** reduz o pico de memória em 29–33% com alocação estática e vence no decode token a token (54–69%). **Custo:** 21–51% mais lento no **prefill** — exatamente o regime de um SOM.
@@ -966,7 +1025,7 @@ som-webcore/
 | Alvo | `wasm32-unknown-unknown` + WebGPU | wgpu nativo: Vulkan, Metal, D3D12 |
 | Memória | 2–3 slabs de 128 MiB + dynamic offsets | 1 slab monolítico (ou bindless array) |
 | Upload | OPFS → `queue.writeBuffer` / `mappedAtCreation` | `mmap` + `wgpu-hal` (`newBufferWithBytesNoCopy`, `VK_EXT_external_memory_host`) |
-| Readback | ring de 4 staging buffers de 256 B | `MAPPABLE_PRIMARY_BUFFERS` em UMA; `device.poll(Maintain::Wait)` |
+| Readback | ring de 4 staging buffers de 1.056 B | `MAPPABLE_PRIMARY_BUFFERS` em UMA; `device.poll(Maintain::Wait)` |
 | Metadados | `LayerMetaUniform` de 256 B por camada | `Features::PUSH_CONSTANTS` (128 B) |
 | Bind | 1 bind group por slab + dynamic offset | `BUFFER_BINDING_ARRAY` / `binding_array<storage, 28>` |
 | Tensor cores | Não (WGSL padrão) | `SPIRV_SHADER_PASSTHROUGH` / MSL `simdgroup_matrix` |
@@ -993,7 +1052,7 @@ pub struct SomBinHeader {
     pub magic: [u8; 8],                 // "SOMBIN01"
     pub version: u32,                   // 1
     pub arch_type: u32,                 // 1 = ModernBERT, 2 = LFM2.5
-    pub quant_type: u32,                // 0 = FP16, 1 = Q8_0, 2 = Q4_K, 3 = Q4_0 repack
+    pub quant_type: u32,                // 0 = FP16, 1 = Q8_0, 2 = Q4_0 repack, 3 = Q4_K (origem; não executável)
     pub num_layers: u32,                // 28, 22 ou 16
     pub hidden_size: u32,               // 1024, 768
     pub intermediate_size: u32,         // 2624, 1152, 4608
@@ -1018,19 +1077,25 @@ pub struct SomBinHeader {
     pub calib_t_max: f32,               // 12.0
     pub noul_band_mode: u32,            // 1 = band, 0 = raw posterior
 
+    // Seção A — embeddings (fora da VRAM; o Worker extrai as S linhas ativas)
+    pub embedding_file_offset: u64,     // offset da Seção A no arquivo
+    pub embedding_byte_size: u64,       // bytes da tabela vocab × row_stride
+    pub embedding_quant_type: u32,      // 0 = F16, 1 = Q8_0
+    pub embedding_row_stride: u32,      // bytes por linha (H × bytes/param)
+
     // Geometria dos slabs: TODOS os offsets/tamanhos são múltiplos de 256 B
-    pub static_slab_offset: u64,        // embeddings + final_norm + option_marker
+    pub static_slab_offset: u64,        // Seção B: embed_norm + final_norm + option_marker (SEM embeddings)
     pub static_slab_size: u64,
     pub layer_stride_bytes: u64,        // bytes exatos de 1 camada Transformer
-    pub num_weight_slabs: u32,          // 1 (nativo), 2 (Q4_K), 3 (Q8_0)
+    pub num_weight_slabs: u32,          // 1 (nativo), 2 (Q4_0), 3 (Q8_0)
     pub layers_per_slab: [u32; 4],      // ex.: [14, 14, 0, 0]
     pub slab_file_offsets: [u64; 4],    // offset de cada slab no arquivo
     pub slab_byte_sizes: [u64; 4],      // cada slab <= 128 MiB no Perfil 1
-    pub reserved: [u8; 44],             // padding até fechar 256 bytes
+    pub reserved: [u8; 20],             // padding até fechar 256 bytes
 }
 ```
 
-> **Por que `#[repr(C, align(256))]`?** O cabeçalho é lido com um único `copy` e interpretado por `bytemuck`; o alinhamento a 256 B garante que o offset 0 do arquivo já é válido para `GPUBuffer` e para `mmap` nativo. O campo `reserved` fecha o struct em exatamente 256 bytes (8 + 16 + 36 + 12 + 32 + 24 + 4 + 16 + 32 + 32 + 44 = 256).
+> **Por que `#[repr(C, align(256))]`?** O cabeçalho é lido com um único `copy` e interpretado por `bytemuck`; o alinhamento a 256 B garante que o offset 0 do arquivo já é válido para `GPUBuffer` e para `mmap` nativo. O campo `reserved` fecha o struct em exatamente 256 bytes (8 + 64 + 32 + 24 + 24 + 4 + 16 + 32 + 32 + 20 = 256). Os 24 bytes de embeddings são o que permite manter a tabela **fora** do slab estático.
 
 #### Layout dos slabs e das camadas
 
@@ -1049,10 +1114,22 @@ Dentro de cada slab de camadas, cada camada ocupa exatamente `layer_stride_bytes
 
 | Slab | Conteúdo | Exemplo (Von Q4_K) | Exemplo (Von Q8_0) |
 |---|---|---:|---:|
-| `static` | `tok_embeddings`, `embed_norm`, `final_norm`, cabeça `option_marker` | ~28,2 MB | ~? |
+| `static` | `embed_norm`, `final_norm`, cabeça `option_marker` — **sem `tok_embeddings`** | ~28,2 MB | n/d |
 | `0` | camadas 0..13 | ~92,05 MB | ~115 MB (0..9) |
 | `1` | camadas 14..27 | ~92,05 MB | ~115 MB (10..19) |
 | `2` | — | — | ~115 MB (20..27) |
+
+> **Seção A (embeddings):** fica no arquivo/OPFS, **fora dos slabs de VRAM**. O `embedding_file_offset` e o `embedding_byte_size` do header dizem onde ela começa e quanto ocupa; o Worker lê as `S` linhas ativas, converte para f16 e envia para `embed_active` (G0:B3). O slab estático contém apenas `embed_norm`, `final_norm` e a cabeça. É isso que faz o Laya caber em 127,1 MiB: os 196,61M de embeddings **nunca** entram na GPU.
+
+#### Layouts de quantização (decisão explícita)
+
+| Formato | Bloco | Bytes/bloco | Layout | Uso no runtime |
+|---|---:|---:|---|---|
+| **Q8_0** | 32 pesos | **34 B** | `d: f16` + `qs: [i8; 32]` | **Padrão** para Ettin/Laya; calibração quase intacta |
+| **Q4_0 reempacotado** | 32 pesos | **18 B** | `d: f16` + `qs: [u8; 16]` (nibbles contíguos; ordem lo/hi documentada no conversor) | **Modo de baixa VRAM** para d1/Von; 4,5 bpw |
+| **Q4_K** | 256 pesos | **144 B** | `d: f16` + `dmin: f16` + `scales: [u8; 12]` (6 bits empacotados) + `qs: [u8; 128]` | **Formato de origem/leitura**; o conversor reempacota para Q4_0. O runtime **não executa Q4_K** on-the-fly |
+
+> **Q4_K não é um formato de execução no browser.** O header aceita `quant_type=3` para identificar um arquivo de origem Q4_K, mas o carregador rejeita esse tipo e o conversor gera Q4_0/Q8_0. Isso evita o custo de desempacotar escalas de 6 bits em regime compute-bound e mantém o kernel simples. Para extrair nibbles Q4_K (quando o conversor lê a origem), use `(w & 0x0F0F0F0F)` e `((w >> 4u) & 0x0F0F0F0F)` antes de qualquer `dot4I8Packed`; o resultado **não** é executado diretamente.
 
 **Converter (`som-convert`):**
 
@@ -1061,7 +1138,7 @@ Dentro de cada slab de camadas, cada camada ocupa exatamente `layer_stride_bytes
 3. funde `Wqkv` em um único tensor, intercala `Wi` `(val, gate)`;
 4. quantiza para Q8_0 (bloco de 32: `d: f16` + `qs: [i8; 32]` = 34 B) ou Q4_0 reempacotado (nibbles em `u32` contíguos + escalas f16);
 5. calcula `layer_stride_bytes` com padding de 256 B;
-6. escreve o header, o slab estático e os slabs de camadas;
+6. escreve o header, a **Seção A (embeddings)**, o slab estático e os slabs de camadas;
 7. calcula BLAKE3 do arquivo inteiro e grava um sidecar `.blake3` (ou embute no manifesto).
 
 **Regras de ouro do formato:**
@@ -1079,27 +1156,30 @@ O motor cria **exatamente 3 bind group layouts**, respeitando o limite de 8 stor
 | Grupo | Nome / propósito | Binding | Tipo | Dynamic offset | Conteúdo |
 |---|---|---|---:|---:|---|
 | `@group(0)` | **Static model & request** (vinculado uma vez) | 0 | `Uniform` (64 B) | não | `GlobalUniforms`: `seq_len`, `state_len`, `num_options`, `noul_band_mode`, coeficientes de calibração |
-| | | 1 | `Storage { read_only: true }` | não | Slab 0 estático: `tok_embeddings [V,H]`, `embed_norm`, `final_norm`, pesos da cabeça |
+| | | 1 | `Storage { read_only: true }` | não | Slab 0 estático: `embed_norm`, `final_norm`, pesos da cabeça — **sem `tok_embeddings`** |
 | | | 2 | `Storage { read_only: true }` | não | `input_tokens: array<u32>`, `token_meta: array<vec2<u32>>`, `mask_indices: array<u32,256>` |
+| | | 3 | `Storage { read_only: true }` | não | `embed_active: array<f16> ([S,H])` — micro-tensor extraído da Seção A pelo Worker |
 | `@group(1)` | **Layer weight window** (atualizado por camada) | 0 | `Storage { read_only: true }` | **sim** | Janela de `layer_stride_bytes` sobre o slab atual (`attn_norm`, `Wqkv`, `Wo`, `mlp_norm`, `Wi`, `Wo`) |
 | | | 1 | `Uniform` (256 B stride) | sim | `LayerMetaUniform`: `layer_idx`, `is_global_layer`, `rope_theta` (28 entradas alinhadas) — só no Perfil 1 |
 | `@group(2)` | **Activation ping-pong & readout** | 0 | `Storage { read_write }` | não | `act_buf_a: array<f32> ([N,H])` |
 | | | 1 | `Storage { read_write }` | não | `act_buf_b: array<f32> ([N,H])` |
-| | | 2 | `Storage { read_write }` | não | `qkv_workspace: array<f32> ([N,3H])` |
-| | | 3 | `Storage { read_write }` | não | `decision_out: DecisionPacket` (64–256 B) |
+| | | 2 | `Storage { read_write }` | não | `qkv_workspace: array<f16> ([N,3H])` |
+| | | 3 | `Storage { read_write }` | não | `decision_out: DecisionPacket` (capacidade 1.056 B; pacote comum de 64 B) |
 
 **Pipeline creation.** São 6 compute pipelines, compiladas com `device.createComputePipelineAsync()` e `PipelineCompilationOptions::constants` para especializar `HIDDEN_SIZE`, `NORM_EPS`, `HEAD_DIM`, `BLOCK_M/BLOCK_N` por modelo. Isso evita 20–40 shaders distintos e mantém o cold start abaixo de ~250 ms.
 
-**Limite de workgroups.** A WebGPU limita `maxComputeWorkgroupsPerDimension` a 65.535. Para grids grandes (ex.: `3H/64` com H=1024 → 48; `N/64` com N=8192 → 128), o helper `compute_2d_workgroups()` divide o dispatch em coordenadas 2D e o shader checa `batch_idx` — padrão extraído do `ggml-webgpu` (PR #19965).
+**Autotune de arranque.** O `workgroup_size` e o sub-tile (4×4 vs. 2×4) não são universais: variam com GPU, ocupação de warps e orçamento de registos. No primeiro arranque (ou após `device.lost`), meça 2–3 variantes em um microbenchmark de GEMM (ex.: 512×512×512) e cacheie a escolha por `adapter.info` + driver + `shader-f16`. O CubeCL/Pooled.run fazem isso; o custo é ~50–200 ms uma vez, e o ganho pode ser 20–40% no caminho quente. Não faça autotune a cada decisão.
+
+**Limite de workgroups.** A WebGPU limita `maxComputeWorkgroupsPerDimension` a 65.535. Para grids grandes (ex.: `3H/64` com H=1024 → 48; `N/64` com N=1.024 → 16, ou N=8.192 → 128 no perfil de stress), o helper `compute_2d_workgroups()` divide o dispatch em coordenadas 2D e o shader checa `batch_idx` — padrão extraído do `ggml-webgpu` (PR #19965).
 
 <a id="seis-shaders"></a>
 ### 6.5 Os seis shaders WGSL
 
 | Arquivo | `@workgroup_size` | Grid de dispatch | Lê | Escreve |
 |---|---|---|---|---|
-| `01_embed_norm_pack.wgsl` | `(256,1,1)` | `(seq_len,1,1)` | `G0:B0` globals, `G0:B1` embeddings/`embed_norm`, `G0:B2` `input_tokens` | `G2:B0` `act_buf_a` normalizado |
-| `02_qkv_rope_quant.wgsl` | `(16,16,1)` | `((N+63)/64, 3H/64, 1)` | `G0:B0`, `G0:B2` `token_meta`, `G1:B0` `attn_norm`/`Wqkv`, `G1:B1` `layer_meta`, `G2:B0` | `G2:B2` `qkv_workspace` com Q/K rotacionados |
-| `03_flash_attn_block_diag.wgsl` | `(32,4,1)` | `((N+31)/32, num_heads, 1)` | `G0:B0`, `G0:B2`, `G1:B1` `is_global_layer`, `G2:B2` | `G2:B1` `act_buf_b` (saída da atenção) |
+| `01_embed_norm_pack.wgsl` | `(256,1,1)` | `(seq_len,1,1)` | `G0:B0` globals, `G0:B1` `embed_norm`, `G0:B2` `input_tokens`, `G0:B3` `embed_active` | `G2:B0` `act_buf_a` normalizado |
+| `02_qkv_rope_quant.wgsl` | `(16,16,1)` | `((N+63)/64, 3H/64, 1)` | `G0:B0`, `G0:B2` `token_meta`, `G1:B0` `attn_norm`/`Wqkv`, `G1:B1` `layer_meta`, `G2:B0` | `G2:B2` `qkv_workspace` (f16) com Q/K rotacionados |
+| `03_flash_attn_block_diag.wgsl` | `(16,4,1)` | `((N+15)/16, num_heads, 1)` | `G0:B0`, `G0:B2`, `G1:B1` `is_global_layer`, `G2:B2` | `G2:B1` `act_buf_b` (saída da atenção) |
 | `04_wo_res_mlpnorm.wgsl` | `(256,1,1)` | `(seq_len,1,1)` | `G0:B0`, `G1:B0` `attn.Wo`/`mlp_norm`, `G2:B0`, `G2:B1` | `G2:B0` residual `h`, `G2:B1` `mlp_norm(h)` |
 | `05_fused_geglu_ffn.wgsl` | `(256,1,1)` | `(seq_len,1,1)` | `G0:B0`, `G1:B0` `mlp.Wi` intercalado/`mlp.Wo`, `G2:B1`, `G2:B0` | `G2:B0` `h + Wo(GeGLU(Wi(mlp_norm(h))))` |
 | `06_calibrate_readout.wgsl` | `(256,1,1)` | `(1,1,1)` | `G0:B0` calibração, `G0:B1` `final_norm`/cabeça, `G0:B2` `mask_indices`, `G2:B0` | `G2:B3` `DecisionPacket` |
@@ -1107,6 +1187,7 @@ O motor cria **exatamente 3 bind group layouts**, respeitando o limite de 8 stor
 #### Shader 1 — embedding + norma
 
 ```wgsl
+enable f16;
 enable subgroups;
 
 override HIDDEN_SIZE: u32 = 1024u;
@@ -1120,6 +1201,7 @@ struct GlobalUniforms {
 @group(0) @binding(0) var<uniform> globals: GlobalUniforms;
 @group(0) @binding(1) var<storage, read> static_weights: array<u32>;
 @group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
+@group(0) @binding(3) var<storage, read> embed_active: array<f16>;
 @group(2) @binding(0) var<storage, read_write> act_buf_a: array<f32>;
 
 var<workgroup> smem_sum: array<vec2<f32>, 8>;
@@ -1137,13 +1219,16 @@ fn main(
     let tid = lid.x;
     let sg_id = tid / sg_size;
     let num_sgs = 256u / sg_size;
-    let token_id = req_inputs[token_pos];
 
-    // Gather de 4 valores f16 (2 u32) por thread
-    let base_idx = token_id * (HIDDEN_SIZE / 2u) + tid * 2u;
-    let p0 = unpack2x16float(static_weights[base_idx]);
-    let p1 = unpack2x16float(static_weights[base_idx + 1u]);
-    let local_vals = vec4<f32>(p0.x, p0.y, p1.x, p1.y);
+    // O Worker já extraiu as S linhas ativas da Seção A (OPFS) e subiu
+    // este micro-tensor [S,H] em f16. Não há tok_embeddings na VRAM.
+    let base_idx = token_pos * HIDDEN_SIZE + tid * 4u;
+    let local_vals = vec4<f32>(
+        f32(embed_active[base_idx + 0u]),
+        f32(embed_active[base_idx + 1u]),
+        f32(embed_active[base_idx + 2u]),
+        f32(embed_active[base_idx + 3u])
+    );
 
     // Redução in-lane -> subgroupAdd escalar f32 (evita bug vetorial f16 em RDNA1)
     let thread_sum = local_vals.x + local_vals.y + local_vals.z + local_vals.w;
@@ -1166,8 +1251,9 @@ fn main(
     let mean = stats.x * inv_h;
     let inv_std = inverseSqrt(max(stats.y * inv_h - mean * mean, 0.0) + NORM_EPS);
 
-    // embed_norm.weight em f32, após a tabela de embeddings
-    let norm_w_base = (50368u * (HIDDEN_SIZE / 2u)) + tid * 4u;
+    // embed_norm é o PRIMEIRO tensor do slab estático (offset 0), em f32.
+    // Não há mais o hardcode 50368 * HIDDEN_SIZE/2 da tabela de embeddings.
+    let norm_w_base = tid * 4u;
     let w = vec4<f32>(
         bitcast<f32>(static_weights[norm_w_base + 0u]),
         bitcast<f32>(static_weights[norm_w_base + 1u]),
@@ -1184,7 +1270,7 @@ fn main(
 }
 ```
 
-> O blueprint acima assume `HIDDEN_SIZE` divisível por 1024 e 256 threads; na implementação real, o número de valores por thread é `HIDDEN_SIZE / 256` e o gather usa `vec4`/`unpack2x16float` conforme a quantização.
+> O blueprint acima assume `HIDDEN_SIZE` divisível por 1.024 e 256 threads; na implementação real, o número de valores por thread é `HIDDEN_SIZE / 256` e o gather usa `vec4`/`f16` conforme a quantização. O `embed_active` é o único caminho para os embeddings: se o Worker falhar em extrair as linhas, o shader não tem de onde lê-las — e é isso que garante que a tabela de 256k do Laya nunca entre na VRAM.
 
 #### Shader 2 — QKV + RoPE + quantização
 
@@ -1206,7 +1292,7 @@ struct LayerMeta {
 @group(1) @binding(0) var<storage, read> layer_weights: array<u32>;
 @group(1) @binding(1) var<uniform> layer_meta: LayerMeta;
 @group(2) @binding(0) var<storage, read_write> act_buf_a: array<f32>;
-@group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f32>;
+@group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f16>;
 
 fn dot_block_q8_0(act_packed: array<u32, 8>, act_scale: f32, w_base_u32: u32, w_scale: f32) -> f32 {
     var acc_i32: i32 = 0;
@@ -1244,20 +1330,20 @@ enable subgroups;
 override HIDDEN_SIZE: u32 = 1024u;
 override NUM_HEADS: u32 = 16u;
 override HEAD_DIM: u32 = 64u;
-override BLOCK_M: u32 = 32u;
-override BLOCK_N: u32 = 32u;
+override BLOCK_M: u32 = 16u;
+override BLOCK_N: u32 = 16u;
 
 @group(0) @binding(0) var<uniform> globals: GlobalUniforms;
 @group(0) @binding(2) var<storage, read> req_inputs: array<u32>;
 @group(1) @binding(1) var<uniform> layer_meta: LayerMeta;
 @group(2) @binding(1) var<storage, read_write> act_buf_b: array<f32>;
-@group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f32>;
+@group(2) @binding(2) var<storage, read_write> qkv_workspace: array<f16>;
 
-var<workgroup> smem_k: array<f16, 2048>;
-var<workgroup> smem_v: array<f16, 2048>;
-var<workgroup> smem_meta: array<vec2<u32>, 32>;
+var<workgroup> smem_k: array<f16, 1024>;
+var<workgroup> smem_v: array<f16, 1024>;
+var<workgroup> smem_meta: array<vec2<u32>, 16>;
 
-@compute @workgroup_size(32, 4, 1)
+@compute @workgroup_size(16, 4, 1)
 fn main(@builtin(workgroup_id) wg_id: vec3<u32>,
         @builtin(local_invocation_id) lid: vec3<u32>) {
     let q_row = wg_id.x * BLOCK_M + lid.x;
@@ -1470,13 +1556,17 @@ pub fn encode_full_som_forward(
         timestamp_writes: None,
     });
 
-    // BindGroup 0 (estático): embeddings, tabelas RoPE, pesos da cabeça, calibração
+    // BindGroup 0 (estático): embed_norm, pesos da cabeça, calibração
+    // (os embeddings ativos chegam por G0:B3, vindos da Seção A/OPFS)
     cpass.set_bind_group(0, &self.static_bind_group, &[]);
 
     // 1. Embedding + embed_norm + reset de Position ID -> act_buf_a
     cpass.set_pipeline(&self.pipe_embed_norm);
     cpass.set_bind_group(2, &self.ping_pong_bg_even, &[]);
     cpass.dispatch_workgroups(seq_len, 1, 1);
+
+    // Cada workgroup de 16x16 cobre um tile de 64 tokens.
+    let tile_m_groups = (seq_len + 63) / 64;
 
     // 2. Loop de camadas, com chunked submit a cada 7-8 camadas
     for (chunk_idx, chunk) in self.layer_chunks.iter().enumerate() {
@@ -1620,7 +1710,7 @@ som.dispose();
 |---|---|---|
 | `UnsupportedEnvironmentError` | Sem `navigator.gpu`, sem WebGPU, Worker indisponível | Fallback Wasm/remoto ou mensagem clara |
 | `UnsupportedFeatureError` | `shader-f16` ausente e modelo exige; `subgroups` obrigatório | Usar variante f32; nunca exigir subgroups |
-| `ModelFormatError` | Magic/versão/alignamento inválidos; hash BLAKE3 divergente | Rejeitar; baixar novamente; nunca “tentar mesmo assim” |
+| `ModelFormatError` | Magic/versão/alinhamento inválidos; hash BLAKE3 divergente | Rejeitar; baixar novamente; nunca “tentar mesmo assim” |
 | `OutOfMemoryError` | `createBuffer` falha, `device.lost` por OOM | Reduzir slabs/modelo; liberar buffers; recarregar |
 | `DeviceLostError` | Driver reset, aba em background, bug D3D12 | Recriar device; recarregar do OPFS; reexecutar 1× |
 | `TimeoutError` | `timeoutMs`/SLA excedido | Cancelar; degradar para modelo semente/CPU |
@@ -1651,7 +1741,7 @@ device.lost.then(async (info) => {
 <a id="riscos"></a>
 ## 7. Riscos, armadilhas e mitigações
 
-Esta é a seção que separa um blueprint de um desejo. Cada linha foi observada em produção ou documentada por um relatório; a coluna “como validar” diz o que medir antes de considerar o risco mitigado.
+Esta é a seção que separa um blueprint de um desejo. Cada linha tem origem num relatório ou em produção; quando é inferência deste documento, isso está explícito. A coluna “como validar” diz o que medir antes de considerar o risco mitigado.
 
 | # | Risco | Sintoma | Mitigação | Como validar |
 |---:|---|---|---|---|
@@ -1700,6 +1790,7 @@ Esta é a seção que separa um blueprint de um desejo. Cada linha foi observada
 
 O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar todos os modelos; é provar o contrato em um modelo, um navegador e um dispositivo — e então expandir.
 
+<a id="fase-0"></a>
 ### Fase 0 — Fundação (concluída em 2026-11-18)
 
 - [x] Ler e catalogar os dois relatórios de pesquisa.
@@ -1708,6 +1799,7 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 - [x] Publicar o repositório público com governança open-source.
 - [x] Definir licença, código de conduta, segurança e política de merge.
 
+<a id="fase-1"></a>
 ### Fase 1 — Formato e conversor (semanas 1–2)
 
 - [ ] `som-format`: header de 256 B, reader/writer, validação de alinhamento, BLAKE3.
@@ -1716,6 +1808,7 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 - [ ] Modelo semente Ettin-17M; download em chunks de 8 MiB; OPFS.
 - **Critério de saída:** converter, ler de volta e validar 100% dos tensores; `.sombin` carrega no OPFS em < 2 s num desktop.
 
+<a id="fase-2"></a>
 ### Fase 2 — Kernels e paridade numérica (semanas 3–5)
 
 - [ ] `01_embed_norm_pack.wgsl` + `02_qkv_rope_quant.wgsl`.
@@ -1725,14 +1818,16 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 - [ ] Referência CPU em Rust (`f32`) para paridade.
 - **Critério de saída:** top-1 ≥ 99% igual à referência; ECE dentro de 1%; nenhum NaN/Inf.
 
+<a id="fase-3"></a>
 ### Fase 3 — Runtime e API (semanas 6–8)
 
 - [ ] `SomEngine` com dois perfis; slabs; dynamic offsets; chunked submit.
-- [ ] Ring de readback de 4×256 B; `device.lost` recovery.
+- [ ] Ring de readback de 4×1.056 B; `device.lost` recovery.
 - [ ] Worker + OPFS + tokenizer; `SOM.load`/`decide`/`eval`/`score`/`noul`.
 - [ ] Modelo semente e troca de modelo sem reload.
 - **Critério de saída:** Ettin-150M choice end-to-end em Chrome desktop; p95 < 70 ms; zero rede após load.
 
+<a id="fase-4"></a>
 ### Fase 4 — Mobile, benchmarks e release (semanas 9–12)
 
 - [ ] Safari 26/iOS, Chrome Android, Firefox desktop.
@@ -1742,6 +1837,7 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 - [ ] Release `v0.1.0`; pacote npm `@som-web/core` (se aplicável).
 - **Critério de saída:** matriz de benchmarks publicada; p95 < 50 ms em mobile para S≤256; release assinada.
 
+<a id="fase-5"></a>
 ### Fase 5 — Expansão (pós-v0.1)
 
 - [ ] d1-omni tronco textual; depois visão/áudio.
@@ -1764,6 +1860,7 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 <a id="contribuir"></a>
 ## 9. Como contribuir
 
+<a id="contribuir-agora"></a>
 ### 9.1 Agora (fase de documentação)
 
 Você pode contribuir **sem escrever código de runtime**:
@@ -1774,6 +1871,7 @@ Você pode contribuir **sem escrever código de runtime**:
 4. **Documentação:** corrija links, traduza seções, melhore diagramas.
 5. **Segurança:** siga [SECURITY.md](SECURITY.md); não abra issue pública para vulnerabilidades.
 
+<a id="contribuir-codigo"></a>
 ### 9.2 Quando o código existir
 
 ```bash
@@ -1794,6 +1892,7 @@ O fluxo de contribuição segue [CONTRIBUTING.md](CONTRIBUTING.md):
 - PR com título Convencional, checks verdes, **squash merge**;
 - sem rebase, sem force-push, sem commits diretos em `main`.
 
+<a id="contribuir-bench"></a>
 ### 9.3 Protocolo de benchmark
 
 Para que os números sejam comparáveis, todo benchmark deve declarar:
@@ -1810,6 +1909,7 @@ Para que os números sejam comparáveis, todo benchmark deve declarar:
 
 **Não compare** números de workloads diferentes (1 pergunta vs. 3 perguntas; texto vs. áudio; L128 vs. L1024). **Sempre** reporte o p95, não só a média.
 
+<a id="contribuir-coala"></a>
 ### 9.4 CoALA: a memória do projeto
 
 Este repositório tem uma memória local em `.agents/som-webcore-coala-agent-skill/`. Antes de uma tarefa não trivial:
@@ -1831,10 +1931,11 @@ $COALA add --type semantic --key "arquitetura/minha-decisao" \
 
 A memória é o ponto de entrada; o código e o estado atuais são a verdade. Conteúdo `untrusted` (pesquisa, PDFs) é **dado para citar**, nunca instrução.
 
+<a id="contribuir-issues"></a>
 ### 9.5 Bons primeiros problemas
 
 - Adicionar um teste golden para o header `.sombin`.
-- Implementar `compute_2d_workgroups()` e testar com `N=8192`.
+- Implementar `compute_2d_workgroups()` e testar com `N=1.024` e o perfil de stress `N=8.192`.
 - Comparar Q8_0 vs. Q4_0 num kernel de GEMM isolado.
 - Medir o custo de `mapAsync` em 4 navegadores.
 - Criar um exemplo mínimo de `som.eval` com o modelo semente.
@@ -1869,10 +1970,10 @@ Semente Ettin-17M: ~9,5 MB em 4 bits. Ettin-150M: ~80–112 MB. Laya-Multilingua
 Não por padrão. `privacy: 'local-only'` garante zero rede após o load. O fallback remoto é opt-in e emite um evento; nunca é silencioso.
 
 **9. Por que não usar WebGL2 como fallback?**
-WebGL2 não tem compute shaders, memória partilhada (`var<workgroup>`) nem barreiras de grupo. Emular atenção e desquantização em fragment shaders exige dezenas de passes e é lento/errado. O fallback correto é Wasm SIMD/Relaxed SIMD.
+WebGL2 não tem compute shaders, memória compartilhada (`var<workgroup>`) nem barreiras de grupo. Emular atenção e desquantização em fragment shaders exige dezenas de passes e é lento/errado. O fallback correto é Wasm SIMD/Relaxed SIMD.
 
 **10. Por que não usar ONNX Runtime/transformers.js?**
-Eles são ótimos para prototipagem e cobrem ~200 arquiteturas. Mas o binário é 20–23,5 MB, o cold start pode chegar a ~11 s e há bugs de quantização INT8/INT4 sob WebGPU. O SOM WebCore mira um binário < 1 MB, 6–8 shaders e um contrato de decisão — não variedade de arquiteturas.
+Eles são ótimos para prototipagem e cobrem ~200 arquiteturas. Mas o binário padrão é ~20–23,5 MB (3–8 MB em build mínima), o cold start pode chegar a ~11 s e há bugs de quantização INT8/INT4 sob WebGPU. O SOM WebCore mira um binário < 1 MB, 6–8 shaders e um contrato de decisão — não variedade de arquiteturas.
 
 **11. Posso usar meu próprio modelo?**
 Sim, se ele for um encoder bidirecional compatível (ModernBERT/Ettin, mmBERT/Laya, LFM2.5/d1) e você tiver a cabeça de decisão + calibração. O conversor `.sombin` é o caminho. Modelos autorregressivos não são suportados.
@@ -1912,6 +2013,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | Termo | Definição |
 |---|---|
 | **SOM (System One Model)** | Modelo que faz uma passada única não autorregressiva e devolve uma decisão tipada, em vez de gerar texto. |
+| **SLA (neste projeto)** | Alvo de **p95** de latência por decisão, não um contrato universal: < 50 ms para 150M em `S ≤ 240` no mobile, e `S = 80–88` para 380–395M. Depende de device, browser, quantização e temperatura. |
 | **JEV** | Julgamento, Escolha e Valorização: contrato com `Choice`, `Score` e `Noul`. |
 | **Choice** | Primitiva de escolha entre 1 e 255 opções; retorna índice, distribuição e confiança. |
 | **Score** | Primitiva de nota ordenada (2–10 níveis); retorna valor esperado e distribuição. |
@@ -1922,13 +2024,13 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | **Roofline** | Modelo que compara FLOPs/byte com o ponto de equilíbrio do hardware (compute vs. memory bound). |
 | **Intensidade aritmética** | FLOPs por byte movido; decide se o kernel é compute-bound ou memory-bound. |
 | **Q8_0** | Quantização simétrica de 8 bits em blocos de 32 pesos: 34 B/bloco (1,0625 B/param). |
-| **Q4_0** | Quantização simétrica de 4 bits em blocos de 32 pesos, com escalas; usada reempacotada. |
-| **Q4_K** | Quantização K-quant de 4 bits com super-blocos de 256 pesos e escalas de 6 bits (144 B/bloco). |
+| **Q4_0** | Quantização simétrica de 4 bits em blocos de 32 pesos: `d: f16` + 16 B de nibbles = 18 B/bloco (4,5 bpw); usada reempacotada. |
+| **Q4_K** | K-quant de 4 bits: 144 B por 256 pesos (`d`/`dmin` f16 + `scales[12]` de 6 bits + 128 B de nibbles); **formato de origem**, não executado on-the-fly. |
 | **GGUF** | Formato de pesos do ecossistema llama.cpp; referência para layouts de quantização. |
 | **Slab** | Buffer grande de VRAM que contém um subconjunto fixo de camadas. |
 | **Dynamic offset** | Offset passado em `set_bind_group` que desloca a janela do binding sem recriar o bind group. |
 | **Bind group** | Conjunto de bindings (buffers/texturas) ligado a um pipeline. |
-| **Workgroup** | Grupo de invocações que partilha `var<workgroup>` e barreiras. |
+| **Workgroup** | Grupo de invocações que compartilha `var<workgroup>` e barreiras. |
 | **Subgroup** | Subconjunto de invocações (warp/wavefront) que pode fazer reduções coletivas. |
 | **WGSL** | WebGPU Shading Language; linguagem de shaders da WebGPU. |
 | **wgpu** | Biblioteca Rust de GPU que implementa WebGPU e backends nativos (Vulkan/Metal/D3D12). |
@@ -1938,14 +2040,14 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | **OPFS** | Origin Private File System; armazenamento persistente e isolado por origem. |
 | **Cache API** | Cache HTTP do navegador; limite silencioso de ~200 MB no Chromium. |
 | **Wasm32** | WebAssembly com ponteiros de 32 bits; teto de 4 GiB de memória linear. |
-| **UMA** | Unified Memory Architecture; CPU e GPU partilham a mesma DRAM (Apple Silicon, APUs, SoCs). |
+| **UMA** | Unified Memory Architecture; CPU e GPU compartilham a mesma DRAM (Apple Silicon, APUs, SoCs). |
 | **DVFS** | Dynamic Voltage and Frequency Scaling; ajuste de tensão/frequência conforme temperatura/carga. |
 | **ECE** | Expected Calibration Error; mede se a probabilidade emitida corresponde à frequência real de acerto. |
 | **RLCD** | Reinforcement Learning for Calibrated Decisions; treino com perdas de Brier/log-score para calibrar. |
 | **FlashAttention-2** | Algoritmo de atenção com tiling e online softmax que evita materializar a matriz S×S. |
 | **Online softmax** | Cálculo de softmax em blocos, com reescalonamento incremental do máximo e da soma. |
 | **RoPE** | Rotary Position Embeddings; codifica posição por rotação de pares de dimensões. |
-| **GQA** | Grouped-Query Attention; várias cabeças Q partilham uma cabeça KV. |
+| **GQA** | Grouped-Query Attention; várias cabeças Q compartilham uma cabeça KV. |
 | **GeGLU** | Gated GELU: `GELU(x_val) * gate`; ativação do ModernBERT/Ettin/Von. |
 | **SwiGLU** | Gated SiLU: `SiLU(w1(x)) * w3(x)`; ativação do LFM2/d1-omni. |
 | **ShortConv** | Convolução 1D depthwise curta com gating; bloco do LFM2. |
@@ -2048,7 +2150,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 8. [Bug] [Web] Batched WebGPU dispatch (#18871) causes UI jank, https://github.com/apache/tvm/issues/19342
 9. webgpu-device-hung-test/README.md at main - LostBeard - GitHub, https://github.com/LostBeard/webgpu-device-hung-test/blob/main/README.md
 10. 一次dispatch 的八重翻译— WebGPU 全栈源码深读 - Airing, https://ursb.me/immersive/webgpu/
-11. unknown_url
+11. fonte não identificada no relatório
 12. https://posttrainllm.com/llms-full.txt
 13. Llamas on the Web: Memory-Efficient, Performance-Portable ... - arXiv, https://arxiv.org/html/2605.20706v1
 14. llama-cpp-pydist · PyPI, https://pypi.org/project/llama-cpp-pydist/
@@ -2058,29 +2160,29 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 18. jhu-clsp/ettin-encoder-150m - Hugging Face, https://huggingface.co/jhu-clsp/ettin-encoder-150m
 19. Laya Explained: A Decision Model With Zero Output Tokens, https://www.orcarouter.ai/blog/laya-decision-model-explained
 20. Liquid AI d1-omni-600M is now an Ollama pull: what ships, https://www.orcarouter.ai/blog/liquid-ai-d1-omni-ollama-decision-model
-21. https://github.com/ml-explore/mlx-swift-lm/blob/main/Libraries/MLXEmbedders/ Models/LFM2Bidirectional.swift
+21. https://github.com/ml-explore/mlx-swift-lm/blob/main/Libraries/MLXEmbedders/Models/LFM2Bidirectional.swift
 22. GitHub - wfzyx/von: The open-source System One decision model, https://github.com/wfzyx/von
 23. 四大平台Web Canvas显存限制差异全解析- U深搜, https://unifuncs.com/s/R1uiy08H
 24. Characterizing WebGPU Dispatch Overhead for LLM Infer - arXiv, https://arxiv.org/pdf/2604.02344
-25. Downloading WebGPU buffer with await mapAsync is 5000 times, https://stackoverflow.com/questions/78566825/downloading-webgpu-buffer-wit h-await-mapasync-is-5000-times-slower-in-firefox-ni
+25. Downloading WebGPU buffer with await mapAsync is 5000 times, https://stackoverflow.com/questions/78566825/downloading-webgpu-buffer-with-await-mapasync-is-5000-times-slower-in-firefox-ni
 26. The origin private file system | Articles - web.dev, https://web.dev/articles/origin-private-file-system
 27. Local Storage in Browser: OPFS with Web Workers - Zenn, https://zenn.dev/hideyuki_hori/articles/3abc10be8d9ca0?locale=en
 28. GPUSupportedLimits - Web APIs | MDN, https://developer.mozilla.org/en-US/docs/Web/API/GPUSupportedLimits
-29. Modern Quantization: FP8, AWQ, and Marlin | Harness Academy, https://infinitytechstack.uk/harness-academy/quantization-kernel-optimization/m odern-quantization-fp8-awq-and-marlin
+29. Modern Quantization: FP8, AWQ, and Marlin | Harness Academy, https://infinitytechstack.uk/harness-academy/quantization-kernel-optimization/modern-quantization-fp8-awq-and-marlin
 30. typestrict/TS-Ettin-150M - Hugging Face, https://huggingface.co/typestrict/TS-Ettin-150M
 31. ModernBERT: a modern encoder for fast classification - Laya Studio, https://laya.studio/learn/modernbert
-32. Von: Open-source 395M "System One" model : r/LocalLLaMA - Reddit, https://www.reddit.com/r/LocalLLaMA/comments/1wkpxn6/von_opensource_395 m_system_one_model/
+32. Von: Open-source 395M "System One" model : r/LocalLLaMA - Reddit, https://www.reddit.com/r/LocalLLaMA/comments/1wkpxn6/von_opensource_395m_system_one_model/
 33. Von - Learn AI, https://ai.miraheze.org/wiki/Von
 34. Liquid D1-Omni 600M - VRAM Requirements, Specs & Benchmarks, https://apxml.com/models/liquid-d1-omni-600m
 35. https://www.orcarouter.ai/blog/liquid-ai-d1-omni-600m-vs-lfm2-5-vl-3b
 36. What Is Laya? Laya vs Jev, with Live Demo!! - DEV Community, https://dev.to/vishalmysore/what-is-laya-laya-vs-jev-with-live-demo-4j6e
 37. The WebGPU execution model (for reading our shaders), https://posttrainllm.com/docs/learn/webgpu-execution-model/
-38. WebGPU Release Date & Browser Support 2026, https://www.programming-helper.com/tech/webgpu-2026-next-generation-bro wser-graphics-compute-api
+38. WebGPU Release Date & Browser Support 2026, https://www.programming-helper.com/tech/webgpu-2026-next-generation-browser-graphics-compute-api
 39. WebGPU Browser Support in 2026: Is It Mostly Available? | imgtotable, https://imgtotable.com/blog/is-webgpu-mostly-available-now
 40. WebGPU Hits Critical Mass: All Major Browsers Now Ship It, https://webgpu.com/news/webgpu-hits-critical-mass-all-major-browsers/
 41. Implementation Status - GitHub, https://github.com/gpuweb/gpuweb/wiki/Implementation-Status
 42. Safari 26 ships WebGPU support by default - Cinevva, https://app.cinevva.com/news/2025-09-15-safari-webgpu
-43. Early access to the new WebGPU backend - Page 20 - Web, https://discussions.unity.com/t/early-access-to-the-new-webgpu-backend/9334 93?page=20
+43. Early access to the new WebGPU backend - Page 20 - Web, https://discussions.unity.com/t/early-access-to-the-new-webgpu-backend/933493?page=20
 44. WebGPU: the browser's new performance engine - Joan León, https://joanleon.dev/en/webgpu-browser-performance/
 45. Run an LLM Inside a Browser Tab: WebGPU and Local Inference in, https://pinggy.io/blog/run_llm_in_browser_webgpu/
 46. What's New in WebGPU (Chrome 133) | Blog, https://developer.chrome.com/blog/new-in-webgpu-133
@@ -2089,12 +2191,12 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 49. WebGPU - W3C, https://www.w3.org/TR/webgpu/
 50. nfsu2-web/docs/web/PLAYING.md at main - GitHub, https://github.com/th0mk/nfsu2-web/blob/main/docs/web/PLAYING.md
 51. WebGPU VRAM Stress Test & Thermal Throttling Checker, https://toolkitgen.com/tool/webgpu_vram_thermal_check
-52. Thermal Throttling: How Heat Impacts Android App UX - eInfochips, https://www.einfochips.com/blog/thermal-throttling-how-heat-quietly-destroys- user-experience/
+52. Thermal Throttling: How Heat Impacts Android App UX - eInfochips, https://www.einfochips.com/blog/thermal-throttling-how-heat-quietly-destroys-user-experience/
 53. WebGL Test & WebGPU Checker: Test Your Browser's GPU | Cinevva, https://app.cinevva.com/tools/webgl-webgpu-checker
 54. Chrome does not allow to down mix 5.1 to 4.0 - Chromium Issue, https://issues.chromium.org/issues/452919818
 55. WebAssembly and WebGPU enhancements for faster Web AI, part 2, https://developer.chrome.com/blog/io24-webassembly-webgpu-2
 56. OpenAI Privacy Filter — browser demo (transformers.js v4 ... - GitHub, https://github.com/montevive/openai-privacy-filter
-57. (PDF) GPU Goldmines: Tunable WebGPU Kernels for Edge LLM, https://www.researchgate.net/publication/415750933_GPU_Goldmines_Tunable_ WebGPU_Kernels_for_Edge_LLM_Inference
+57. (PDF) GPU Goldmines: Tunable WebGPU Kernels for Edge LLM, https://www.researchgate.net/publication/415750933_GPU_Goldmines_Tunable_WebGPU_Kernels_for_Edge_LLM_Inference
 58. WebGPU Data Memory Layout, https://webgpufundamentals.org/webgpu/lessons/webgpu-memory-layout.html
 59. wgpu::documentation::platforms::web - Rust, https://wgpu.rs/doc/wgpu/documentation/platforms/web/index.html
 60. wgpu_hal - Rust - Docs.rs, https://docs.rs/wgpu-hal
@@ -2102,17 +2204,17 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 62. Measuring and Reducing WebGPU Dispatch Overhead for LLM, https://arxiv.org/html/2608.08730v2
 63. Pool the WebGPU readback staging buffers · Issue #9297 - GitHub, https://github.com/playcanvas/engine/issues/9297
 64. WebGPU renderer recreates GPU buffers every frame ... - GitHub, https://github.com/pixijs/pixijs/issues/12163
-65. WebGPU Interview Questions: Buffers, Bind Groups, and ... - PracHub, https://prachub.com/resources/webgpu-interview-questions-buffers-bind-group s-and-synchronization
-66. Reading Results – Compute and Workgroups – WebGPU, https://webcodingcenter.com/webgpu/compute-shaders-workgroups-and-synch ronization--reading-back-compute-results-to-javascript.html
+65. WebGPU Interview Questions: Buffers, Bind Groups, and ... - PracHub, https://prachub.com/resources/webgpu-interview-questions-buffers-bind-groups-and-synchronization
+66. Reading Results – Compute and Workgroups – WebGPU, https://webcodingcenter.com/webgpu/compute-shaders-workgroups-and-synchronization--reading-back-compute-results-to-javascript.html
 67. Buffer in bevy::render::render_resource - Rust - Docs.rs, https://docs.rs/bevy/latest/bevy/render/render_resource/struct.Buffer.html
-68. Question about the maximum maxStorageBufferBindingSize of, https://forum.babylonjs.com/t/question-about-the-maximum-maxstoragebufferb indingsize-of-webgpu-storagebuffer-array/50678
+68. Question about the maximum maxStorageBufferBindingSize of, https://forum.babylonjs.com/t/question-about-the-maximum-maxstoragebufferbindingsize-of-webgpu-storagebuffer-array/50678
 69. babylonjs-loaders - Yarn Classic, https://classic.yarnpkg.com/en/package/babylonjs-loaders
 70. Babylon.js/CHANGELOG.md at master · BabylonJS ... - GitHub, https://github.com/BabylonJS/Babylon.js/blob/master/CHANGELOG.md
 71. The most effective ways to improve Core Web Vitals | Articles, https://web.dev/articles/top-cwv
 72. fusor-rs/fusor-ai: Compile AI models into sealed WebAssembly, https://github.com/fusor-rs/fusor-ai
-73. Introducing Ettin Suite: the SoTA open recipe to outperform existing, https://lighton.ai/fr-blog-posts/introducing-ettin-suite-the-sota-open-recipe-to- outperform-existing-generative-retrieval-models
+73. Introducing Ettin Suite: the SoTA open recipe to outperform existing, https://lighton.ai/fr-blog-posts/introducing-ettin-suite-the-sota-open-recipe-to-outperform-existing-generative-retrieval-models
 74. Fill-Mask Models: ModernBERT, mmBERT and How to Use Them, https://acta.ai/blogs/fill-mask-models-explained-and-how-to-use-them
-75. WebGPU Explained: The Browser's New Graphics and Compute, https://dev.to/biomathcode/webgpu-explained-the-browsers-new-graphics-and- compute-engine-1cld
+75. WebGPU Explained: The Browser's New Graphics and Compute, https://dev.to/biomathcode/webgpu-explained-the-browsers-new-graphics-and-compute-engine-1cld
 76. Run a compute shader with WebGPU - Deno Docs, https://docs.deno.com/examples/webgpu_compute/
 77. Introduction to WebGPU Compute Shaders | Three.js Roadmap, https://threejsroadmap.com/blog/introduction-to-webgpu-compute-shaders
 78. wgpu - crates.io: Rust Package Registry, https://crates.io/crates/wgpu/0.19.1
@@ -2120,10 +2222,10 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 80. The State of WebAssembly – 2025 and 2026 - Uno Platform, https://platform.uno/blog/the-state-of-webassembly-2025-2026/
 81. Web features explorer - Limited availability, https://web-platform-dx.github.io/web-features-explorer/limited-availability/
 82. A curated list of awesome Zig frameworks, libraries and software., https://github.com/uhub/awesome-zig
-83. omni-d1 600M by Liquid AI running in the browser using WebGPU, https://www.reddit.com/r/LocalLLaMA/comments/1x03mrh/omnid1_600m_by_liqu id_ai_running_in_the_browser/
+83. omni-d1 600M by Liquid AI running in the browser using WebGPU, https://www.reddit.com/r/LocalLLaMA/comments/1x03mrh/omnid1_600m_by_liquid_ai_running_in_the_browser/
 84. O futuro da IA on-device: WebNN, WebGPU e além - Prompt API, https://prompt.api.br/blog/10-futuro-ia-on-device/
 85. WebGPU加速DeepSeek-R1：端侧大模型浏览器推理实战 - CSDN博客, https://blog.csdn.net/weixin_29021291/article/details/170327595
-86. Announcing Burn-Wgpu: New Deep Learning Cross-Platform GPU, https://www.reddit.com/r/rust/comments/159cbto/announcing_burnwgpu_new_d eep_learning/
+86. Announcing Burn-Wgpu: New Deep Learning Cross-Platform GPU, https://www.reddit.com/r/rust/comments/159cbto/announcing_burnwgpu_new_deep_learning/
 87. burn-wgpu - crates.io: Rust Package Registry, https://crates.io/crates/burn-wgpu/0.20.0
 88. Installation - The CubeCL Book - Burn.dev, https://burn.dev/books/cubecl/getting-started/installation.html
 89. candle vs burn - compare differences and reviews? - LibHunt, https://www.libhunt.com/compare-candle-vs-burn
@@ -2148,18 +2250,18 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 10. https://www.datacamp.com/blog/top-open-source-jev-alternatives
 11. d1-omni-600M by LiquidAI | Mixpeek Model Hub, https://mixpeek.com/model/LiquidAI/d1-omni-600M
 12. https://huggingface.co/convaiinnovations/laya
-13. Jev vs Kev: The Two Decision Models Changing How AI Agents, https://medium.com/towards-artificial-intelligence/jev-vs-kev-the-two-decision- models-changing-how-ai-agents-make-choices-bff61bea6224
+13. Jev vs Kev: The Two Decision Models Changing How AI Agents, https://medium.com/towards-artificial-intelligence/jev-vs-kev-the-two-decision-models-changing-how-ai-agents-make-choices-bff61bea6224
 14. onnx-community/d1-omni-600M-ONNX - Hugging Face, https://huggingface.co/onnx-community/d1-omni-600M-ONNX
 15. litert-community/d1-omni-600M-LiteRT - Hugging Face, https://huggingface.co/litert-community/d1-omni-600M-LiteRT
-16. unknown_url
+16. fonte não identificada no relatório
 17. Bespoke Nimble — llama.app, https://llama.app/models/bespoke-nimble
 18. kev - Ollama, https://ollama.com/library/kev
 19. Features in agpu - Rust - Docs.rs, https://docs.rs/agpu/latest/agpu/struct.Features.html
 20. What's New in WebGPU (Chrome 123) | Blog, https://developer.chrome.com/blog/new-in-webgpu-123
 21. Naga translated SpirV shader cannot be passed through · Issue #4763, https://github.com/gfx-rs/wgpu/issues/4763
-22. https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-vulkan/vulkan- shaders/vulkan-shaders-gen.cpp
+22. https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
 23. ik_llama.cpp 中IQ2_K Metal 内核修复与优化实战解析 - CSDN博客, https://blog.csdn.net/gitblog_00688/article/details/157571815
-24. Features in maplibre::render::settings - Rust, https://maplibre.org/maplibre-rs/docs/api/maplibre/render/settings/struct.Features .html
+24. Features in maplibre::render::settings - Rust, https://maplibre.org/maplibre-rs/docs/api/maplibre/render/settings/struct.Features.html
 25. System One Model Explained: What Jev Is and How It Works, https://www.devcompass.ai/blog/what-is-a-system-one-model
 26. Jeva: System One Models from First Principles - arXiv, https://arxiv.org/html/2610.18773v2
 27. JEV Choice, Score and Noul: Question Types and Confidence, https://ahmetbalaman.com/en/blog/jev-choice-score-noul-question-types-en/
@@ -2167,37 +2269,37 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 29. https://blog.csdn.net/gitblog_01061/article/details/153547576
 30. I investigated the 395M Von-1.0, which is being talked about ... - note, https://note.com/hacklog_stealth/n/n7644735668a5?hl=en
 31. https://blog.csdn.net/gitblog_00755/article/details/168864116
-32. initial release · KoichiYasuoka/modernbert-large-thai-wikipedia at, https://huggingface.co/KoichiYasuoka/modernbert-large-thai-wikipedia/commit/d 746d3d30871012b4d5115a100b2e2c3bb6c99a0
-33. Canonicalize RoPE theta: align legacy local_rope_theta to 160000, https://huggingface.co/hotchpotch/bekko-embedding-v1-a25m/commit/59f13e3 8a61318f56d45f33e5b428e67d9f5857c
-34. final ettin150m-nli · xxparthparekhxx/openjev-flash at d7a81e0, https://huggingface.co/xxparthparekhxx/openjev-flash/commit/d7a81e0c213c2ee 92738012d92411c2ba52085e0
+32. initial release · KoichiYasuoka/modernbert-large-thai-wikipedia at, https://huggingface.co/KoichiYasuoka/modernbert-large-thai-wikipedia/commit/d746d3d30871012b4d5115a100b2e2c3bb6c99a0
+33. Canonicalize RoPE theta: align legacy local_rope_theta to 160000, https://huggingface.co/hotchpotch/bekko-embedding-v1-a25m/commit/59f13e38a61318f56d45f33e5b428e67d9f5857c
+34. final ettin150m-nli · xxparthparekhxx/openjev-flash at d7a81e0, https://huggingface.co/xxparthparekhxx/openjev-flash/commit/d7a81e0c213c2ee92738012d92411c2ba52085e0
 35. modernbert.py · scairesearch/bertbm-100m at main - Hugging Face, https://huggingface.co/scairesearch/bertbm-100m/blob/main/modernbert.py
-36. config.json · mukaddamzaid/amos-1-mini at ... - Hugging Face, https://huggingface.co/mukaddamzaid/amos-1-mini/blob/340d8af4bfbf420b2cec 31b79d27a528958eaf3a/config.json
+36. config.json · mukaddamzaid/amos-1-mini at ... - Hugging Face, https://huggingface.co/mukaddamzaid/amos-1-mini/blob/340d8af4bfbf420b2cec31b79d27a528958eaf3a/config.json
 37. 因果解码器架构与文本生成实战指南-CSDN博客, https://blog.csdn.net/gitblog_00591/article/details/156330336
 38. https://blog.csdn.net/gitblog_00851/article/details/170695171
 39. https://blog.csdn.net/gitblog_00424/article/details/170713188
 40. LiquidAI/LFM2-1.2B - Hugging Face, https://huggingface.co/LiquidAI/LFM2-1.2B
-41. Download config.json from LiquidAI/LFM2-350M-ENJP-MT, https://huggingface.co/LiquidAI/LFM2-350M-ENJP-MT/blob/11c66d4212206c98a 5ac32a58f716cc8e012e99d/config.json
-42. Introducing LFM2: The Fastest On-Device Foundation Models on the, https://www.liquid.ai/blog/liquid-foundation-models-v2-our-second-series-of-ge nerative-ai-models
-43. modeling_lfm2.py · LiquidAI/LFM2-1.2B-Longevity at main, https://huggingface.co/LiquidAI/LFM2-1.2B-Longevity/blob/main/modeling_lfm2.p y
-44. Building Liquid LFM2-VL From Scratch using Pytorch - Medium, https://medium.com/@shanmuka.sadhu/building-liquid-lfm2-vl-from-scratch-usi ng-pytorch-7c6792c39e57
+41. Download config.json from LiquidAI/LFM2-350M-ENJP-MT, https://huggingface.co/LiquidAI/LFM2-350M-ENJP-MT/blob/11c66d4212206c98a5ac32a58f716cc8e012e99d/config.json
+42. Introducing LFM2: The Fastest On-Device Foundation Models on the, https://www.liquid.ai/blog/liquid-foundation-models-v2-our-second-series-of-generative-ai-models
+43. modeling_lfm2.py · LiquidAI/LFM2-1.2B-Longevity at main, https://huggingface.co/LiquidAI/LFM2-1.2B-Longevity/blob/main/modeling_lfm2.py
+44. Building Liquid LFM2-VL From Scratch using Pytorch - Medium, https://medium.com/@shanmuka.sadhu/building-liquid-lfm2-vl-from-scratch-using-pytorch-7c6792c39e57
 45. LiquidAI/LFM2.5-Audio-1.5B - hfviewer.com, https://hfviewer.com/LiquidAI/LFM2.5-Audio-1.5B
-46. config.json · madoss/test-LFM2-350M at ... - Hugging Face, https://huggingface.co/madoss/test-LFM2-350M/blame/5bc583cc4e44aaf9d597 0bf973e47b51f628bf5c/config.json
-47. https://aws.amazon.com/pt/blogs/aws-brasil/faca-o-deploy-do-seu-primeiro-syst em-one-model-na-aws-com-laya/
+46. config.json · madoss/test-LFM2-350M at ... - Hugging Face, https://huggingface.co/madoss/test-LFM2-350M/blame/5bc583cc4e44aaf9d5970bf973e47b51f628bf5c/config.json
+47. https://aws.amazon.com/pt/blogs/aws-brasil/faca-o-deploy-do-seu-primeiro-system-one-model-na-aws-com-laya/
 48. jaredpalmer/kev: Jev-like family of decision models built on ... - GitHub, https://github.com/jaredpalmer/kev
 49. Kev - SGLang Documentation, https://lmsysorg.mintlify.app/cookbook/autoregressive/Kev/kev
 50. BioClinical ModernBERT: an example of continued pre-training of, https://huggingface.co/blog/thomas-sounack/bioclinical-modernbert-tutorial
-51. Duplicate from MahmoodAnaam/ModernBERT-large - Hugging Face, https://huggingface.co/roadrage10/ModernBERT-large/commit/50edfcbefba9979 942dcec6a47200bf48a1c3a91
+51. Duplicate from MahmoodAnaam/ModernBERT-large - Hugging Face, https://huggingface.co/roadrage10/ModernBERT-large/commit/50edfcbefba9979942dcec6a47200bf48a1c3a91
 52. jhu-clsp/ettin-encoder-150m - Hugging Face, https://huggingface.co/jhu-clsp/ettin-encoder-150m
-53. Encoders vs Decoders: the Ettin Suite - a jhu-clsp Collection, https://huggingface.co/collections/jhu-clsp/encoders-vs-decoders-the-ettin-suit e
+53. Encoders vs Decoders: the Ettin Suite - a jhu-clsp Collection, https://huggingface.co/collections/jhu-clsp/encoders-vs-decoders-the-ettin-suite
 54. PaddleNLP 中的DeBERTa 模型集合：架构解析、配置与实战使用指南, https://blog.csdn.net/gitblog_00189/article/details/157225932
-55. tomaarsen/ettin-encoder-150m-multivector-msmarco32k-3e-5, https://huggingface.co/tomaarsen/ettin-encoder-150m-multivector-msmarco32k -3e-5-20261014/blob/f8f8955d6f8a771674ac58dcdad3ab8b5d02c6ad/config.json
-56. config.json · stefan-it/ettin-encoder-400m-tokenizer-fix at, https://huggingface.co/stefan-it/ettin-encoder-400m-tokenizer-fix/blob/82d97b3 ffd00a6612fd360f50884de2e633d875b/config.json
-57. codavidgarcia/mola-150m at fc92bea - Hugging Face, https://huggingface.co/codavidgarcia/mola-150m/commit/fc92bea8ec5240050ae 0eb52248187a198e9ea04
+55. tomaarsen/ettin-encoder-150m-multivector-msmarco32k-3e-5, https://huggingface.co/tomaarsen/ettin-encoder-150m-multivector-msmarco32k-3e-5-20261014/blob/f8f8955d6f8a771674ac58dcdad3ab8b5d02c6ad/config.json
+56. config.json · stefan-it/ettin-encoder-400m-tokenizer-fix at, https://huggingface.co/stefan-it/ettin-encoder-400m-tokenizer-fix/blob/82d97b3ffd00a6612fd360f50884de2e633d875b/config.json
+57. codavidgarcia/mola-150m at fc92bea - Hugging Face, https://huggingface.co/codavidgarcia/mola-150m/commit/fc92bea8ec5240050ae0eb52248187a198e9ea04
 58. 手把手教你用Ratchet构建Phi3模型浏览器端应用：跨平台AI推理的, https://blog.csdn.net/gitblog_00660/article/details/151479689
-59. Duplicate from microsoft/deberta-v3-small · zhihuiwu123/deberta-v3, https://huggingface.co/zhihuiwu123/deberta-v3-small/commit/48279c1729ce2750 b3bfbf74df6054433b701231
+59. Duplicate from microsoft/deberta-v3-small · zhihuiwu123/deberta-v3, https://huggingface.co/zhihuiwu123/deberta-v3-small/commit/48279c1729ce2750b3bfbf74df6054433b701231
 60. 为什么bge-m3-zeroshot-v2.0 能读懂8192 tokens？上下文窗口与长, https://blog.csdn.net/gitblog_00218/article/details/168659561
 61. [Performance] WebGPU EP: Conv3D uses a naive per-element, https://github.com/microsoft/onnxruntime/issues/34087
-62. When Your AI Says “I'm Sure,” Check Whose Sure It Is - Medium, https://medium.com/@mbonsign/when-your-ai-says-im-sure-check-whose-sure -it-is-1900834561a5
+62. When Your AI Says “I'm Sure,” Check Whose Sure It Is - Medium, https://medium.com/@mbonsign/when-your-ai-says-im-sure-check-whose-sure-it-is-1900834561a5
 63. https://blog.csdn.net/gitblog_00647/article/details/168884086
 64. Implement experimental DP4a in Tint [42250522] - Chromium Issue, https://issues.chromium.org/42250522
 65. [Web] WebGPU DP4A MatMulNBits gives wrong FP16 results on, https://github.com/microsoft/onnxruntime/issues/34078
@@ -2213,28 +2315,28 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 75. ggml-org/llama.cpp b8190 on GitHub - NewReleases.io, https://newreleases.io/project/github/ggml-org/llama.cpp/release/b8190
 76. llama-cpp-pydist · PyPI, https://pypi.org/project/llama-cpp-pydist/
 77. README.md · LJTSG/gemma-webgpu at main - Hugging Face, https://huggingface.co/LJTSG/gemma-webgpu/blame/main/README.md
-78. ssm_conv.wgsl - GitHub, https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-webgpu/wgsl- shaders/ssm_conv.wgsl
+78. ssm_conv.wgsl - GitHub, https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-webgpu/wgsl-shaders/ssm_conv.wgsl
 79. https://blog.csdn.net/gitblog_00398/article/details/141076828
 80. Vulkan: vkCreateComputePipelines fails (VK_ERROR_UNKNOWN, https://github.com/ggml-org/llama.cpp/issues/28635
-81. whisper.cpp Vulkan 后端源码解析：一份构建覆盖四大GPU 厂商的, https://blog.csdn.net/gitblog_00374/article/details/151912073?utm_source=gitcod e_aigc_v1_t0&index=next&type=card&
+81. whisper.cpp Vulkan 后端源码解析：一份构建覆盖四大GPU 厂商的, https://blog.csdn.net/gitblog_00374/article/details/151912073?utm_source=gitcode_aigc_v1_t0&index=next&type=card&
 82. Repository Wiki — generated by GitNexus - GitHub Gist, https://gist.github.com/983033995/658503cd48866b4915c7c7d80f73d79e
-83. llama.cpp-dev/README-todo-counts.md at master · ggml ... - GitHub, https://github.com/ggml-org/llama.cpp-dev/blob/master/README-todo-counts.m d
-84. norm.comp - GitLab, https://gitlab.futo.org/keyboard/transcribe.cpp/-/blob/v0.0.2/ggml/src/ggml-vulka n/vulkan-shaders/norm.comp?ref_type=tags
+83. llama.cpp-dev/README-todo-counts.md at master · ggml ... - GitHub, https://github.com/ggml-org/llama.cpp-dev/blob/master/README-todo-counts.md
+84. norm.comp - GitLab, https://gitlab.futo.org/keyboard/transcribe.cpp/-/blob/v0.0.2/ggml/src/ggml-vulkan/vulkan-shaders/norm.comp?ref_type=tags
 85. Vulkan backend, glslc shader compilation errors (Ubuntu 24.04.3), https://github.com/ggml-org/llama.cpp/issues/16860
 86. ollama v0.20.7 最新版更新详解：ROCm 7.2.1、Gemma4 渲染修复与, https://blog.csdn.net/weixin_48502062/article/details/160191540
 87. PowerInfer/ggml-metal.metal at main - GitHub, https://github.com/Tiiny-AI/PowerInfer/blob/main/ggml-metal.metal
-88. compile upstream's kernels as they ship · marcsun13/ggml-attn at, https://huggingface.co/marcsun13/ggml-attn/commit/062729c9f47bb7265e0069 edc24e3ca3913572fa
+88. compile upstream's kernels as they ship · marcsun13/ggml-attn at, https://huggingface.co/marcsun13/ggml-attn/commit/062729c9f47bb7265e0069edc24e3ca3913572fa
 89. You probably shouldn't train a language model in your browser, https://vin.how/blog/train-a-language-model-in-your-browser
 90. 深度探索Ratchet量化技术：浏览器端高效模型部署的关键-CSDN博客, https://blog.csdn.net/gitblog_01145/article/details/151778554
 91. Releases · Looong01/onnxruntime-rocm-build - GitHub, https://github.com/Looong01/onnxruntime-rocm-build/releases
 92. Vulkan confused by push_constants binding with separate ... - GitHub, https://github.com/gfx-rs/wgpu/issues/6562
-93. Testing – wgpu wiki - Factory.ai, https://factory.ai/open-source-wikis/wgpu?page=how-to-contribute%2Ftesting. md
+93. Testing – wgpu wiki - Factory.ai, https://factory.ai/open-source-wikis/wgpu?page=how-to-contribute%2Ftesting.md
 94. wgpu/CHANGELOG.md at trunk - gfx-rs - GitHub, https://github.com/gfx-rs/wgpu/blob/trunk/CHANGELOG.md
 95. Vulkan backend is much slower than dx12 (consumed time is 6x!), https://github.com/gfx-rs/wgpu/discussions/9020
 96. Create an IR based MSL Generator [42251016] - Chromium Issue, https://issues.chromium.org/issues/42251016
 97. Limits in wgpu - Rust, https://doc.qu1x.dev/bevy_trackball/wgpu/struct.Limits.html
 
-> **Nota:** a numeração é a dos relatórios originais. Entradas `unknown_url` foram preservadas como estavam; não foram inventadas URLs. Alguns links podem ter mudado desde Nov/2026.
+> **Nota:** a numeração é a dos relatórios originais. Entradas sem URL (marcadas como “fonte não identificada no relatório”) foram preservadas como estavam; não foram inventadas URLs. Alguns links podem ter mudado desde Nov/2026.
 
 </details>
 
@@ -2255,7 +2357,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | Cabeças Q / KV | 12 / 12 | 12 / 12 | 16 / 16 | 16 / 8 | 16 / 16 | 12 / 12 | 16 / 16 |
 | `head_dim` | 64 | 64 | 64 | 64 | 64 | 64 | 64 |
 | `vocab_size` | 50.368 | 256.000 | 50.368 | 65.536 | 50.368 | 128.100 | 128.100 |
-| `max_seq_len` | 8.192 | 8.192 | 8.192 (default 512) | 16.384 | 8.192 | 512 | 512 |
+| `max_seq_len` | 8.192 | 8.192 | **512 (treino); backbone 8.192** | 16.384 | 8.192 | 512 | 512 |
 | RoPE global / local | 160.000 / 10.000 | 160.000 / 10.000 | 160.000 / 10.000 | — (LFM2) | 160.000 / 10.000 | relativo | relativo |
 | Normalização | Pre-Norm; layer 0 sem `attn_norm` | idem | idem | RMSNorm (qNorm/kNorm) | idem | Post-Norm/relativo | Post-Norm/relativo |
 | Ativação | GeGLU | GeGLU | GeGLU | SwiGLU | GeGLU | GELU | GELU |
@@ -2264,7 +2366,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | Embeddings | 38,68M | 196,61M | 51,58M | 67,11M | 51,58M | 98,77M | 131,70M |
 | Licença | Apache-2.0/MIT | Apache-2.0 | ver repo | LFM Open v1.0 | Apache-2.0 | MIT | MIT |
 
-> **Atenção:** os valores de `max_seq_len` do DeBERTa e do Von são os padrões de treino; o runtime pode aceitar mais, mas a qualidade fora do contexto treinado não é garantida. O ModernBERT suporta 8.192; o d1-omni, 16.384.
+> **Atenção:** os valores de `max_seq_len` do DeBERTa e do Von são os padrões de treino; o runtime pode aceitar mais, mas a qualidade fora do contexto treinado não é garantida. O ModernBERT suporta 8.192; o d1-omni, 16.384. **Somas:** no Von, 343,20M (tronco) + 51,58M (embeddings) = 394,78M; o total de 395,83M inclui ~1,05M da cabeça `OptionMarkerScorer`, que não está na coluna “tronco”. No Ettin, 110,33M + 38,68M = 149,01M; os 111,32M do relatório 1 incluem a cabeça de decisão (~1M).
 
 <a id="apendice-b"></a>
 ### 13.B Equações e pseudocódigo
@@ -2377,7 +2479,7 @@ As cinco figuras abaixo são as páginas-infográfico dos relatórios. Elas est�
 
 ![Decomposição de memória e escalabilidade roofline](docs/figures/fig-01-memoria-roofline.png)
 
-*O que ler:* o offload de embeddings reduz o Ettin-150M para 112,8 MB e o Laya para 127,1 MB em Q8_0, ambos abaixo do slab W3C de 128 MiB; o painel inferior mostra a latência de passada única e o teto de 240 tokens para o SLA de 50 ms em mobile.
+*O que ler:* o offload de embeddings reduz o **backbone** do Ettin-150M para 112,8 MiB e o **backbone+cabeça** do Laya para 127,1 MiB em Q8_0, ambos abaixo do slab W3C de 128 MiB; o painel inferior mostra a latência de passada única e o teto de 240 tokens para o SLA de 50 ms em mobile.
 
 **Figura 2 — Telemetria do ecossistema WebGPU em 2026.**
 
@@ -2389,7 +2491,7 @@ As cinco figuras abaixo são as páginas-infográfico dos relatórios. Elas est�
 
 ![Comparativo quantitativo de motores](docs/figures/fig-03-comparativo-motores.png)
 
-*O que ler:* o motor customizado tem 0,4 MB de binário, 0,25 s de compilação e 12,4 ms (Ettin) / 29,5 ms (d1-omni), contra 23,5 MB / 11 s / 35 ms do ONNX Runtime.
+*O que ler:* o motor proposto (ainda não medido) tem 0,4 MB de binário, 0,25 s de compilação e 12,4 ms (Ettin) / 29,5 ms (d1-omni) como **alvos**, contra 23,5 MB / 11 s / 35 ms do ONNX Runtime medidos.
 
 **Figura 4 — Footprint de VRAM e FLOPs em passada única.**
 
@@ -2412,16 +2514,22 @@ Os dois PDFs foram produzidos em datas próximas, mas não são idênticos. Esta
 |---|---|---|---|
 | d1-omni: parâmetros do tronco | **380,73M** | **381,00M** (tabela) | Usar “380,73M” no texto e “381,00M” na tabela, arredondando; a diferença é de 0,07% |
 | d1-omni: total multimodal | 587M | 587,00M | 587M |
-| d1-omni: footprint Q4 | 240 MB (ONNX) | 314,89 MB (Q4_K, multimodal) | Explicitar o formato: 240 MB é ONNX Q4; 314,89 MB é o `.sombin` Q4_K completo |
-| d1-omni: camadas | 16 (10 ShortConv + 6 GQA) | 16 (10 + 6) | Consistente |
+| d1-omni: footprint Q4 | 240 MB (ONNX) | 314,89 MiB (Q4_K, multimodal) | Explicitar o formato: 240 MB é ONNX Q4; 314,89 MiB é o `.sombin` Q4_K de referência |
+| **d1-omni: camadas** | **18 blocos** (p. 6/8) | **16** (10 ShortConv + 6 GQA) | O `config.json` oficial da LiquidAI (consultado em 2026-11-19) confirma `num_hidden_layers: 16` e `layer_types` com 10 `conv` + 6 `full_attention`. **Adotamos 16; o relatório 1 está errado neste ponto.** |
+| **d1-omni: temperaturas/projetor** | 1,7465→1,1751; projetor 2560 | idem | O config oficial detalha `choice:2=1.7465`, `choice:3-5=1.3999`, `choice:6-10=1.1751`, `choice:11+=1.3725`, `noul:2=1.6663`, `score:3-5=1.7301`, `score:6-10=1.0`; `projector_hidden_size=2048`. Adotamos o config. |
 | ModernBERT/Ettin: camadas | 22 (base) | 22 (base) / 28 (large) | Consistente; a confusão é base vs. large |
-| Von: parâmetros | 395,0M | 395,83M | 395,83M na tabela; 395M no texto |
-| Ettin: parâmetros | 150,0M | 149,01M | 150M arredondado; 149,01M na tabela |
+| Von: parâmetros | 395,0M | 395,83M | 395,83M na tabela; 395M no texto. A soma 343,20M + 51,58M = 394,78M; falta a cabeça OptionMarkerScorer (~1M) |
+| Ettin: parâmetros | 150,0M (38,68M + 111,32M) | 149,01M (38,68M + 110,33M) | A diferença de ~1M é a cabeça de decisão: 110,33M é o tronco do encoder; 111,32M inclui a cabeça. 112,8 MiB usa o segundo split |
 | Laya: parâmetros | 322,0M | 321,94M | 322M arredondado |
 | Laya: camadas | 22 + 2 head | 22 + 2 head | Consistente |
+| **Estratégia de submissão** | **3 submits** (7–8 camadas) | **1 submit** (`CommandEncoder`/`ComputePass` único) | **Adotamos 3 submits, um `ComputePass` por chunk** ([3.5](#ponte)). O single-submit é baseline/opt-in de benchmark; as três falhas de produção do relatório 1 justificam o custo de ~2 dispatches extras |
+| **Localização dos embeddings** | **Seção A/OPFS**, só `S` vetores ativos na GPU | `tok_embeddings` no slab estático | **Adotamos a Seção A/OPFS** ([3.1](#armazenamento), [6.3](#sombin)). Com 196,61M embeddings, o Laya não caberia num binding de 128 MiB; o slab estático tem só `embed_norm` + `final_norm` + cabeça |
+| **Q4_K vs. Q4_0** | Q4_0 reempacotado no runtime | Q4_K no layout/kernels | **Q4_K é formato de origem/leitura; o runtime executa Q8_0/Q4_0** ([6.3](#sombin)). O header aceita `quant_type=3` para identificar a origem, mas o carregador rejeita Q4_K on-the-fly |
+| **Unidades** | “MB” em várias tabelas | “MB” que são MiB | **Tabela 1 ([5.2](#vram)) é a canônica em MiB.** O limite W3C é 128 MiB = 134.217.728 B; o Laya em 127,1 MiB tem só 0,74% de margem |
+| **FLOPs a S=1.024** | — | 257,30 / 755,38 / 614,29 GFLOPs | **Não reconciliável** (d1 614,29 < 4×162,75; Ettin linear 3,96× e atenção 10,4×). Não usar para dimensionar; a coluna S=256 é a canônica |
 | Von: status | “descontinuado” | “arquivado” | Tratar como **descontinuado/arquivado**; não é alvo |
-| Ettin: Q8_0 | 112,8 MB (backbone) | 150,99 MB (total) | 112,8 MB é **backbone sem embeddings**; 150,99 MB é o modelo completo |
-| Laya: Q8_0 | 127,1 MB (backbone+head) | 326,21 MB (total) | 127,1 MB é **após offload**; 326,21 MB é o modelo completo |
+| Ettin: Q8_0 | 112,8 MiB (backbone) | 150,99 MiB (total) | 112,8 MiB é **backbone sem embeddings**; 150,99 MiB é o modelo completo |
+| Laya: Q8_0 | 127,1 MiB (backbone+head) | 326,21 MiB (total) | 127,1 MiB é **após offload**; 326,21 MiB é o modelo completo |
 | Datas de browser | Safari 26.0 15/09/2025 | idem | Consistente |
 | WebGPU coverage | 88,6–89,46% | 89,46% | Usar a faixa |
 | Referências | 95 | 97 | Preservar ambas; 192 entradas no apêndice |
@@ -2430,7 +2538,7 @@ Os dois PDFs foram produzidos em datas próximas, mas não são idênticos. Esta
 
 - **Alto:** especificação W3C, limites de buffer, arquitetura dos modelos (shapes, camadas, vocabulário), licenças, comportamento de OPFS/WebGPU.
 - **Médio:** latências e footprints medidos por terceiros; variam com device, browser, driver, temperatura e versão do modelo.
-- **Baixo/especulativo:** números de “SLA” universais; cobertura futura de NPU/WebNN; algumas URLs marcadas `unknown_url` nos relatórios.
+- **Baixo/especulativo:** números de “SLA” universais; cobertura futura de NPU/WebNN; algumas fontes não identificadas nos relatórios.
 
 **O que este README não faz:** não reproduz os benchmarks, não valida as licenças de cada checkpoint, não garante que os números de 2026 se mantenham em 2027. Ele preserva o **estado da arte documentado** e as **decisões de engenharia** para que a implementação possa ser medida de novo.
 
@@ -2448,13 +2556,30 @@ Os dois PDFs foram produzidos em datas próximas, mas não são idênticos. Esta
   author       = {Kl{\"u}ser, Frederico},
   year         = {2026},
   howpublished = {\url{https://github.com/frederico-kluser/som-webcore}},
-  note         = {RFC/blueprint v0.1.0}
+  note         = {RFC/blueprint, documento v0.1.0 (sem tag de runtime)}
 }
 ```
 
-**Agradecimentos.** A pesquisa original compilada nos dois PDFs; às equipes do ModernBERT, Ettin, Laya, Liquid AI e Von por abrirem modelos e documentação; aos projetos wgpu, Dawn, Naga, llama.cpp, ONNX Runtime, Burn, fusor-ai, Pooled.run e ruNNtime pelas técnicas e correções que tornaram este blueprint possível; e a todos que testarem os números em hardware real.
+**Agradecimentos.** À pesquisa original compilada nos dois PDFs; às equipes do ModernBERT, Ettin, Laya, Liquid AI e Von por abrirem modelos e documentação; aos projetos wgpu, Dawn, Naga, llama.cpp, ONNX Runtime, Burn, fusor-ai, Pooled.run e ruNNtime pelas técnicas e correções que tornaram este blueprint possível; e a todos que testarem os números em hardware real.
 
 **Disclaimer.** Este projeto não é afiliado à TypeSafe AI, Liquid AI, LightOn, JHU CLSP, ConvAI Innovations, Hugging Face, Google, Apple, Mozilla ou Microsoft. Nomes de produtos pertencem aos seus donos. Nada aqui é aconselhamento jurídico; verifique as licenças dos modelos antes de usar.
+
+<a id="apendice-f"></a>
+### 13.F Tabela 3 — de onde copiar kernels e padrões (sem importar dependências)
+
+O relatório 2 dedica o Pilar 4 a mapear **o que estudar e traduzir** de projetos abertos, sem adicionar dependências de ML ao bundle. Esta é a versão condensada; os caminhos são os do repositório de origem na data do relatório.
+
+| Projeto | Arquivos/caminhos a estudar | Padrão a extrair para o SOM WebCore |
+|---|---|---|
+| `ggml-org/llama.cpp` (ggml-webgpu) | `wgsl-shaders/mul_mat.wgsl`, `mul_mat_reg_tile.wgsl`, `mul_mat_subgroup_matrix.wgsl`, `flash_attn.wgsl`, `rms_norm*.wgsl`, `rope*.wgsl`, `glu.wgsl`, `ssm_conv.wgsl`, `conv2d_dw.wgsl` | Register tiling; `compute_2d_workgroups()`; FA simplificada; GLU `INPLACE`; conv depthwise para `LFM2ShortConv` |
+| `ggml-org/llama.cpp` (ggml-vulkan) | `mul_mat_vec_q4_K.comp`, `mul_mat_vec_q8_0.comp`, `mul_mm.comp`, `flash_attn*.comp`, `norm.comp`, `rope_neox.comp`, `rope_funcs.glsl` | Desempacotamento Q4_K/Q8_0; online softmax com block mask skipping; `vec2(sum_x, sum_x2)` em `norm.comp`; RoPE NeoX |
+| `ggml-org/llama.cpp` (ggml-metal) | `ggml-metal.metal`: `kernel_mul_mm`, `kernel_mul_mv_q4_K_f32`, `kernel_mul_mv_q8_0_f32`, `kernel_flash_attn_ext`, `kernel_flash_attn_ext_vec` | `simd_sum`/`simd_max`; `simdgroup_half8x8`; correção do cast `if (simd_max(float(sm[tiisg])) <= -65504.0f)` |
+| `wfzyx/von` + `NandhaKishorM/laya` | `src/von/models/option_marker.py`, `src/von/backends/option_marker_backend.py`, `src/von/server.py`, `src/von/api.py`, `laya_mlx/model.py`, `laya_mlx/common.py` | Option-Marker em 4 etapas; `split_digits`; `_neutralise`; `independent_options`; reset de position IDs; truncamento 60/40; calibração |
+| `FL33TW00D/ratchet` | `crates/ratchet-core/src/quant.rs`, `crates/ratchet-core/src/gpu/` | Layout binário alinhado Q8_0F/Q8_0H/Q4_0; deteção de memória in-place |
+| `microsoft/onnxruntime` (WebGPU EP) | `onnxruntime/core/providers/webgpu/`, `js/web/lib/wasm/jsep/webgpu/ops/matmulnbits.ts`, `dp4a_quantize.wgsl.template` | `BlockwiseMatMulNBits32`; `DP4AMatMulQuantize`; `DP4ASmallM` (PR #27910); `workgroupUniformLoad` |
+| `gfx-rs/wgpu` + `google/dawn` | `wgpu/examples/features/src/uniform_values/`, `PipelineCompilationOptions`, issue #8556 (immediates), `dawn/test/tint/builtins/gen/literal/dot4I8Packed/`, `.../var/workgroupUniformLoad/` | Dynamic offsets; `bytemuck::Pod` para `set_push_constants`; constantes de override; sintaxe canônica de `dot4I8Packed`/`workgroupUniformLoad` |
+
+> **Regra de ouro do Pilar 4:** extraia o **algoritmo** e o **layout de bits**, não a dependência. Cada linha acima deve virar um teste de paridade numérico contra uma referência CPU antes de entrar no runtime.
 
 ---
 

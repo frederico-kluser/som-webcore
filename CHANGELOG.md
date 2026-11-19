@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shaders WGSL ainda não foram implementados.
 - A política de revisão foi adaptada para **mantenedor único**: PR obrigatório, `build` verde e
   squash merge, sem exigir aprovações externas enquanto não houver uma segunda pessoa.
+- **Auditoria de arquitetura aplicada ao README:** embeddings passam a viver na Seção A/OPFS
+  (o slab estático não contém `tok_embeddings`), a submissão é explicitamente **3 chunks**,
+  Q4_K é formato de origem (o runtime executa Q8_0/Q4_0), o `S_max` normativo é **1.024**, o
+  `DecisionPacket`/ring tem capacidade de **1.056 B**, e as unidades das tabelas são **MiB**.
+- **Fatos do d1-omni reconciliados com o `config.json` oficial:** 16 camadas (10 conv + 6
+  full attention), temperaturas por bucket (`choice:11+ = 1.3725`), `projector_hidden_size=2048`.
+- **Bibliografia:** 41 URLs quebradas por quebra de linha foram corrigidas; entradas sem URL
+  foram marcadas como “fonte não identificada no relatório”, sem inventar links.
+- Adicionados apêndices de **quantização** (Q8_0/Q4_0/Q4_K), **classes de dispositivo**,
+  **Tabela 3 — de onde copiar kernels** e **cooperative matrix** (SPIR-V/MSL).
 
 ### Fixed
 
