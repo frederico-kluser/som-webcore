@@ -29,7 +29,7 @@ som-webcore/
 ├── deny.toml                        licenças e avisos de dependências Rust           A-09
 ├── package.json · pnpm-workspace.yaml · pnpm-lock.yaml   workspace JavaScript        P-03
 │
-├── crates/                          código Rust — ver seção 2
+├── crates/                          código Rust — só nos ramos de motor nosso (seção 2)
 │   ├── som-contract/                tipos do contrato de decisão                     P-02
 │   ├── som-format/                  leitor e escritor do .sombin e do manifesto      P-06 → A-06
 │   ├── som-tokenizer/               tokenização e montagem da sequência              P-05
@@ -63,6 +63,7 @@ som-webcore/
 ├── conformance/                     vetores e executor públicos, neutros de motor    B-09
 │
 ├── bench/
+│   ├── spike-mobile/                página de teste do marco T e tipos da API        T-01
 │   ├── harness/                     página e scripts de medição                      P-11
 │   ├── baseline-ort/                o mesmo modelo no ONNX Runtime Web               P-12
 │   ├── schema/report.schema.json    formato dos relatórios                           P-11
@@ -77,7 +78,7 @@ som-webcore/
 │   ├── STRUCTURE.md                 ✅ este arquivo
 │   ├── adr/                         registros de decisão de arquitetura              P-01
 │   ├── rfcs/                        propostas de superfície pública e de formato     P-02
-│   ├── spec/                        especificações normativas, em inglês             A-06
+│   ├── spec/                        especificações normativas, em inglês             T-05
 │   ├── standards/                   explainer, prior art e evidências, em inglês     S-01
 │   ├── reports/                     relatórios de marco e de portão                  P-14
 │   ├── guides/                      guias de uso e de segurança                      A-09
@@ -102,11 +103,13 @@ som-webcore/
 <a id="crates"></a>
 ## 2. Crates Rust
 
+> As crates abaixo só nascem se o portão `GT` do roadmap escolher um motor nosso (fork ou do zero). No ramo do motor existente, o código vive em `packages/`.
+
 Cada crate tem uma responsabilidade e uma razão para ser separada. Se uma crate nova não tiver as duas, ela é um módulo.
 
 | Crate | Responsabilidade | Por que é separada | Depende de |
 |---|---|---|---|
-| `som-contract` | Tipos de requisição e resposta (`choice`, `noul`, `score`), erros, renderização do estado, JSON Schema | É a superfície que todas as outras partes e o SDK partilham; não pode puxar GPU nem I/O | — |
+| `som-contract` | Tipos de requisição e resposta (`boolean`, `choice` e `score`, idênticos aos da Decisions API), erros, renderização do estado, JSON Schema | É a superfície que todas as outras partes e o SDK partilham; não pode puxar GPU nem I/O | — |
 | `som-format` | Ler e escrever `.sombin` e o manifesto; validação; hashing | Precisa ser pequena, sem `std` obrigatório e testável por fuzzing; é o que um terceiro reimplementa a partir da especificação | `som-contract` |
 | `som-tokenizer` | Texto → IDs; montagem da sequência com marcadores | Paridade de IDs é um contrato próprio, com corpus e testes próprios | `som-contract` |
 | `som-ref` | Passada completa em f32 na CPU, cabeça, calibração | É o oráculo interno: **não pode depender de GPU**. Vira a base do fallback Wasm SIMD | `som-contract`, `som-format` |

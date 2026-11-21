@@ -5,7 +5,7 @@
 > As atividades formam um **grafo acíclico dirigido (DAG)**: cada uma declara de quais depende, o que entrega e como se prova que terminou.
 > As tabelas são a fonte; os grafos Mermaid, as ondas de execução e o caminho crítico são **gerados** por `python3 scripts/roadmap.py render` e validados na CI.
 
-**Atalhos:** [Valor](#valor) · [Como ler](#como-ler) · [Marcos](#marcos) · [O que mudou no plano](#correcoes) · [M0](#m0) · [Padrão de chamada](#padrao-chamada) · [Bifurcações](#bifurcacoes) · [T — Teste](#mt) · [Prompts](#prompts) · [M1 — PoC](#m1) · [M2 — Alpha](#m2) · [M3 — Beta](#m3) · [M4 — v1.0.0](#m4) · [Trilha S — Padronização](#trilha-s) · [M5](#m5) · [Critérios globais](#dod) · [Riscos](#riscos-do-plano) · [Fora do roadmap](#fora) · [Manutenção](#manutencao)
+**Atalhos:** [Valor](#valor) · [Como ler](#como-ler) · [Marcos](#marcos) · [O que mudou no plano](#correcoes) · [M0](#m0) · [Padrão de chamada](#padrao-chamada) · [Ambiente](#ambiente) · [Bifurcações](#bifurcacoes) · [T — Teste](#mt) · [Prompts](#prompts) · [M1 — PoC](#m1) · [M2 — Alpha](#m2) · [M3 — Beta](#m3) · [M4 — v1.0.0](#m4) · [Trilha S — Padronização](#trilha-s) · [M5](#m5) · [Critérios globais](#dod) · [Riscos](#riscos-do-plano) · [Fora do roadmap](#fora) · [Manutenção](#manutencao)
 
 Documentos irmãos: [metodologia](docs/METHODOLOGY.md) · [estrutura do repositório](docs/STRUCTURE.md) · [como contribuir](CONTRIBUTING.md) · [governança](GOVERNANCE.md) · [errata da pesquisa](research/ERRATA.md).
 
@@ -64,7 +64,7 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 79 (4 feitos) · **arestas:** 123.
+- **Nós:** 80 (4 feitos) · **arestas:** 124.
 - **Esforço relativo:** 19/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro (117 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-08` → `DT-01` → `T-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
@@ -137,6 +137,7 @@ A auditoria de 2026-11-21 conferiu os dois relatórios de pesquisa e o README co
 | 17 | O projeto como “o polyfill aberto” da Decisions API | Já existe um polyfill no npm (`built-in-ai-task-apis-polyfills`) | O papel do projeto é cobrir o que falta, com o celular em primeiro lugar |
 | 18 | API própria (`som.decide`, `som.eval`, `noul`), com um “mapeamento” para a do Chrome | Para mostrar o trabalho ao time do Chrome e a pares, a API tem de ser a **mesma** | [Padrão de chamada](#padrao-chamada) idêntico à Decisions API (`T-05`); os nomes do JEV saem da superfície pública |
 | 19 | Um único caminho depois do teste, decidido pelo agente | O caminho depende do que o teste mostrar, e a escolha é do usuário | [Bifurcações](#bifurcacoes) `DT-01`, `GT` e `DP-01`, com ramos opcionais, prompt e validação por atividade e consulta ao usuário em cada uma |
+| 20 | “A flag do Chrome ainda não foi conferida”; a prévia só existiria no Edge Canary | A API está no Chrome estável 157 e no Canary 160, atrás da flag `decisions-api`; a implementação tem o membro `preference`, que o explainer não descreve, e num perfil novo o modelo aparece como indisponível | [Ambiente verificado](#ambiente); `T-05` captura a superfície da implementação; nova bifurcação `DT-02` |
 
 ---
 
@@ -193,7 +194,7 @@ flowchart LR
 
 **Regra.** A API pública deste projeto é a **Decisions API** do Chrome, sem nomes próprios e sem variações. Quem escreve código para a nossa biblioteca escreve, linha por linha, o mesmo código que roda na implementação nativa. É isso que dá peso para mostrar o trabalho ao time do Chrome e a pares: não é “parecido com”, é o mesmo contrato.
 
-**Referência fixada:** explainer `explainers-by-googlers/decisions-api`, commit `5ce6e10a81f766efaec670282696c0c57ba2de50` (2026-11-11). A forma ainda muda entre commits. A atividade `T-05` fixa a superfície, e a `T-03` confere-a contra a implementação real — a prévia do Edge Canary e o protótipo do Chrome Canary, cuja flag ainda não conferimos.
+**Referência.** A referência é a **implementação do Chrome**; o explainer é a documentação dela. Conferido nesta máquina em 2026-11-21 **[MEDIDO]**: no Chrome estável 157 e no Chrome Canary 160, com a flag `chrome://flags/#decisions-api` (recurso `AIDecisionModelAPI`), o navegador expõe `DecisionModel` com `availability()` e `create()` estáticos e, na instância, `decide()`, `destroy()` e `preference` — este último **não aparece no explainer**. Explainer fixado: `explainers-by-googlers/decisions-api`, commit `5ce6e10a81f766efaec670282696c0c57ba2de50` (2026-11-11). Quando os dois divergem, vale a implementação, e a divergência fica registrada (`T-05`, `T-03`). Os detalhes estão em [Ambiente verificado](#ambiente).
 
 ```js
 const schema = {
@@ -227,14 +228,44 @@ if (status === "available" || status === "downloadable") {
 | Aspecto | Regra |
 |---|---|
 | Ponto de entrada | `DecisionModel`, com `availability()`, `create()`, `decide()` e `destroy()` — mesmos nomes, mesmos argumentos, mesmos valores de retorno |
-| Perguntas | `boolean`, `choice` e `score`, com `id`, `prompt` e `options` (`label`, `description`) |
+| Perguntas | `boolean`, `choice` e `score`, com `id`, `prompt` e `options` (`label`, `description`). Limites da implementação: até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções |
 | Resultado | objeto indexado pelo `id` da pergunta, com `label`, `probabilities`, `confidence` e, em `score`, `expectedScore` |
 | Nomes do JEV | `som.decide`, `som.eval` e `noul` saem da superfície pública; `noul` é `boolean` |
 | O que é só nosso | escolha do modelo, orçamento de download, política de licença e diagnóstico ficam **fora** da superfície padrão, num ponto de configuração separado, que a aplicação pode remover sem mudar nenhuma chamada |
 | Quando o explainer mudar | a referência fixada é atualizada por PR e a nossa API muda junto, mesmo antes da 1.0 |
 | Quando o nativo existir | a biblioteca não se instala por cima: a aplicação usa o `DecisionModel` do navegador |
 
-**Validação do padrão.** Uma única página de conformidade, escrita só com a API acima, roda **sem alteração** (1) sobre a implementação nativa, no Chrome Canary ou no Edge Canary, e (2) sobre a nossa biblioteca, em qualquer navegador. Diferença de forma entre as duas é bug nosso.
+**Validação do padrão.** Uma única página de conformidade, escrita só com a API acima, roda **sem alteração** (1) sobre a implementação nativa, no Chrome com a flag `decisions-api` ligada, e (2) sobre a nossa biblioteca, em qualquer navegador. Diferença de forma entre as duas é bug nosso.
+
+---
+
+<a id="ambiente"></a>
+## Ambiente verificado
+
+O que foi conferido na máquina de desenvolvimento em 2026-11-21, antes de qualquer atividade — tudo **[MEDIDO]** nela. Nada aqui é resultado de teste do roadmap: é só o ponto de partida.
+
+| Item | O que há | O que isso significa |
+|---|---|---|
+| Chrome estável | 157.0.8103.79 | Com `chrome://flags/#decisions-api` (ou `--enable-features=AIDecisionModelAPI`) expõe `DecisionModel`; sem a flag, não |
+| Chrome Canary | 160.0.8174.2, instalado nesta revisão | Mesmo comportamento; o binário cita dois backends para a API: `embedding_gemma_v1` e `language_model` |
+| Superfície observada | estáticos `availability` e `create`; na instância `decide`, `destroy` e `preference` | `preference` não está no explainer: a referência é a implementação (`T-05`) |
+| Limites lidos no binário | até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções | Entram na especificação e nos testes de conformidade |
+| Modelo embutido | `availability()` devolveu `unavailable` num perfil novo, em modo headless | Ainda não se sabe se fica disponível num perfil real; se não ficar, bifurcação `DT-02` |
+| Edge estável | 158.0.4370.33; o binário contém a mesma API | Não testado em execução; o Edge Canary não está instalado |
+| Emulador Android | aceleração WHPX utilizável; aparelhos virtuais `jev_playstore_36`, `jev_google_36` e `jev_atd_36` (Android 36, x86_64) | Usar o `jev_playstore_36`, que tem Play Store para atualizar o Chrome |
+| GPU do emulador | `hw.gpu.mode=swiftshader_indirect` — por software | WebGPU provavelmente indisponível no Chrome do emulador; testar também com `-gpu host` (`T-07`) |
+| Node, npm e bun | 22.23.1, 10.9.8 e 1.4.4 | Suficiente para a página de teste; TypeScript via `npx` |
+| Python | 3.12.10, com `.venv` na raiz: torch 2.15.0 (CPU), transformers 5.24.0, onnxruntime 1.32.0 | Pronto para gerar as respostas de referência (`T-09`) |
+| Rust | 1.99.1 | Só será usado se o portão `GT` escolher um motor nosso |
+| GPU do computador | NVIDIA GeForce RTX 4070 Laptop e Intel UHD | É a família em que a pesquisa relata o travamento de driver em D3D12 — útil para reproduzi-lo, se o motor nosso existir |
+
+**Como abrir o Chrome com a API ligada**, sem tocar no perfil do dia a dia:
+
+```text
+"%LOCALAPPDATA%\Google\Chrome SxS\Application\chrome.exe" --user-data-dir="%TEMP%\som-decisions" --enable-features=AIDecisionModelAPI http://localhost:8377/
+```
+
+A API só existe em contexto seguro: a página tem de ser servida em `http://localhost` ou em HTTPS.
 
 ---
 
@@ -253,6 +284,7 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 | Bifurcação | Pergunta | Ramos | Evidência exigida |
 |---|---|---|---|
 | **DT-01** | Os resultados do emulador bastam para decidir? | (a) seguir só com o emulador · (b) medir também em aparelho real (`T-02`) | `T-08` e `T-09` |
+| **DT-02** | O modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | (a) comparar só a forma da API · (b) instalar o Edge Canary e usar o modelo embutido dele · (c) deixar a comparação de respostas para outra máquina | `T-03`, com o valor de `availability()` num perfil real |
 | **GT** | O motor existente serve, ou há uma janela para um motor nosso? | (a) motor existente, biblioteca fina (`L-01`, `L-02`) · (b) motor nosso em WebGPU (`DP-01`) · (c) só evidência e contribuições | `T-04`, com o veredito e a análise da janela |
 | **DP-01** | O motor nosso nasce de um fork ou do zero? | (a) fork do motor leve existente (`K-01`, `K-02`) · (b) do zero (`P-05` a `P-10`) | `T-10` e as licenças levantadas em `T-06` |
 
@@ -271,7 +303,7 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 
 É uma investigação de prazo fixo (ver [metodologia](docs/METHODOLOGY.md#portoes)): o entregável é uma resposta escrita, com dados, e não um produto.
 
-**O que o emulador mede — e o que não mede.** O emulador roda no processador do computador, não num processador de celular, e a sua placa de vídeo é emulada; o Chrome dele pode nem oferecer WebGPU. Por isso ele serve para saber **se funciona** no Chrome para Android, **quanto baixa**, **quanta memória** usa e para **comparar motores entre si** no mesmo ambiente. Não serve como latência de celular real. É para isso que existe a bifurcação `DT-01`.
+**O que o emulador mede — e o que não mede.** O emulador roda no processador do computador, não num processador de celular, e a sua placa de vídeo é emulada; o Chrome dele pode nem oferecer WebGPU. Por isso ele serve para saber **se funciona** no Chrome para Android, **quanto baixa**, **quanta memória** usa e para **comparar motores entre si** no mesmo ambiente. Não serve como latência de celular real. É para isso que existe a bifurcação `DT-01`. Nos aparelhos virtuais desta máquina a GPU é por software, de modo que o caminho WebGPU provavelmente só poderá ser avaliado em aparelho real.
 
 **Por que este marco vem primeiro.** O celular é a prioridade, e é onde não temos dados: os 12,6 ms do motor existente foram medidos num Apple M4 **[REPORTADO]**; muitos celulares não têm WebGPU; só o runtime do motor existente custa 3,2 MB (CPU) ou 4,8 MB (WebGPU) comprimidos **[MEDIDO nos arquivos publicados do `onnxruntime-web` 1.31.1, em 2026-11-21]**, e em WebGPU ele só atingiu paridade com pesos em precisão cheia **[REPORTADO pelo `crivo-web`]**; e nem o explainer nem a documentação do Edge mencionam Android ou iOS.
 
@@ -283,10 +315,11 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 | `T-01` | **Página de teste** — página estática que usa só a API de `T-05` e faz as mesmas perguntas, em português e em inglês, a cada motor candidato | `T-05`, `T-06` | `bench/spike-mobile/` | registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados, memória e as respostas; exporta um JSON; o que não rodar fica registrado como resultado | S | a fazer |
 | `T-08` | **Medição no emulador** — rodar a página no Chrome do emulador Android, em Wasm e, se houver, em WebGPU | `T-01`, `T-07` | `bench/results/` (arquivos marcados como emulador) | modelos de 17M e de 32M; cada medição repetida duas vezes; nenhuma latência de emulador apresentada como latência de celular | S | a fazer |
 | `T-09` | **Teste do motor existente** — conferir se responde certo e aguenta: respostas contra a referência do modelo, forma da API e 200 decisões seguidas | `T-01` | seção do relatório, `bench/results/` | mesmas respostas da referência, dentro da tolerância da variante; forma do resultado idêntica à de `T-05`; nenhuma falha nem crescimento de memória nas 200 decisões | S | a fazer |
-| `T-03` | **Prévia nativa** — rodar a página de conformidade na Decisions API nativa (Chrome Canary ou Edge Canary) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; se a prévia não puder ser ligada, isso fica escrito | S | a fazer |
+| `T-03` | **API nativa** — rodar a página de conformidade na Decisions API do Chrome (flag `decisions-api`) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; valor de `availability()` num perfil real registrado | S | a fazer |
+| `DT-02` | **Bifurcação DT-02** — o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | `T-03` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; se o modelo ficar disponível, fecha como “não se aplica” | — | a fazer |
 | `DT-01` | **Bifurcação DT-01** — o emulador basta, ou medimos em aparelho real? | `T-08`, `T-09` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | a fazer |
 | `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone | `DT-01` (se aparelho real) | `bench/results/` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | a fazer |
-| `T-10` | **Análise da janela** — listar as limitações do motor existente com modelos de decisão, e as dos próprios modelos, e dizer quais um motor nosso resolveria | `T-03`, `DT-01`, `T-02` | seção do relatório | cada limitação com evidência medida, causa provável e se um fork ou um motor próprio a resolve; limitações de modelo separadas das de motor | S | a fazer |
+| `T-10` | **Análise da janela** — listar as limitações do motor existente com modelos de decisão, e as dos próprios modelos, e dizer quais um motor nosso resolveria | `DT-02`, `DT-01`, `T-02` | seção do relatório | cada limitação com evidência medida, causa provável e se um fork ou um motor próprio a resolve; limitações de modelo separadas das de motor | S | a fazer |
 | `T-04` | **Relatório e veredito** — o motor existente é satisfatório? Anotar o veredito, os limites e a janela | `T-10` | `docs/reports/teste-mobile.md` | veredito explícito contra cada critério de GT; dados brutos publicados; todo número rotulado; o que não se sabe, listado | S | a fazer |
 | `GT` | **Portão GT** — motor existente ou motor nosso? | `T-04` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; critérios de [GT](#gt) | — | a fazer |
 
@@ -300,8 +333,9 @@ flowchart LR
     T01["T-01 · Página de teste"]:::todo
     T08["T-08 · Medição no emulador"]:::todo
     T09["T-09 · Teste do motor existente"]:::todo
-    T03["T-03 · Prévia nativa"]:::todo
+    T03["T-03 · API nativa"]:::todo
     DT01{"DT-01 · o emulador basta, ou medimos em aparelho real?"}:::fork
+    DT02{"DT-02 · o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo?"}:::fork
     T02["T-02 · Medição em celulares reais"]:::opt
     T10["T-10 · Análise da janela"]:::todo
     T04["T-04 · Relatório e veredito"]:::todo
@@ -317,8 +351,9 @@ flowchart LR
     T01 --> T03
     T08 --> DT01
     T09 --> DT01
+    T03 --> DT02
     DT01 -.->|"se aparelho real"| T02
-    T03 --> T10
+    DT02 --> T10
     DT01 --> T10
     T02 --> T10
     T10 --> T04
@@ -338,7 +373,7 @@ flowchart LR
 1. `T-05` · `T-06` · `T-07`
 2. `T-01`
 3. `T-08` · `T-09` · `T-03`
-4. `DT-01`
+4. `DT-01` · `DT-02`
 5. `T-02`
 6. `T-10`
 7. `T-04`
@@ -383,21 +418,22 @@ Cada bloco é o texto a entregar ao agente de código, dentro deste repositório
 
 ```text
 Atividade T-05 do ROADMAP.md: fixar o padrão de chamada idêntico à Decisions API do Chrome.
-1. Leia o explainer github.com/explainers-by-googlers/decisions-api no commit 5ce6e10a81f766efaec670282696c0c57ba2de50. Se houver commits mais novos, use o mais novo e registre o hash.
-2. Escreva docs/spec/decisions-api-surface.md, em inglês: cada membro da API (DecisionModel.availability, DecisionModel.create, decide, destroy, o formato do schema, os tipos boolean, choice e score, e o formato do resultado), com o trecho do explainer que o define.
-3. Escreva bench/spike-mobile/decision-model.d.ts com as declarações TypeScript dessa superfície, sem nenhum nome próprio do projeto.
-4. Liste numa tabela o que o explainer deixa em aberto ou marca como instável.
-Não invente membros: o que o explainer não define fica como "não definido".
+1. Capture a superfície REAL: abra o Chrome com a Decisions API ligada (chrome.exe --enable-features=AIDecisionModelAPI, com um --user-data-dir próprio) numa página servida em http://localhost e enumere os membros de DecisionModel e de uma instância, os valores de availability() e as mensagens de erro de validação. Já se sabe que existe o membro preference, ausente do explainer, e que os limites são: 16 perguntas por esquema, choice com 2 a 26 opções, score com 2 a 11 níveis, boolean sem opções.
+2. Leia o explainer github.com/explainers-by-googlers/decisions-api no commit 5ce6e10a81f766efaec670282696c0c57ba2de50 (ou o mais novo; registre o hash) e marque cada diferença entre ele e a implementação. Quando divergirem, vale a implementação.
+3. Escreva docs/spec/decisions-api-surface.md, em inglês: cada membro da API (DecisionModel.availability, DecisionModel.create, decide, destroy, preference, o formato do schema, os tipos boolean, choice e score, os limites e o formato do resultado), com a origem de cada um: a implementação (versão do Chrome) e o trecho do explainer.
+4. Escreva bench/spike-mobile/decision-model.d.ts com as declarações TypeScript dessa superfície, sem nenhum nome próprio do projeto. Confira com: npx -p typescript tsc --noEmit.
+5. Liste numa tabela o que o explainer deixa em aberto, o que marca como instável e o que só existe na implementação.
+Não invente membros: o que nem a implementação nem o explainer definem fica como "não definido".
 ```
 
-**Validação:** cada membro das declarações aponta para um trecho do explainer no commit registrado · a busca por `noul`, `som.` e `jev` nas declarações não devolve nada · o exemplo de uso deste roadmap compila contra as declarações.
+**Validação:** cada membro das declarações aponta para a implementação (versão do Chrome) ou para um trecho do explainer no commit registrado · o membro `preference` e os limites estão documentados · a busca por `noul`, `som.` e `jev` nas declarações não devolve nada · o exemplo de uso deste roadmap compila contra as declarações.
 
 <!-- prompt:T-06 -->
 #### `T-06` — Levantamento dos motores leves
 
 ```text
 Atividade T-06 do ROADMAP.md: levantar os motores leves que já rodam modelos de decisão no navegador.
-1. Avalie, no mínimo: ONNX Runtime Web (via crivo-web e via Transformers.js) e o pacote npm built-in-ai-task-apis-polyfills. Procure outros e inclua os que rodarem um modelo de decisão em passada única.
+1. Avalie, no mínimo: ONNX Runtime Web (via crivo-web e via Transformers.js) e o pacote npm built-in-ai-task-apis-polyfills. Procure outros e inclua os que rodarem um modelo de decisão em passada única. Registre também o que o próprio Chrome usa: o binário do Canary 160 cita dois backends para a Decisions API, embedding_gemma_v1 e language_model.
 2. Para cada um registre, com fonte primária e data: licença, tamanho do runtime (bruto e comprimido), backends (Wasm, WebGPU), modelos e precisões aceitos em cada backend, estado de manutenção e como se instala.
 3. Escolha 1 ou 2 candidatos para medir e justifique. Critério: o mais leve que rode o TS-Ettin-17M ou um modelo da mesma arquitetura.
 Entregável: docs/reports/motores-existentes.md. Não meça desempenho aqui; isso é a T-08.
@@ -411,10 +447,10 @@ Entregável: docs/reports/motores-existentes.md. Não meça desempenho aqui; iss
 ```text
 Atividade T-07 do ROADMAP.md: deixar pronto o emulador Android para os testes.
 Use a skill /android-agent-skill para tudo o que tocar no Android.
-1. Crie ou reutilize um aparelho virtual com Google Play e Chrome atualizado; registre a imagem, a versão do Android e a do Chrome.
+1. Reutilize o aparelho virtual jev_playstore_36 (Android 36, x86_64, com Google Play), que já existe nesta máquina; não crie outro. Atualize o Chrome dele pela Play Store e registre a imagem, a versão do Android e a do Chrome. A aceleração WHPX já está instalada e utilizável.
 2. Sirva uma página estática do computador para o emulador e abra-a no Chrome do emulador.
 3. Faça a página gravar um resultado e recolha-o no computador, de forma repetível.
-4. Verifique no Chrome do emulador se navigator.gpu existe e se requestAdapter devolve um adaptador; registre o resultado com e sem flags.
+4. Verifique no Chrome do emulador se navigator.gpu existe e se requestAdapter devolve um adaptador. Os aparelhos virtuais desta máquina usam GPU por software (hw.gpu.mode=swiftshader_indirect): teste assim e também iniciando o emulador com -gpu host, e registre os dois resultados, com e sem flags do Chrome.
 Entregável: bench/spike-mobile/EMULADOR.md com os comandos exatos. Não instale nada fora do que a skill prevê.
 ```
 
@@ -431,6 +467,7 @@ Atividade T-01 do ROADMAP.md: construir a página de teste.
 4. Meça, por motor: tempo até a primeira resposta, latência quente (p50 e p95 de pelo menos 100 decisões), bytes baixados e memória; guarde todas as respostas.
 5. Exporte um JSON por execução, com o ambiente (navegador, sistema, navigator.gpu) e os resultados.
 Use o modelo fixado no ROADMAP (TS-Ettin-17M). Se o motor não o aceitar, registre o motivo e use o modelo da mesma arquitetura que ele aceitar.
+Nesta máquina há Node 22, npm 10 e bun 1.4. Sirva a página em http://localhost: a API só existe em contexto seguro.
 ```
 
 **Validação:** a página roda no Chrome de desktop e produz o JSON · trocar de motor não exige mudar nenhuma chamada da página · o que não rodar aparece no JSON como falha, com a mensagem de erro.
@@ -445,7 +482,7 @@ Use a skill /android-agent-skill e o procedimento de bench/spike-mobile/EMULADOR
 2. Repita cada medição duas vezes; se o p50 variar mais de 10%, repita de novo.
 3. Guarde os JSON em bench/results/ com "emulador" no nome.
 4. Escreva um resumo: o que rodou, o que não rodou, bytes baixados, memória e latência.
-Marque toda latência como medida em emulador: ela não vale como latência de celular real.
+Marque toda latência como medida em emulador: ela não vale como latência de celular real. Se o Chrome do emulador não oferecer WebGPU, registre isso como resultado e meça só em Wasm.
 ```
 
 **Validação:** há dois JSON por configuração · o resumo separa “funciona ou não” de “quanto demora” · nenhuma frase apresenta latência de emulador como latência de celular.
@@ -455,7 +492,7 @@ Marque toda latência como medida em emulador: ela não vale como latência de c
 
 ```text
 Atividade T-09 do ROADMAP.md: testar se o motor existente responde certo e aguenta.
-1. Gere as respostas de referência do conjunto de perguntas com a implementação do próprio modelo (dinah.py do repositório do modelo, PyTorch FP32, em CPU).
+1. Gere as respostas de referência do conjunto de perguntas com a implementação do próprio modelo (dinah.py do repositório do modelo, PyTorch FP32, em CPU). O ambiente já existe: .venv na raiz do repositório, com torch 2.15.0 (CPU), transformers 5.24.0, onnxruntime 1.32.0, safetensors, huggingface_hub e numpy; use .venv/Scripts/python.exe.
 2. Compare, por motor e por precisão, as probabilidades da página com as de referência: maior diferença absoluta e concordância da opção vencedora.
 3. Confira que a forma do resultado é idêntica à de docs/spec/decisions-api-surface.md.
 4. Rode 200 decisões seguidas e registre falhas e memória no início e no fim.
@@ -465,18 +502,34 @@ Entregável: os arquivos em bench/results/ e uma seção no relatório. Diga com
 **Validação:** as respostas de referência são regeneráveis com um comando · a diferença máxima de probabilidade e a concordância da vencedora estão reportadas por motor e precisão · o veredito de corretude é explícito.
 
 <!-- prompt:T-03 -->
-#### `T-03` — Prévia nativa
+#### `T-03` — API nativa
 
 ```text
 Atividade T-03 do ROADMAP.md: rodar a página de conformidade na API nativa.
-1. Ligue a Decisions API no Edge Canary (edge://flags, "Decisions API") e, se existir a flag, no Chrome Canary; registre versões e flags.
-2. Rode a página de teste com o adaptador nativo e guarde o JSON.
-3. Compare a forma (nomes, tipos, valores de availability, erros) com docs/spec/decisions-api-surface.md e liste cada diferença.
-4. Corrija a especificação e as declarações da T-05 para ficarem iguais ao que a implementação nativa faz.
-Esta atividade precisa de uma pessoa para instalar o navegador e ligar a flag: peça ao usuário e espere.
+1. Abra o Chrome (estável 157 ou Canary 160, ambos instalados) com a Decisions API ligada: chrome://flags/#decisions-api, ou chrome.exe --enable-features=AIDecisionModelAPI com um --user-data-dir próprio. Registre versões e flags.
+2. Num perfil real, não headless, chame DecisionModel.availability(). Num perfil headless novo o valor foi "unavailable"; registre o valor obtido. Se for "downloadable", peça ao usuário para autorizar o download do modelo. Se continuar "unavailable", pare e siga a bifurcação DT-02.
+3. Rode a página de teste com o adaptador nativo e guarde o JSON.
+4. Compare a forma (nomes, tipos, valores de availability, erros) com docs/spec/decisions-api-surface.md e liste cada diferença.
+5. Corrija a especificação e as declarações da T-05 para ficarem iguais ao que a implementação nativa faz.
+Os navegadores já estão instalados nesta máquina. O download do modelo embutido, se for pedido, precisa de uma pessoa: peça ao usuário e espere.
 ```
 
-**Validação:** as versões e as flags usadas estão registradas · cada diferença entre a nossa superfície e a nativa está resolvida ou justificada · se a prévia não pôde ser ligada, o relatório diz por quê.
+**Validação:** as versões e as flags usadas estão registradas · cada diferença entre a nossa superfície e a nativa está resolvida ou justificada · o valor de `availability()` num perfil real está registrado.
+
+<!-- prompt:DT-02 -->
+#### `DT-02` — Bifurcação: o modelo nativo não fica disponível
+
+```text
+Bifurcação DT-02 do ROADMAP.md: o modelo embutido do Chrome não fica disponível nesta máquina. Como comparar com o nativo?
+Se availability() chegou a "available", registre isso, feche a bifurcação como "não se aplica" e siga.
+Caso contrário, não inicie nenhuma atividade posterior e siga o protocolo de consulta do ROADMAP.
+1. Registre o que foi tentado: versões do Chrome, flags, o valor de availability() e a mensagem de erro de create().
+2. Monte o documento de decisão com os três ramos: (a) comparar só a forma da API, sem respostas nativas; (b) instalar o Edge Canary e usar o modelo embutido dele; (c) deixar a comparação de respostas para outra máquina.
+3. Abra-o no Plannotator com um bloco :::question e espere a resposta.
+4. Registre a resposta em docs/adr/ e atualize o ROADMAP.
+```
+
+**Validação:** existe a ADR com o que foi tentado, os ramos e a resposta do usuário — ou o registro de que o modelo ficou disponível · o estado de `DT-02` corresponde à resposta.
 
 <!-- prompt:DT-01 -->
 #### `DT-01` — Bifurcação: emulador ou aparelho real

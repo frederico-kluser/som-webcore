@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Ambiente verificado:** a Decisions API foi confirmada no Chrome estável 157 e no Canary 160
+  (flag `decisions-api`), incluindo um membro que o explainer não descreve; o roadmap ganhou a
+  seção “Ambiente verificado”, a bifurcação `DT-02` e prompts ajustados aos achados. O README
+  passa a mostrar a API idêntica à do Chrome.
 - **API idêntica à do Chrome e bifurcações:** o roadmap fixa o padrão de chamada igual ao da
   Decisions API (`DecisionModel`), reorganiza o marco T (levantamento e teste do motor leve
   existente no emulador Android, análise da janela) e descreve os ramos opcionais — motor
