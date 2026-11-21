@@ -21,7 +21,7 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { brotliCompressSync, constants } from "node:zlib";
+import { brotliCompressSync, constants, gzipSync } from "node:zlib";
 
 const HERE = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const ROOT = resolve(HERE, "..", "..");
@@ -52,18 +52,19 @@ function inside(base, path) {
   return full === base || full.startsWith(base + sep) ? full : null;
 }
 
-function brotli(file, stat) {
+function compressed(file, stat, encoding = "br") {
   const key = createHash("sha256").update(`${file}|${stat.size}|${stat.mtimeMs}`).digest("hex");
-  const cached = join(BR_CACHE, key + ".br");
+  const cached = join(BR_CACHE, `${key}.${encoding === "br" ? "br" : "gz"}`);
   if (existsSync(cached)) return readFileSync(cached);
-  const data = brotliCompressSync(readFileSync(file), {
-    params: { [constants.BROTLI_PARAM_QUALITY]: 11, [constants.BROTLI_PARAM_SIZE_HINT]: stat.size },
-  });
+  const data = encoding === "br"
+    ? brotliCompressSync(readFileSync(file), { params: { [constants.BROTLI_PARAM_QUALITY]: 11, [constants.BROTLI_PARAM_SIZE_HINT]: stat.size } })
+    : gzipSync(readFileSync(file), { level: 9 });
   mkdirSync(BR_CACHE, { recursive: true });
   writeFileSync(cached + ".tmp", data);
   renameSync(cached + ".tmp", cached);
   return data;
 }
+const brotli = (file, stat) => compressed(file, stat, "br");
 
 function send(res, status, body, headers = {}) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers });
@@ -132,10 +133,13 @@ const server = createServer(async (req, res) => {
       headers["Cross-Origin-Opener-Policy"] = "same-origin";
       headers["Cross-Origin-Embedder-Policy"] = "require-corp";
     }
+    // Brotli when the browser offers it, gzip otherwise: Safari offers br only over HTTPS, so on
+    // http://localhost it gets gzip, as from a CDN that falls back to it.
     const accepts = String(req.headers["accept-encoding"] || "");
-    if (COMPRESS && COMPRESSIBLE.has(ext) && !WEIGHTS.has(ext) && /\bbr\b/.test(accepts) && stat.size > 1024) {
-      const data = brotli(file, stat);
-      res.writeHead(200, { ...headers, "Content-Encoding": "br", "Content-Length": data.length, Vary: "Accept-Encoding" });
+    const encoding = /\bbr\b/.test(accepts) ? "br" : /\bgzip\b/.test(accepts) ? "gzip" : null;
+    if (COMPRESS && encoding && COMPRESSIBLE.has(ext) && !WEIGHTS.has(ext) && stat.size > 1024) {
+      const data = compressed(file, stat, encoding);
+      res.writeHead(200, { ...headers, "Content-Encoding": encoding, "Content-Length": data.length, Vary: "Accept-Encoding" });
       return res.end(req.method === "HEAD" ? undefined : data);
     }
     res.writeHead(200, { ...headers, "Content-Length": stat.size });
@@ -157,8 +161,12 @@ function precompress() {
     if (/(^|[\\/])(tokenizer|tokenizer_config|config)\.json$/.test(entry)) files.push(join(modelCache(), entry));
   }
   const started = Date.now();
-  for (const file of files) brotli(file, statSync(file));
-  console.log(`precompressed ${files.length} files in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+  for (const file of files) {
+    const stat = statSync(file);
+    compressed(file, stat, "br");
+    compressed(file, stat, "gzip");
+  }
+  console.log(`precompressed ${files.length} files (brotli and gzip) in ${((Date.now() - started) / 1000).toFixed(1)} s`);
 }
 
 precompress();

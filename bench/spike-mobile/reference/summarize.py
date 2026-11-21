@@ -5,8 +5,8 @@
 
 Columns: run, engine, variant, model, status, time to the first answer (ms since navigation),
 first-pass p50, warm p50/p95/p99 (ms), first-visit bytes on the wire (MB, runtime + adapter +
-weights + tokenizer + config), peak JS heap (MB), peak PSS of all Chrome processes (MB, Android
-only), max |Δp| and top-1 agreement against the reference of the run's model, and the failure.
+weights + tokenizer + config), peak JS heap (MB), peak memory (MB: PSS of all Chrome processes on Android,
+RSS of the device's WebKit processes on the iOS Simulator), max |Δp| and top-1 against the reference, and the failure.
 """
 
 from __future__ import annotations
@@ -61,10 +61,13 @@ def row(path: Path) -> str:
     warm = lat.get("warm") or {}
     first = lat.get("firstPass") or {}
     heap = max((m.get("jsHeapUsed") or 0 for m in run.get("memory", [])), default=0) or None
-    pss = None
+    pss = None  # Android: PSS of every Chrome process; iOS Simulator: RSS (on the Mac) of the device's WebKit processes
     samples = (run.get("androidMemory") or {}).get("samples") or []
     if samples:
         pss = max(sum(s["pss"].values()) for s in samples)
+    ios = (run.get("iosMemory") or {}).get("samples") or []
+    if ios and any(s["rss"] for s in ios):
+        pss = max(sum(s["rss"].values()) for s in ios)
     parity = "—"
     reference = HERE / f"{model}.json"
     if run.get("answers") and reference.exists() and cfg.get("engine") != "native":
@@ -96,7 +99,7 @@ def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
         return 2
-    print("| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | PSS máx. (MB) | máx. \\|Δp\\| · top-1 | Falha |")
+    print("| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | Memória máx. (MB; PSS no Android, RSS no simulador iOS) | máx. \\|Δp\\| · top-1 | Falha |")
     print("|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|")
     for p in argv:
         print("| " + row(Path(p)) + " |")
