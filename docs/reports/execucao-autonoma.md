@@ -43,3 +43,39 @@ Feito: `T-05`, `T-06`, `T-07` (PR #9) e `S-01`. Nenhuma execução da página no
 3. `T-09`: 200 decisões seguidas no emulador, com o heap preciso — `EXTRA="&warm=0&endurance=200" SUFFIX=-resistencia-200` e `FLAGS=--enable-precise-memory-info` para `ort-wasm 8bit`, `ort-wasm int8`, `ort-wasm q8emb-f16` e `jh-cpu f32`, 17M.
 4. `T-01` e `T-03`: `bash bench/spike-mobile/matrix-desktop.sh` (todas as variantes no Chrome 157 e a página sobre o nativo no Canary 160), uma execução com `debug=1` para versionar a identidade dos tokens, e a captura da superfície do polyfill (`surface.html?engine=ort-wasm&variant=8bit`) para `reference/compare_surface.py`.
 5. Fechar `DT-02` e `DT-01` (ADRs 0001 e 0002 passam a aceitas; `T-02` descartada), depois `T-10`, `T-04` e `GT`.
+
+## Relatório final desta execução (2026-11-21)
+
+### O que foi feito
+
+| Atividade | Estado | Entrega | PR |
+|---|---|---|---|
+| `T-05` — superfície da Decisions API | feito | [especificação](../spec/decisions-api-surface.md) a partir do WebIDL e do código do Chrome 157 e 160, de capturas em execução e do explainer; [declarações TypeScript](../../bench/spike-mobile/decision-model.d.ts) com o exemplo do roadmap e os do explainer compilando | #9 |
+| `T-06` — motores leves | feito | [levantamento](motores-existentes.md) com tamanhos medidos nos pacotes publicados; candidatos ONNX Runtime Web 1.31.1 e motor `@johnhenry` | #9 |
+| `T-07` — emulador | feito | [EMULADOR.md](../../bench/spike-mobile/EMULADOR.md): página servida ao Chrome do emulador, resultado recolhido, sem WebGPU em quatro configurações, repetição idêntica | #9 |
+| `S-01` — prior art | feito | [prior-art.md](../standards/prior-art.md), com prompt e validação escritos no roadmap antes | #11 |
+| `T-01` — página de teste | em curso | página, motores, corpus, referência, comparador, verificador de forma, executores e reexportações | #11 |
+| `T-09` — teste do motor existente | em curso | referência determinística e os 8 artefatos no ONNX Runtime nativo ([relatório, seção 4](teste-mobile.md)) | #11 |
+| `T-08`, `T-03` | em curso | executores e capturas da superfície nativa; nenhuma execução da página versionada | #9, #11 |
+
+### Decisões de bifurcação
+
+Nenhuma bifurcação fechou nesta execução: as dependências de cada uma ainda estão em curso.
+
+- **`DT-02`** — [ADR 0001](../adr/0001-dt-02-modelo-nativo-disponivel.md), **proposta**: “não se aplica”, porque o modelo nativo do Canary 160 ficou disponível num perfil de teste e respondeu sem uma pessoa (regra do dono: usar respostas nativas se for possível obtê-las sem ninguém). Fecha quando a `T-03` fechar.
+- **`DT-01`** — [ADR 0002](../adr/0002-dt-01-seguir-com-o-emulador.md), **proposta**: seguir só com o emulador e descartar a `T-02` (regra do dono: não há aparelho real). Fecha quando a `T-08` e a `T-09` fecharem.
+- **`GT`, `DP-01`, `G1`–`G4`** — não alcançados.
+
+### O que ficou pendente e por quê
+
+1. **Medições interrompidas — precisa do dono.** O Claude Code encerrou o servidor da página e a matriz do emulador por falta de memória no computador e orientou não religá-los sem o dono pedir. O agente respeitou a orientação, desligou o emulador (5,6 GB) e entregou o que estava pronto. Tudo o que falta no marco T depende de rodar a página: `T-01` (execução versionada no desktop), `T-08`, `T-09` (comparação Web × nativo e 200 decisões seguidas) e `T-03`.
+2. **Externa — conta Google no emulador.** O Chrome do emulador é o 133 da imagem; atualizá-lo pela Play Store exige uma conta.
+3. **Externa — aparelhos reais.** Não há celular nem iPhone ligados: a `DT-01` vai descartar a `T-02`, e a latência de celular fica “não medida” no portão `GT`.
+
+### O que recomendo fazer primeiro
+
+1. **Liberar memória e mandar retomar.** Fechar o que não precisa estar aberto (havia várias sessões do Claude Code somando cerca de 2,7 GB) e reenviar o prompt da execução autônoma — ou pedir explicitamente para religar o servidor e a matriz. O roteiro exato está em “Estado e próximo passo”, acima.
+2. **Ler o achado da fronteira tamanho × paridade** ([relatório, seção 4](teste-mobile.md)): com o TS-Ettin-17M, nenhum artefato testado cabe em 25 MB e cumpre a tolerância Q8 ao mesmo tempo; o melhor chega a ≈ 26,3 MB. É o fato que mais pesa no portão `GT`, e os critérios não foram mudados.
+3. **Se quiser medições no Chrome atual**, entrar com uma conta Google no emulador `jev_playstore_36` para a Play Store atualizar o Chrome antes da retomada.
+
+Registro de conduta: num passo intermediário, um commit local temporário foi feito com os hooks desligados; a mensagem passava no gate, o commit nunca foi enviado e a branch foi apagada. Não se repetiu.
