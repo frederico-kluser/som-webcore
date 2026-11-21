@@ -1,3 +1,7 @@
+[ERRATA — auditoria de 2026-11-21] Este relatório foi produzido com assistência de IA e contém
+afirmações incorretas ou não verificáveis. As correções, com fonte primária, estão em
+research/ERRATA.md; os trechos afetados estão marcados abaixo com [ERRATA E-nn]. O texto original
+foi preservado: leia as marcações antes de usar qualquer número ou estrutura deste documento.
 
 
 ===== PAGE 1 =====
@@ -99,7 +103,7 @@ quatro etapas sequenciais28:
        opções candidatas, cada uma precedida pelo seu próprio token [MASK]: [CLS]
        <Premissa: State + Question> [SEP] [MASK] <Opção 0> [MASK] <Opção 1> ... [MASK]
        <Opção K-1> [SEP]7.
-  2.   Máscara de Atenção e Reset de Position IDs (independent_options: true): Quando a
+  2.   Máscara de Atenção e Reset de Position IDs (independent_options: true) [ERRATA E-06: específico do Von; TS-Ettin e Crivo usam atenção conjunta]: Quando a
        flag independent_options: true de marker_calibration.json está ativa, os tokens
        pertencentes a qualquer opção candidata só podem atender aos tokens da premissa
        compartilhada e aos tokens da própria opção, sendo estritamente mascarados (-∞)
@@ -173,7 +177,7 @@ intercaladas segundo a lista full_attn_idxs do config.json40. O segundo módulo 
 Visão (94M parâmetros), composta por um encoder visual SigLIP2 (dimensão oculta 768
 expandida para 3072 na MLP com GELU tanh e LayerNorm) acoplado a um projetor espacial
 (pixel_unshuffle com fator de downsample + 2 camadas lineares com projector_hidden_size =
-2560 para 1024) herdado do LFM2.5-VL-450M, que converte cada crop de imagem em 256
+2560 [ERRATA E-09: o valor correto é 2048] para 1024) herdado do LFM2.5-VL-450M, que converte cada crop de imagem em 256
 embeddings de prefixo de shape [1, 256, 1024]8. O terceiro módulo é a Torre de Áudio (112M
 parâmetros), que combina um pré-processador Log-Mel (128 bins via convolução com kernels
 DFT) com um encoder FastConformer de 17 camadas e adaptador linear, convertendo até 30
@@ -263,7 +267,7 @@ Quando desenhamos um SOM customizado (acoplando uma cabeça OptionMarkerScorer d
 e 400M parâmetros são o ModernBERT-base (149M)50, a suíte Ettin-Encoder
 (jhu-clsp/ettin-encoder-150m e 400m)52 e a família DeBERTa-v3
 (microsoft/deberta-v3-base e large)54. A suíte Ettin (treinada em 2 biliões de tokens abertos
-pela Johns Hopkins CLSP) utiliza exatamente a mesma arquitetura topológica do ModernBERT
+pela Johns Hopkins CLSP) utiliza exatamente a mesma arquitetura topológica do ModernBERT [ERRATA E-01/E-02/E-03: com diferenças que importam — RoPE local θ = 160.000 (não 10.000), contexto de 7.999 tokens e licença MIT]
 (22 camadas com H = 768, I = 1152, 12 cabeças na versão 150M; 28 camadas com H = 1024, I =
 2624, 16 cabeças na versão 400M; vocabulário de 50.368 tokens, RoPE e GeGLU sem bias),
 superando o ModernBERT em benchmarks GLUE (88,9 vs. 88,4 no Base; 90,8 vs. 90,4 no Large)
@@ -661,7 +665,7 @@ performance forçando leituras da GPU através do barramento PCIe19).
 Push Constants / Immediates (Features::PUSH_CONSTANTS)
 Em vez de gravar e sincronizar UniformBuffers para passar hiperparâmetros dinâmicos a cada
 dispatch (o que exige alinhamento de 256 bytes e consome slots de BindGroup), o Perfil 2 ativa
-wgpu::Features::PUSH_CONSTANTS com Limits { max_push_constant_size: 128, .. }19.
+wgpu::Features::PUSH_CONSTANTS com Limits { max_push_constant_size: 128, .. }19. [ERRATA E-35: no wgpu 30 o recurso chama-se IMMEDIATES]
 No shader WGSL, declaramos uma estrutura imediata de 32 bytes alojada diretamente nos
 registos do processador de comandos da GPU24:
 
@@ -761,7 +765,7 @@ cpass.dispatch_workgroups() consecutivas dentro do mesmo ComputePass sempre que 
 buffer transita de escrita para leitura.
 Portanto, o nosso motor grava todas as 28 camadas do Encoder + Cabeça
 OptionMarkerScorer + Calibração de Temperatura dentro de um único
-wgpu::CommandEncoder e um único wgpu::ComputePass, usando apenas dois buffers de
+wgpu::CommandEncoder e um único wgpu::ComputePass [o README adota 3 submissões; ver README §3.5], usando apenas dois buffers de
 ativação em esquema Ping-Pong (act_buf_a e act_buf_b, cada um de tamanho N_max * H * 4
 bytes = 8192 × 1024 × 4 = 32 MiB, mais um buffer de espaço de trabalho QKV de 8192 × 3072 × 2
 = 48 MiB em f16)35:
@@ -1122,6 +1126,7 @@ permitindo mmap direto no nativo ou queue.write_buffer direto em fatias no brows
       use bytemuck::{Pod, Zeroable};
 
       /// Cabeçalho Zero-Parse de 256 bytes exatos no offset 0x0000 do ficheiro .sombin
+      /// [ERRATA E-30: este struct ocupa 264 bytes em repr(C) — 512 com align(256) — e não aceita Pod]
       #[repr(C, align(256))]
       #[derive(Clone, Copy, Debug, Pod, Zeroable)]
       pub struct SomBinHeader {
@@ -1141,7 +1146,7 @@ permitindo mmap direto no nativo ou queue.write_buffer direto em fatias no brows
           pub local_attn_window: u32,         // 128 (±64 posições inclusivas = 129)
           pub global_attn_every_n: u32,       // 3 (camadas 0, 3, 6... são globais)
           pub global_rope_theta: f32,         // 160000.0
-          pub local_rope_theta: f32,          // 10000.0
+          pub local_rope_theta: f32,          // 10000.0 [ERRATA E-01: 160000.0 em Ettin e mmBERT]
           pub norm_eps: f32,                  // 1e-5
 
           // Parâmetros embutidos do marker_calibration.json (Von 1.3)

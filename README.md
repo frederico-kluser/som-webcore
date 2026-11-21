@@ -22,10 +22,12 @@
 
 > ### Status deste repositório
 >
-> **RFC / blueprint — documento v0.1.0 · 2026-11-18.** A versão numera **este documento**; não há tag nem release de runtime nesta fase. O runtime será versionado a partir da v0.1.0 real, na Fase 4 do roadmap.
+> **RFC / blueprint — documento v0.1.0 · revisão auditada de 2026-11-21.** A versão numera **este documento**; não há tag nem release de runtime nesta fase. A primeira tag do runtime será a `v0.1.0`, no fim da prova de conceito (marco M1 do [ROADMAP.md](ROADMAP.md)).
 > Este repositório contém (a) a **memória CoALA local** do projeto e (b) este **documento de arquitetura autossuficiente**, que consolida dois relatórios de pesquisa sobre o motor. **O runtime ainda não foi implementado.** Tudo o que aqui aparece marcado como “proposto”, “alvo” ou “segundo o relatório” é desenho e evidência compilada — não uma API estável nem uma especificação W3C.
 >
 > O objetivo desta fase é permitir que qualquer pessoa entenda, critique e implemente o motor **sem precisar dos PDFs originais**. O código nascerá nas fases seguintes do [roadmap](#roadmap).
+>
+> **O que mudou em 2026-11-21.** A pesquisa foi conferida em fontes primárias e os erros estão em [research/ERRATA.md](research/ERRATA.md). O planejamento passou a ser um DAG com critérios de aceite ([ROADMAP.md](ROADMAP.md)): primeiro uma **prova de conceito com um modelo de 17M de parâmetros** (TS-Ettin-17M); a **v1.0.0** analisa o dispositivo e recomenda o modelo ([seção 4.5](#analise-dispositivo)). As seções 2, 3 e 6 descrevem a **arquitetura-alvo da v1.0.0**; a PoC implementa um subconjunto deliberadamente simples.
 
 ---
 
@@ -37,6 +39,7 @@
   - [1.1 O que são Condicionais Abstratas (JEV)](#jev)
   - [1.2 Nossos pilares](#pilares)
   - [1.3 O que este projeto é — e o que não é](#nao-e)
+  - [1.4 Nosso valor: decisão local como padrão da web](#valor)
 - [2. A arquitetura em uma página](#arquitetura)
   - [2.1 Diagrama de camadas](#diagrama)
   - [2.2 O caminho de uma decisão](#caminho)
@@ -54,6 +57,7 @@
     - [Ettin-150M](#ettin) · [Laya](#laya) · [Von-1.3](#von) · [d1-omni](#d1) · [DeBERTa-v3](#deberta)
   - [4.3 Como escolher um modelo](#escolher)
   - [4.4 Licenças dos modelos](#licencas-modelos)
+  - [4.5 Análise do dispositivo e escada de modelos (v1.0.0)](#analise-dispositivo)
 - [5. Números: o que a pesquisa mediu](#numeros)
   - [5.1 Roofline: compute-bound, não memory-bound](#roofline)
   - [5.2 Pegada de VRAM por quantização](#vram)
@@ -71,8 +75,7 @@
   - [6.7 API JavaScript proposta](#api)
   - [6.8 Erros, recuperação e privacidade](#erros)
 - [7. Riscos, armadilhas e mitigações](#riscos)
-- [8. Roadmap](#roadmap)
-  - [Fase 0](#fase-0) · [Fase 1](#fase-1) · [Fase 2](#fase-2) · [Fase 3](#fase-3) · [Fase 4](#fase-4) · [Fase 5](#fase-5)
+- [8. Roadmap](#roadmap) — resumo; o plano completo está em [ROADMAP.md](ROADMAP.md)
 - [9. Como contribuir](#contribuir)
   - [9.1 Agora](#contribuir-agora) · [9.2 Código](#contribuir-codigo) · [9.3 Benchmarks](#contribuir-bench) · [9.4 CoALA](#contribuir-coala) · [9.5 Bons primeiros problemas](#contribuir-issues)
 - [10. FAQ](#faq)
@@ -92,9 +95,11 @@
 | **O que ele faz?** | Recebe um estado, uma pergunta e opções; devolve uma **decisão tipada** (`choice`, `score`, `noul`) calibrada, em **uma única passada** não autorregressiva. |
 | **O que ele não faz?** | Não gera texto token a token, não mantém KV-Cache, não precisa de servidor, não envia dados do usuário para a nuvem. |
 | **Por que agora?** | WebGPU atingiu ~89% de cobertura; modelos SOM de 150M–600M cabem em 80–400 MB; o gargalo deixou de ser memória e passou a ser **computação e estabilidade do driver**. |
-| **Qual o alvo de latência?** | **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo alvo de p95. |
+| **Qual o alvo de latência?** | **[ALVO, ainda não medido]** **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo alvo de p95. |
 | **Como?** | Streaming direto OPFS → VRAM, embeddings fora da GPU, quantização Q8_0/Q4_0, 6 shaders WGSL, calibração in-shader e **micro-readback de 64–256 bytes**. |
-| **Estado?** | **RFC/blueprint.** Memória CoALA + este README. Código ainda não escrito. |
+| **Estado?** | **RFC/blueprint auditado.** Pesquisa conferida ([errata](research/ERRATA.md)) e plano em DAG ([ROADMAP.md](ROADMAP.md)). Código ainda não escrito. |
+| **Por onde começa?** | Por uma **prova de conceito** com um modelo de 17M de parâmetros (TS-Ettin-17M, Apache-2.0), medida contra o ONNX Runtime Web. |
+| **E a v1.0.0?** | O SDK **analisa o dispositivo** e baixa o modelo mais forte que couber no orçamento declarado — de 17M a 150M no catálogo padrão ([seção 4.5](#analise-dispositivo)). |
 | **Licença?** | **Apache-2.0** para o código/documentação. Os pesos dos modelos têm licenças próprias. |
 
 > **A frase que resume o projeto:** *transformar “o site decidir” em uma operação local, privada, offline e de custo marginal zero — e provar que isso pode virar primitiva da web.*
@@ -145,7 +150,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 
 - **Custo marginal zero.** Sites pessoais, ONGs, projetos sem monetização e pequenos negócios devem poder usar inteligência local sem faturas de nuvem.
 - **Operação 100% offline (local-first).** Uma vez que o site e o modelo são armazenados no navegador, a inteligência funciona no meio do oceano ou em modo avião, com privacidade absoluta. **Ressalva honesta:** isso vale quando `privacy: 'local-only'`; o fallback remoto é opt-in, emite evento e quebra a promessa — nunca é silencioso.
-- **Um catalisador para a web.** Criamos esta solução no presente para demonstrar aos comitês de padrões (W3C, WHATWG) e aos fabricantes de navegadores que a **inferência de decisão em passada única precisa virar uma API padrão embutida no navegador**, abrindo no futuro o acesso transparente e desimpedido às NPUs e aceleradores do silício.
+- **Um catalisador para a web.** A decisão em passada única deve ser uma **API padrão embutida no navegador**, com acesso às NPUs e aos aceleradores do silício. Essa proposta já existe — a Decisions API, do time de Built-in AI do Chrome, com protótipo em Chromium e prévia no Edge — e o nosso papel é fazê-la dar certo em toda parte: polyfill aberto, evidência medida e testes de conformidade ([1.4](#valor)).
 - **Engenharia honesta.** Nada de “AGI no browser”. O escopo é deliberadamente estreito: decisões tipadas, modelos compactos, uma passada, latência previsível. O que não couber nesse contrato fica de fora.
 
 <a id="nao-e"></a>
@@ -158,11 +163,30 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 | Um **formato binário aberto** (`.sombin`) e um conjunto de kernels WGSL. | Um fork do llama.cpp, do ONNX Runtime ou do transformers.js. |
 | Um **documento de arquitetura** que registra evidências, riscos e números. | Uma promessa de que todos os números dos relatórios foram reproduzidos. |
 | Um projeto **Apache-2.0** que aceita contribuições. | Um projeto afiliado à TypeSafe AI, Liquid AI, LightOn, JHU ou Convai. |
+| Um **polyfill e implementação de referência** para a decisão local na web. | O primeiro nem o único runtime de decisão no navegador (ver [5.6](#comparativo)), nem um padrão concorrente da Decisions API. |
+
+<a id="valor"></a>
+### 1.4 Nosso valor: decisão local como padrão da web
+
+**Decidir é uma primitiva da web — e deve ser tão fácil quanto `fetch`.** O projeto existe para que essa capacidade venha embutida em **todo motor de navegador** e seja simples para **todo programador**. O nosso sucesso mede-se pela dispensabilidade: no dia em que `decide()` for nativo em Chromium, WebKit e Gecko, esta biblioteca vira um polyfill fino.
+
+| Valor | Na prática |
+|---|---|
+| **Padrão antes de produto** | A API pública acompanha a proposta da Decisions API e tem forma de polyfill; nada prende ninguém ao nosso motor ou ao nosso formato. |
+| **Para todo programador** | Um import, uma chamada, resposta tipada; dispositivo, modelo e backend ficam escondidos, mas inspecionáveis. |
+| **Para todo dispositivo** | Do celular de entrada ao desktop com GPU dedicada, com degradação explícita. |
+| **Evidência antes de afirmação** | Todo número é rotulado como medido, reportado, alvo ou hipótese; erros viram [errata](research/ERRATA.md). |
+| **Privacidade por construção** | O estado do usuário não sai do dispositivo; sem telemetria. |
+| **Abertura real** | Apache-2.0, [governança](GOVERNANCE.md) pública, catálogo de modelos com licença declarada. |
+
+**Por que precisa ser padrão, e não só biblioteca:** o armazenamento do navegador é particionado por origem, então cada site baixa a sua própria cópia do modelo; NPUs e aceleradores nativos não estão ao alcance da WebGPU; a página não vê temperatura nem bateria. Só o navegador resolve os três. O detalhe está na [seção 1 do roadmap](ROADMAP.md#valor).
 
 ---
 
 <a id="arquitetura"></a>
 ## 2. A arquitetura em uma página
+
+> **Arquitetura-alvo da v1.0.0.** Os diagramas e a especificação das seções 2, 3 e 6 descrevem o destino. A prova de conceito implementa um subconjunto simples — kernels em f32 sem fusão, cabeça e calibração no host, um único buffer de pesos, sem máscara por opção (ver [ROADMAP.md](ROADMAP.md#m1)). Cada otimização descrita aqui só entra depois de medida contra o baseline.
 
 <a id="diagrama"></a>
 ### 2.1 Diagrama de camadas
@@ -288,7 +312,7 @@ Esta seção é o coração do documento. Ela descreve **o que construir**, **po
 
 | API | Limite/comportamento | Consequência |
 |---|---|---|
-| **Cache API** | Limite silencioso de ~200 MB no Chromium; entradas opacas inflam a quota em ~7 MB por resposta | Pesos reportados como vazios em arranques a frio; downloads repetidos |
+| **Cache API** | Segundo o relatório, um “limite silencioso de ~200 MB no Chromium” — **não confirmado em fonte primária** ([errata E-25](research/ERRATA.md)); respostas opacas inflam a quota | Serve para cache simples; não oferece escrita em streaming nem acesso síncrono no Worker |
 | **IndexedDB** | Leitura assíncrona, overhead de transação, quota conservadora | Cold start lento; difícil de fazer streaming para a GPU |
 | **WebAssembly.Memory** | 4 GiB de espaço linear; páginas nunca devolvidas ao SO | Duplica a RAM; Jetsam no iOS; OOM em mobile |
 | **OPFS** | Sem limite por entrada (só a quota da origem, tipicamente ≥1 GB); `FileSystemSyncAccessHandle` síncrono no Worker | **Escolhido**: leitura fria 2–4× mais rápida que IndexedDB, persistente, offline |
@@ -311,7 +335,7 @@ Esta seção é o coração do documento. Ela descreve **o que construir**, **po
 
 | Modelo | Tamanho típico | Observação |
 |---|---:|---|
-| Ettin-17M (semente) | **~9,5 MB** em 4 bits · ~18 MB em 8 bits | Carrega e compila em < 1 s; decisões imediatas enquanto o modelo principal baixa |
+| TS-Ettin-17M (semente) | **17,2 MB** em int8 (ONNX publicado) · 67,5 MB em FP32 · ≈ 21 MB no empacotamento planejado (backbone FP16 + embeddings Q8) | Checkpoint de decisão sobre o Ettin-17M; o encoder puro não decide nada ([errata E-04](research/ERRATA.md)) |
 | Ettin-150M | **~80–112 MB** | Cabe em um slab de 128 MiB em Q8_0 sem embeddings |
 | Laya-Multilingual | **~647 MB** em disco (checkpoint) | 322M parâmetros; 61,1% são embeddings |
 | d1-omni-600M (texto) | **240 MB** em 4 bits · **410 MB** em 8 bits (ONNX) | Multimodal completo: 670 MB (visão FP16 + áudio Q8 + embeddings FP16) |
@@ -459,7 +483,7 @@ for (var tile_j = 0u; tile_j < num_kv_tiles; tile_j++) {
 
 Com `head_dim = 64`, o estado por thread exige apenas ~18 floats (16 de saída + 2 escalares) na geometria canônica de Q_tile=16/K_tile=16; se o tile de Query também ficar em registos, ~34. Cabe nos registos sem *spilling* (face a `array<f32, 1024>` numa implementação FA1). Nas camadas GQA do d1-omni (16 cabeças Q / 8 KV), duas cabeças Q compartilham a mesma KV: `kv_head = q_head >> 1u`.
 
-**Máscara bloco-diagonal (invariância à ordem).** O SOM avalia `K` opções no mesmo passe. Para que cada opção não “veja” as outras:
+**Máscara bloco-diagonal (invariância à ordem) — só para modelos treinados com ela.** É a opção `independent_options` do Von. TS-Ettin e Crivo usam atenção conjunta sobre todas as opções; aplicar a máscara a eles produz respostas erradas ([errata E-06](research/ERRATA.md)). Quando o manifesto do modelo a pede, cada opção não “vê” as outras:
 
 ```wgsl
 // opt_i = 0 => token do State; opt_i > 0 => opção/pergunta i
@@ -510,6 +534,8 @@ O kernel WGSL mantém `B`, `C`, `x_in` e o estado da convolução em `var<workgr
 <a id="calibracao"></a>
 ### 3.4 Calibração no shader e micro-readback
 
+> **Decisão da revisão de 2026-11-21.** Na prova de conceito, a GPU devolve os vetores ocultos nas posições das opções (`K × H × 4` bytes — 8 KiB para 8 opções de um modelo de 17M) e a cabeça, o softmax e a calibração rodam no host, em Rust/Wasm. O readback continua micro, e a calibração — que é diferente em cada família de modelos — fica testável. A versão in-shader descrita abaixo é uma otimização a validar por medição (atividade `B-03` do roadmap).
+
 **O problema do readback.** Em motores convencionais, a GPU transfere o tensor de saída do encoder (`[N, H] = 1024 × 1024 × 4 = 4 MiB`) para a CPU, que extrai os `[MASK]`, executa a cabeça e aplica softmax/calibração. No navegador, `mapAsync` custa **~2 ms por leitura no Chrome** (até ~11 ms em pipelines não otimizados) e cada transferência atravessa o IPC Renderer ↔ GPU. Ler 4 MiB por decisão custa **~15 ms** só de transferência/IPC (relatório 2) — é inviável para o SLA.
 
 **A solução.** Todo o pós-processamento ocorre no **shader 06**, despachado com `dispatch_workgroups(1, 1, 1)` (1 workgroup de 256 threads):
@@ -553,7 +579,7 @@ O kernel WGSL mantém `B`, `C`, `x_in` e o estado da convolução em `var<workgr
   Com `--noul-decision raw`, retorna a posterior calibrada sem banda.
 - **Laya.** A temperatura do bucket `choice:11+` vem como **0.1006** e exige `clamp(T, 0.5, 5.0)`; `act_probability` está saturada em 1,0 (issue #185; AUROC 0,30) e deve ser ignorada. A confiança é `p1 - p2`.
 - **d1-omni-600M.** Temperaturas por bucket no `config.json` oficial (consultado em 2026-11-19): `choice:2 = 1.7465`, `choice:3-5 = 1.3999`, `choice:6-10 = 1.1751`, `choice:11+ = 1.3725`; `noul:2 = 1.6663`; `score:3-5 = 1.7301`, `score:6-10 = 1.0`. O relatório 2 listava apenas “1,7465 a 1,1751”; a lista completa está no config. Aplicar a temperatura correta por bucket é obrigatório; a média global degrada o ECE.
-- **Ettin/TS-Ettin.** Cabeça tipada sobre pooled/span outputs; a calibração é a da cabeça (não há temperatura dinâmica obrigatória). A referência INT8 preserva a decisão: 0,704 de acurácia vs. 0,709 em FP32.
+- **TS-Ettin (modelo da PoC).** Sequência `[CLS] instruções [SEP] estado [SEP] [OPT] opção₁ [OPT] opção₂ …`; um logit por opção, lido no marcador `[OPT]`; temperatura por (tipo de pergunta, 2–9 opções); confiança por uma MLP de 7 características seguida de Platt. **Os checkpoints são publicados sem calibração** (temperatura 1,0, Platt identidade) — o runtime aplica o que o modelo traz; não inventa calibração. A referência INT8 preserva a decisão no TS-Ettin-150M: 0,704 de acurácia contra 0,709 em FP32 **[REPORTADO pelo autor]**.
 
 > **Regra:** nunca use `f16` para acumuladores de produto escalar, RMSNorm ou reduções de softmax. O f16 é para **armazenamento e transferência**; a acumulação é **f32**. A equipe do Pooled.run comprovou que a acumulação em f16 corrompe os resultados; o d1-omni altera a resposta de topo em 0,8% (texto) e 1,7% (áudio) só por trocar f16 por bfloat16.
 
@@ -621,11 +647,11 @@ Carregar 80–204 MB na primeira visita não pode penalizar LCP nem INP. A arqui
 1. **Execução 100% em Web Worker + sonda pre-flight zero-byte.** Toda a instância wgpu, compilação WGSL e acesso síncrono ao OPFS vivem no Worker (`WorkerNavigator.gpu`). No carregamento da página, execute apenas uma sonda assíncrona leve:
    `navigator.gpu.requestAdapter()`, `adapter.features.has('shader-f16')`, `adapter.limits.maxStorageBufferBindingSize`, `navigator.deviceMemory`, `navigator.storage.estimate()` — **sem disparar download antes do LCP**.
 2. **Desacoplamento de rede pós-LCP + compilação assíncrona.** Reserve a banda inicial para recursos críticos (`fetchpriority="high"`); inicie o streaming do `.sombin` apenas após o LCP, em `requestIdleCallback`, com `fetch(url, { priority: 'low' })` no Worker. Valide cada chunk por BLAKE3 antes de persistir. Restrinja o motor a **6–8 shaders parametrizados** e compile com `device.createComputePipelineAsync()` — motores com 20–40 kernels podem bloquear o processo GPU por segundos no Tint/WebKit.
-3. **Progressive enhancement com modelo semente.** A família Ettin (17M/32M/68M/150M/400M/1B) usa a mesma receita de treino. O SDK baixa primeiro o **Ettin-17M** (~9,5 MB em 4 bits / ~18 MB em 8 bits), que transfere e compila em < 1 s, e entrega decisões imediatas enquanto o modelo principal faz streaming silencioso para o OPFS.
+3. **Progressive enhancement com modelo semente.** A família Ettin (17M/32M/68M/150M/400M/1B) usa a mesma receita de treino. O SDK baixa primeiro um **checkpoint de decisão de 17M** (TS-Ettin-17M, 17,2 MB em int8), pequeno o bastante para entregar decisões imediatas enquanto o modelo principal faz streaming silencioso para o OPFS.
 4. **Fallback em três níveis.**
    - **WebGL2: rejeitado.** Não tem compute shaders, `var<workgroup>` nem barreiras de grupo; emular atenção e desquantização em fragment shaders exige dezenas de passes e tem overhead de CPU alto.
    - **Wasm32 SIMD128 + Relaxed SIMD multithreaded.** Nos ~10–11% de navegadores sem WebGPU, use `i32x4.relaxed_dot_i8x16_i7x16_add_s` (mapeia para `sdot` em ARM e AVX-VNNI em x86). Com `SharedArrayBuffer` (COOP/COEP), 4 Workers alcançam **3,2×** sobre Wasm escalar e executam um modelo de 150M em INT8 em **~196 ms**; modelos leves (Ettin-17M/32M) ficam em **15–80 ms**.
-   - **API remota (último recurso).** Se WebGPU falhar, não houver `SharedArrayBuffer` (Wasm 1 thread) ou a latência CPU exceder o SLA, o SDK pode chavear transparentemente para um endpoint remoto. Isso **quebra a promessa local-first** e deve ser opt-in, explícito e auditável — nunca silencioso.
+   - **API remota: fora do escopo até a v1.0.0.** O blueprint original previa chavear para um endpoint remoto. Isso quebra a promessa local-first e exige um serviço que este projeto não é. Quando nenhum caminho local serve, o SDK devolve um erro tipado e a aplicação decide o que fazer.
 
 **Core Web Vitals.** O objetivo é: LCP e INP da página hospedeira **inalterados**; o motor só entra depois do LCP; nenhuma tarefa longa na main thread; o Worker é terminado quando o site não precisa mais dele. A primeira decisão pode chegar em < 1 s com o modelo semente; o modelo principal fica pronto em segundo plano.
 
@@ -641,7 +667,7 @@ Um SOM não é “um BERT com uma cabeça”. As famílias abaixo têm topologia
 
 | Modelo | Parâmetros totais (embeddings / backbone) | Backbone e atenção | Cabeça de decisão / calibração | Status e licença |
 |---|---:|---|---|---|
-| **ModernBERT-base / Ettin-150M** | **149,01M** (38,68M embeddings / 110,33M tronco; +~1M cabeça) | 22 camadas · H=768 · I=1.152 (GeGLU) · 12 cabeças (d_h=64) · RoPE θ=160.000 · vocab 50.368 · G-L-L: **8 globais** (0,3,6,9,12,15,18,21) + **14 locais** W=128 · contexto 8.192 | Cabeça tipada (TS-Ettin-150M ou reranker) sobre pooled/span outputs para `choice`, `noul`, `score` | **Ativo e recomendado** · Apache-2.0 / MIT · variantes 17M, 32M, 68M para cold-start |
+| **ModernBERT-base / Ettin-150M** | **149,01M** (38,68M embeddings / 110,33M tronco; +~1M cabeça) | 22 camadas · H=768 · I=1.152 (GeGLU) · 12 cabeças (d_h=64) · RoPE θ=160.000 em todas as camadas (o ModernBERT-base usa 10.000 nas locais) · vocab 50.368 · G-L-L: **8 globais** (0,3,6,9,12,15,18,21) + **14 locais** W=128 · contexto 7.999 no Ettin, 8.192 no ModernBERT | Cabeça `[OPT]` da família TS-Ettin: um logit por opção no marcador `[OPT]`, para `choice`, `noul`, `score` | **Ativo; base da escada de modelos** ([4.5](#analise-dispositivo)) · encoders Ettin: MIT; ModernBERT, rerankers e TS-Ettin: Apache-2.0 · escalas 17M, 32M, 68M, 150M, 400M, 1B |
 | **Laya-Multilingual (mmBERT-base)** | **321,94M** (196,61M / 125,33M) | 22 camadas mmBERT-base · H=768 · I=1.152 · G-L-L 8 globais / 14 locais W=128 · **vocab 256.000** (Gemma 2) · +2 camadas Transformer de decisão | Marcadores `[MASK]` por opção (`[CLS] question [SEP] [MASK] opt1 … [SEP] state [SEP]`) · `head_max_len=256` · temperatura `choice:11+` = 0.1006 → **clamp [0.5, 5.0]** · `act_probability` saturada (issue #185; AUROC 0,30) | Ativo · Apache-2.0 · 100+ idiomas |
 | **Von-1.3 (ModernBERT-large)** | **395,83M** (51,58M / 343,20M; +~1,05M cabeça) | 28 camadas · H=1.024 · I=2.624 (GeGLU) · 16 cabeças (d_h=64) · vocab 50.368 · G-L-L: **10 globais** + **18 locais** W=128 · **contexto de treino 512**; backbone suporta 8.192 | Option-Marker (`[MASK]` antes de cada opção) · perda dual RLCD · temperature scaling pós-treino · calibração dinâmica por entropia | **Descontinuado** · pesos arquivados (`wfzyx/von`) · sofre colapso de modo fora da distribuição |
 | **LiquidAI d1-omni-600M (tronco)** | **380,73M** no tronco (67,11M / 313,62M); **587M** com visão+áudio | LFM2.5-Encoder-350M · **16 camadas** · H=1.024 · SwiGLU com `ff_dim=4608` · vocab 65.536 · contexto 16.384 · **10 LFM2BiShortConv** + **6 GQA** (8 cabeças KV) · qNorm/kNorm RMSNorm · 2 blocos de decisão | 2 blocos dedicados (`lfm2.decision.block_count=2`) · temperaturas por bucket no `config.json`: `choice:2=1.7465`, `choice:3-5=1.3999`, `choice:6-10=1.1751`, `choice:11+=1.3725`; `noul:2=1.6663`; `score:3-5=1.7301`, `score:6-10=1.0` · 0 tokens gerados | **Ativo (SOTA multimodal)** · LFM Open License v1.0 · **não suporta bfloat16** em GPU |
@@ -652,6 +678,8 @@ Um SOM não é “um BERT com uma cabeça”. As famílias abaixo têm topologia
 | **Bespoke Nimble 9B/27B** | 9B / 27B | Qwen3.5 + LoRA rank-16 | Códigos de token único por opção | **Inviável** (9,53 GB em Q8_0; 16 GB+ RAM; ~18 GB BF16; 64 GB de RAM no Mac para fusão) |
 
 > **Nota:** “G-L-L” = padrão Global-Local-Local. No ModernBERT, a cada 3 camadas, 1 é global e 2 são locais. No Von-1.3, 10 globais e 18 locais. O número de camadas varia entre as fontes (22 para o base; 28 para o large) — o `.sombin` carrega `num_layers`, `global_attn_every_n` e a lista de camadas globais, em vez de assumir um valor fixo.
+>
+> **Qualidade, medida por terceiros [REPORTADO].** No Decision Index 0.4 (board público, 2026-11-21, pontuação “Full”; a referência Jev 1.14 marca 60,24): Laya 9,21 · Von 1.3 11,65 · d1-omni-600M 11,75 — o mesmo patamar de modelos de **17M** (Crivo-17M 11,65). Na família Ettin a qualidade sobe com o tamanho: Crivo-68M 19,51 · Amber-150M 24,67 · Crivo-400M 23,74 · Crivo-1B 29,25. Por isso a escada da v1.0.0 é a família Ettin, e não esta matriz ([errata E-13](research/ERRATA.md)).
 
 <a id="fichas"></a>
 ### 4.2 Fichas técnicas
@@ -659,13 +687,13 @@ Um SOM não é “um BERT com uma cabeça”. As famílias abaixo têm topologia
 <a id="ettin"></a>
 #### 4.2.1 Ettin-150M / ModernBERT-base — o “padrão de ouro” para começar
 
-- **Geometria:** 22 camadas, `H=768`, `I=1152` (GeGLU), 12 cabeças de 64 dimensões, vocabulário 50.368, contexto 8.192, RoPE com θ global 160.000 e local 10.000.
+- **Geometria:** 22 camadas, `H=768`, `I=1152` (GeGLU), 12 cabeças de 64 dimensões, vocabulário 50.368, contexto 7.999 (8.192 no ModernBERT), RoPE com θ = 160.000 nas camadas globais **e locais** (no ModernBERT-base, 10.000 nas locais).
 - **Atenção:** 8 camadas globais (0, 3, 6, 9, 12, 15, 18, 21) e 14 locais com janela W=128 (um token vê no máximo 129 posições inclusivas, ±64).
 - **Detalhe de implementação:** o ModernBERT usa **Pre-Norm**, mas a **camada 0 omite a normalização pré-atenção** (`layer_0.attn_norm = None`), porque o tensor já sai normalizado de `embed_norm(tok_embeddings(ids))`. Nas camadas 1–21: `h = h + Attn(attn_norm(h))`; `h = h + MLP(mlp_norm(h))`; no topo, `final_norm(h)`.
 - **FFN:** `mlp.Wi` projeta de 768 para 2×1152 = 2304 canais, divide em `x_val` e `gate` de 1152, calcula `GeGLU(x_val, gate) = GELU(x_val) * gate` e projeta de volta para 768 via `mlp.Wo`.
 - **Por que é o padrão:** o backbone de 111,32M parâmetros ocupa **112,8 MiB em Q8_0** — cabe inteiro num slab de 128 MiB, sem Q4_K, preservando a calibração e maximizando o prefill. A família Ettin cobre 17M/32M/68M/150M/400M/1B com a mesma receita; o Ettin-17M é o modelo semente ideal.
 - **Qualidade:** a suíte Ettin (treinada em **2 biliões de tokens abertos** pela Johns Hopkins CLSP) supera o ModernBERT em GLUE (88,9 vs. 88,4 no Base; 90,8 vs. 90,4 no Large) e já serve de base a SOMs abertos (`openjev-flash`, `mola-150m`).
-- **Risco:** a cabeça TS-Ettin é um artefato separado; o `.sombin` precisa empacotar `option_marker.pt`/head weights e a calibração correspondente. Sem a cabeça correta, o backbone é só um encoder.
+- **Risco:** o encoder puro (`jhu-clsp/ettin-encoder-*`) não decide nada; a decisão vem de um checkpoint com cabeça, como a família `typestrict/TS-Ettin-*` (Apache-2.0), cujo `model.safetensors` já traz encoder, embedding de tipo, cabeça e MLP de confiança. Esses checkpoints são publicados **sem calibração** e com qualidade modesta nos tamanhos pequenos.
 
 <a id="laya"></a>
 #### 4.2.2 Laya-Multilingual — o caso de estudo do offload de embeddings
@@ -728,8 +756,8 @@ flowchart TD
     A -->|Não| C{Multilíngue / vocabulário grande?}
     C -->|Sim| D[Laya-Multilingual 322M<br/>offload de embeddings obrigatório]
     C -->|Não| E{Qual o alvo de latência?}
-    E -->|"< 50 ms mobile"| F[Ettin-150M Q8_0<br/>112,8 MiB]
-    E -->|"< 1 s, primeira visita"| G[Ettin-17M semente<br/>~9,5 MB]
+    E -->|"< 50 ms mobile"| F[TS-Ettin-150M<br/>backbone 112,8 MiB em Q8_0]
+    E -->|"< 1 s, primeira visita"| G[TS-Ettin-17M semente<br/>17 MB em int8]
     E -->|"Qualidade máxima, desktop"| H[Ettin-400M / Laya-EN 421M]
     F --> I[Se precisar de mais contexto:<br/>reduzir S ou usar fallback]
     B --> J[Se 587M não couber:<br/>usar só o tronco 380,73M]
@@ -737,8 +765,8 @@ flowchart TD
 
 **Regras de bolso:**
 
-- **Comece pelo Ettin-150M em Q8_0.** É o menor modelo que ainda tem qualidade de encoder moderno, cabe em 128 MiB sem embeddings e tem cabeça tipada pronta.
-- **Use o Ettin-17M como semente.** A primeira decisão chega em < 1 s; o modelo principal baixa em segundo plano. A API deve expor `seedReady` e `fullReady`.
+- **Comece pela semente de 17M e suba a escada.** O TS-Ettin-17M responde primeiro; a análise do dispositivo decide até onde subir (32M, 68M, 150M) — ver [4.5](#analise-dispositivo). A API expõe `seedReady` e `fullReady`.
+- **Maior não é sempre melhor.** Meça na sua tarefa: o modelo de 17M é fraco sem treino nos seus dados, e a qualidade reportada varia mais entre famílias do que entre tamanhos.
 - **Só ative o offload de embeddings se `vocab_size × H` for > ~15% dos pesos.** No Ettin, o ganho é modesto (~39 MiB); no Laya, é transformador (~199 MiB).
 - **Não use Q4_K no browser.** O custo de desempacotar escalas de 6 bits em regime compute-bound anula o ganho de memória. Prefira Q8_0 e, quando precisar, Q4_0 reempacotado.
 - **Von-1.3: apenas para pesquisa/compatibilidade.** Pesos arquivados, colapso de modo, sem suporte de longo prazo.
@@ -749,15 +777,79 @@ flowchart TD
 
 | Modelo | Licença | Observação |
 |---|---|---|
-| ModernBERT / Ettin-150M | **Apache-2.0 / MIT** | Verificar o card de cada checkpoint; a suíte Ettin tem variantes com licenças específicas |
+| ModernBERT | **Apache-2.0** | `answerdotai/ModernBERT-*` |
+| Ettin (encoders) | **MIT** | `jhu-clsp/ettin-encoder-*`, nas seis escalas |
+| Rerankers Ettin · família TS-Ettin | **Apache-2.0** | `cross-encoder/ettin-reranker-*`, `typestrict/TS-Ettin-*` — catálogo padrão |
+| Crivo · Amber · Mola | **CC BY-NC 4.0** | Mesma arquitetura Ettin, qualidade reportada mais alta, **uso não comercial** — fora do filtro padrão |
 | Laya / Laya-Multilingual | **Apache-2.0** | `convaiinnovations/laya`; confirmar o card do checkpoint |
-| Von-1.3 | Licença do repositório `wfzyx/von` | Pesos **arquivados**; não recomendado para novos projetos |
-| LiquidAI d1-omni-600M | **LFM Open License v1.0** | Restrições comerciais próprias; leia a licença antes de usar |
+| Von-1.3 | **Apache-2.0** | Repositório e pesos **arquivados**; não recomendado para novos projetos |
+| LiquidAI d1-omni-600M | **LFM Open License v1.0** | **Não é open source**: uso comercial só para quem fatura menos de US$ 10 milhões por ano; leia a licença antes de usar |
 | DeBERTa-v3 | **MIT** | `microsoft/deberta-v3-*` |
 | Kev | Licença do modelo base (Qwen) + adaptador | Verificar `jaredpalmer/kev` |
 | Bespoke Nimble | Licença do modelo base | Inviável para o alvo |
 
 > **O repositório não distribui pesos.** O `.sombin` é gerado localmente pelo usuário a partir dos checkpoints originais; a licença do modelo continua valendo para o artefato derivado. A licença Apache-2.0 deste repositório cobre o código e a documentação do runtime, não os pesos.
+
+<a id="analise-dispositivo"></a>
+### 4.5 Análise do dispositivo e escada de modelos (v1.0.0)
+
+A v1.0.0 não pede ao desenvolvedor que escolha um modelo: ela **mede a máquina e escolhe**. O fluxo é semente → sonda → microbenchmark → recomendação → upgrade em segundo plano. As atividades `B-04` a `B-07` do [roadmap](ROADMAP.md#m3) o implementam; os números desta seção são **[REPORTADO]** ou **[ALVO]** até lá.
+
+**1. A escada.** A família Ettin cobre de 17M a 1B com a mesma arquitetura — os mesmos kernels servem todos os degraus.
+
+| Degrau | Checkpoint do catálogo padrão (Apache-2.0) | Parâmetros | Download publicado (ONNX int8) | Índice público, Decision Index 0.3 | Alternativas de mesma arquitetura |
+|---|---|---:|---:|---:|---|
+| 17M — semente | `typestrict/TS-Ettin-17M` | 16,9M | 16,4 MiB | 15,76 | Crivo-17M (22,15), Amber-17M (28,40) — CC BY-NC |
+| 32M | `typestrict/TS-Ettin-32M` | 32,0M | 31,0 MiB | 19,70 | Crivo-32M (27,34), Amber-32M (33,16) — CC BY-NC |
+| 68M | `typestrict/TS-Ettin-68M` | 68,4M | 66,1 MiB | 27,61 | Crivo-68M (32,82), Amber-68M (37,89) — CC BY-NC |
+| 150M | `typestrict/TS-Ettin-150M` (inglês) · `TS-moBERTo-150M` (inglês e português) | 149,6M | 143,7 MiB | 31,96 · 31,20 | Crivo-150M (34,38), Amber-150M (42,75) — CC BY-NC; `tasksource-decider-nano` (33,51), `jev-ettin-150m` (37,31) — Apache-2.0 |
+| 400M | — sem checkpoint permissivo | 395,8M | ≈ 380 MiB | — | Crivo-400M (39,79) — CC BY-NC |
+| 1B | — sem checkpoint permissivo | 1,03B | ≈ 987 MiB | — | Crivo-1B (47,77) — CC BY-NC |
+
+> Pontuações da família TS reportadas pelo autor; as demais, pelo board do Decision Index em 2026-11-21. Não são comparáveis entre si com rigor, e nenhuma substitui medir na sua tarefa. Os checkpoints TS são publicados **sem calibração**.
+
+**2. Os sinais que uma página pode ler** — todos padrão, nenhum identifica o hardware:
+
+| Sinal | O que informa | Limite |
+|---|---|---|
+| `navigator.gpu.requestAdapter()` · `adapter.info.isFallbackAdapter` | Se há WebGPU e se é por software | Presença não garante desempenho |
+| `adapter.features` | `shader-f16`, `subgroups`, `timestamp-query` | Otimizações opcionais, nunca requisito |
+| `adapter.limits` | Tamanho máximo de buffer e de binding | Teto por alocação, não memória total |
+| `adapter.info` (fabricante, arquitetura) | Contornar bugs conhecidos de driver | Os campos podem vir vazios |
+| `navigator.deviceMemory` · `hardwareConcurrency` | RAM aproximada (só Chromium) e núcleos | Valores arredondados; RAM não é VRAM |
+| `navigator.storage.estimate()` | Espaço disponível para a origem | Estimativa |
+| `navigator.connection` (`saveData`, `effectiveType`) | Se a rede é limitada (só Chromium) | Ausente em Safari e Firefox |
+| `crossOriginIsolated` · detecção de recursos Wasm | Threads e SIMD para o fallback CPU | — |
+
+A WebGPU **não expõe VRAM**, temperatura nem bateria, e os navegadores limitam de propósito o que distingue um dispositivo de outro. Por isso a classificação não se apoia em nomes de hardware.
+
+**3. O microbenchmark.** Com a semente carregada, o SDK mede algumas decisões sintéticas em tempo ocioso (alvo: até 300 ms no total) e ajusta um modelo de custo simples — latência ≈ custo fixo + custo por operação × operações do modelo. Como todos os degraus têm a mesma arquitetura, o custo por operação medido na semente prevê a latência dos demais. O resultado fica em cache por dispositivo e versão.
+
+**4. A escolha.** O desenvolvedor declara um orçamento; o SDK escolhe o maior degrau que o cumpre:
+
+```ts
+const som = await SOM.load({
+  model: 'auto',
+  budget: { latencyMs: 50, maxDownloadMB: 160 },   // p95 por decisão; teto de download
+  languages: ['pt', 'en'],
+  licensePolicy: 'permissive',                      // padrão: só Apache-2.0, MIT e equivalentes
+});
+som.on('tier', (t) => console.log(t.model, t.reason)); // p.ex. 'ts-ettin-68m', 'latência prevista 31 ms'
+```
+
+| Tier (definido por medição) | Dispositivos típicos | Degrau provável |
+|---|---|---|
+| T0 — sem WebGPU | Navegadores e sistemas sem suporte; adaptador por software | 17M em Wasm SIMD |
+| T1 — GPU básica | Celulares intermediários, GPUs integradas antigas | 17M → 32M |
+| T2 — GPU intermediária | Celulares de topo, GPUs integradas recentes | 32M → 68M |
+| T3 — GPU forte | Apple Silicon, GPUs dedicadas de entrada | 68M → 150M |
+| T4 — GPU dedicada | Desktops com GPU dedicada | 150M; 400M e 1B só com `licensePolicy` que admita uso não comercial |
+
+Como referência de ordem de grandeza, o baseline de terceiros da [seção 5.6](#comparativo) mediu, num Apple M4 em WebGPU, de 12,6 ms (17M) a 68,4 ms (150M) por requisição de três perguntas.
+
+**5. Política de download.** A primeira visita baixa só a semente. O upgrade acontece em segundo plano e apenas se: a rede não estiver em modo de economia de dados, houver quota de armazenamento, a página estiver ociosa e o tamanho couber em `maxDownloadMB`. A troca de modelo é atômica e não perde decisões em curso. Tudo é observável por eventos e pode ser desligado.
+
+**6. Catálogo e licenças.** Cada entrada do catálogo declara licença, revisão de origem, hashes, idiomas, estado de calibração e a fonte datada da métrica de qualidade. O filtro padrão só admite licenças permissivas; modelos de uso não comercial ou de licença própria exigem opção explícita do desenvolvedor. O repositório continua sem distribuir pesos: os artefatos vêm do repositório de origem ou do registro de modelos do projeto.
 
 <a id="numeros"></a>
 ## 5. Números: o que a pesquisa mediu
@@ -887,8 +979,8 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 
 | Motor | Onde WebGPU está ativo por padrão | Como implementa |
 |---|---|---|
-| **Safari / WebKit** | Safari 26.0 (15/set/2025), iOS/iPadOS/macOS 26 Tahoe/visionOS 26; iOS 18.2 já ativava por padrão (dez/2024) | JavaScriptCore → WebIDL → GPU.framework via **XPC (RemoteGPU)**; WebGPU.framework (Objective-C++) + compilador WGSL→MSL proprietário sobre Metal |
-| **Chromium** | ChromeOS/macOS/Windows desde Chrome 113 (mai/2023); Android 12+ Adreno/Mali desde Chrome 121 (jan/2024); Linux Intel Gen12+ desde Chrome 144 (jan/2026) | `dawn::wire` sobre **Mojo IPC**; Dawn (C++) valida; **Tint** traduz WGSL → SPIR-V (Vulkan), HLSL (D3D12) ou MSL (Metal) |
+| **Safari / WebKit** | Safari 26.0 (15/set/2025), **apenas** em iOS/iPadOS/macOS 26 Tahoe/visionOS 26; do Safari 17.4 ao 18.x, só atrás de flag ([errata E-20](research/ERRATA.md)) | JavaScriptCore → WebIDL → GPU.framework via **XPC (RemoteGPU)**; WebGPU.framework (Objective-C++) + compilador WGSL→MSL proprietário sobre Metal |
+| **Chromium** | ChromeOS/macOS/Windows desde Chrome 113 (mai/2023); Android 12+ Adreno/Mali desde Chrome 121 (jan/2024), Imagination só em Android 16+, Samsung Xclipse sem suporte; Linux Intel Gen12+ desde Chrome 144 (jan/2026) e NVIDIA em Wayland desde o 147 — AMD atrás de flag | `dawn::wire` sobre **Mojo IPC**; Dawn (C++) valida; **Tint** traduz WGSL → SPIR-V (Vulkan), HLSL (D3D12) ou MSL (Metal) |
 | **Firefox / Gecko** | Windows 141 (jul/2025); macOS 26 Tahoe Apple Silicon 145 (nov/2025); todos os macOS Apple Silicon 147 (jan/2026); **sem padrão** em Android, Linux e Macs Intel | **wgpu-core** (Rust) + **Naga** via IPDL IPC |
 
 **No iOS, todos os navegadores usam WebKit.** A disponibilidade de WebGPU no iPhone/iPad depende da versão do iOS, não do navegador instalado. No Android, cada `dispatchWorkgroups` atravessa ~8 camadas (JS API → Blink WebIDL → Renderer Wire → Mojo IPC → Dawn Validation → Tint → API nativa → driver ISA → comandos de hardware), com latência base de **200–400 µs** (medida num M2 Pro).
@@ -965,7 +1057,20 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 - **fusor-ai:** AOT sem grafo, streaming OPFS+BLAKE3, quantização em blocos, CPU 8 threads em 95 ms para 2B. **Custo:** não implementa WebGPU; é o fallback CPU ideal.
 - **ruNNtime/Pooled.run:** kernels WGSL especializados por dispositivo, d1-omni a ~45 ms/pergunta. **Custo:** não é um SDK aberto com formato próprio, offload de vocabulário e calibração `choice`/`noul`/`score`.
 
-**Posicionamento:** o SOM WebCore não precisa vencer o ORT em variedade nem o Burn em treino. Ele precisa vencer em **tempo até a primeira decisão**, **tamanho de binário**, **previsibilidade de latência** e **privacidade local** — e ser o primeiro runtime aberto cujo contrato é uma decisão tipada, não uma geração de texto.
+**Posicionamento:** o SOM WebCore não precisa vencer o ORT em variedade nem o Burn em treino. Ele precisa vencer em **tempo até a primeira decisão**, **tamanho de binário**, **previsibilidade de latência** e **privacidade local**. Não é o primeiro runtime de decisão tipada no navegador: o pacote `crivo-web` já faz isso sobre o ONNX Runtime Web, e é contra esse tipo de baseline que o projeto se mede.
+
+**Baseline medido por terceiros [REPORTADO].** `crivo-web` (ONNX Runtime Web 1.30.0, Chromium 154, Apple M4, três perguntas por requisição; mediana da latência quente):
+
+| Modelo (arquitetura Ettin) | Wasm · INT8 | Wasm · FP32 | WebGPU · FP32 | Preparo da sessão em WebGPU, a partir do cache |
+|---|---:|---:|---:|---:|
+| 17M | 61,4 ms | 57,1 ms | **12,6 ms** | 0,21 s |
+| 32M | 187,0 ms | 168,0 ms | **14,6 ms** | 0,30 s |
+| 68M | 577,6 ms | 535,0 ms | **33,2 ms** | 0,75 s |
+| 150M | 1.466,2 ms | 1.302,0 ms | **68,4 ms** | 1,58 s |
+| 400M | 4.406,5 ms | 3.903,4 ms | **192,0 ms** | 4,82 s |
+| 1B | 12.442,0 ms | — | **486,8 ms** | 6,31 s |
+
+Duas leituras: os “~11 s de cold start” atribuídos ao ONNX Runtime vêm de um LLM e não valem para encoders de decisão; e os alvos da primeira linha do comparativo acima só passam a ser resultado quando o portão `G1` do [roadmap](ROADMAP.md#g1) os medir na mesma máquina que o baseline.
 
 <a id="blueprint"></a>
 ## 6. Blueprint de implementação
@@ -975,45 +1080,29 @@ Esta seção é um **plano de construção**, não código pronto. Os trechos Ru
 <a id="workspace"></a>
 ### 6.1 Estrutura do workspace
 
+A estrutura completa, com a responsabilidade de cada diretório, as regras de dependência e a atividade do roadmap que cria cada caminho, está em **[docs/STRUCTURE.md](docs/STRUCTURE.md)**. Em resumo:
+
 ```text
 som-webcore/
-├── Cargo.toml                    # workspace
-├── crates/
-│   ├── som-core/                 # runtime: wgpu, scheduler, buffers, error types
-│   │   ├── src/lib.rs
-│   │   ├── src/engine.rs
-│   │   ├── src/memory.rs         # slabs, arena, ring de readback
-│   │   ├── src/pipelines.rs
-│   │   └── src/profile.rs        # BrowserConstrained | NativeUnconstrained
-│   ├── som-format/               # .sombin: header, reader, writer, alignment
-│   │   ├── src/lib.rs
-│   │   └── src/header.rs
-│   ├── som-convert/              # CLI: safetensors + head + calibration → .sombin
-│   │   ├── src/main.rs
-│   │   └── src/quant.rs          # Q8_0, Q4_0 reempacotado, Q4_K (leitura)
-│   └── som-web/                  # wasm-bindgen + JS/TS SDK
-│       ├── src/lib.rs
-│       └── js/
-│           ├── index.ts          # SOM.load / decide / eval / score / noul
-│           ├── worker.ts         # OPFS, tokenizer, scheduler
-│           └── types.ts
-├── shaders/
-│   ├── 01_embed_norm_pack.wgsl
-│   ├── 02_qkv_rope_quant.wgsl
-│   ├── 03_flash_attn_block_diag.wgsl
-│   ├── 04_wo_res_mlpnorm.wgsl
-│   ├── 05_fused_geglu_ffn.wgsl
-│   └── 06_calibrate_readout.wgsl
-├── examples/
-│   └── decision-demo/            # página estática + Worker + modelo semente
-├── scripts/
-│   └── check-docs.py             # CI de documentação (links, figuras, placeholders)
-└── docs/
-    ├── assets/banner.svg
-    └── figures/*.png
+├── crates/          som-contract · som-format · som-tokenizer · som-ref (oráculo CPU)
+│                    som-core (motor wgpu) · som-device (análise do dispositivo)
+│                    som-convert · som-cli · som-web (bindings wasm)
+├── shaders/         kernels WGSL puros, reutilizáveis por qualquer orquestrador
+├── packages/        SDK TypeScript (core, react)
+├── models/          catálogo de modelos e esquema
+├── tools/           oráculo de referência e conversor (Python, offline)
+├── tests/           fixtures, paridade, ponta a ponta
+├── conformance/     vetores públicos, neutros de motor
+├── bench/           harness, baseline ONNX Runtime Web, resultados
+├── examples/        demo de decisão e integrações mínimas
+├── docs/            metodologia, estrutura, adr/, rfcs/, spec/, standards/, reports/
+├── research/        fontes brutas da pesquisa e ERRATA.md
+└── scripts/         check-docs.py · roadmap.py
 ```
 
-**Dependências mínimas do núcleo:** `wgpu` (feature `webgpu` apenas no browser), `bytemuck` (`Pod`/`Zeroable`), `wasm-bindgen`/`web-sys` (no target Wasm), `thiserror` (erros), `blake3` (verificação de chunks) e `serde`/`serde_json` apenas no conversor offline. **Sem** `onnx`, `safetensors` runtime, `tokenizers` runtime ou framework de ML no bundle do browser.
+Nenhum diretório é criado vazio: cada um nasce com a atividade que o preenche.
+
+**Dependências mínimas do núcleo:** `wgpu` (feature `webgpu` apenas no browser), `bytemuck` (`Pod`/`Zeroable`), `wasm-bindgen`/`web-sys` (no target Wasm), `thiserror` (erros), `blake3` (verificação de chunks) e `serde`/`serde_json` apenas no conversor offline. **Sem** `onnx` nem framework de ML no bundle do browser. O tokenizador é a exceção assumida: a PoC usa a implementação de referência para garantir IDs idênticos, e só a troca por uma versão enxuta com 100% de paridade.
 
 <a id="perfis"></a>
 ### 6.2 Dois perfis de runtime
@@ -1060,11 +1149,11 @@ pub struct SomBinHeader {
     pub num_kv_heads: u32,              // 16 (MHA) ou 8 (GQA)
     pub head_dim: u32,                  // 64
     pub vocab_size: u32,                // 50368, 65536, 256000
-    pub max_seq_len: u32,               // 8192 ou 16384
+    pub max_seq_len: u32,               // 8192, 7999 (Ettin) ou 16384
     pub local_attn_window: u32,         // 128 (±64 inclusivo = 129)
     pub global_attn_every_n: u32,       // 3 (0,3,6... são globais)
     pub global_rope_theta: f32,         // 160000.0
-    pub local_rope_theta: f32,          // 10000.0
+    pub local_rope_theta: f32,          // do config: 10000.0 (ModernBERT) ou 160000.0 (Ettin, mmBERT)
     pub norm_eps: f32,                  // 1e-5
 
     // Parâmetros de calibração embutidos (Von 1.3 / Laya / d1-omni)
@@ -1089,13 +1178,14 @@ pub struct SomBinHeader {
     pub layer_stride_bytes: u64,        // bytes exatos de 1 camada Transformer
     pub num_weight_slabs: u32,          // 1 (nativo), 2 (Q4_0), 3 (Q8_0)
     pub layers_per_slab: [u32; 4],      // ex.: [14, 14, 0, 0]
+    pub _pad0: u32,                     // explícito: alinha os u64 seguintes em 8 bytes
     pub slab_file_offsets: [u64; 4],    // offset de cada slab no arquivo
     pub slab_byte_sizes: [u64; 4],      // cada slab <= 128 MiB no Perfil 1
-    pub reserved: [u8; 20],             // padding até fechar 256 bytes
+    pub reserved: [u8; 16],             // padding até fechar 256 bytes
 }
 ```
 
-> **Por que `#[repr(C, align(256))]`?** O cabeçalho é lido com um único `copy` e interpretado por `bytemuck`; o alinhamento a 256 B garante que o offset 0 do arquivo já é válido para `GPUBuffer` e para `mmap` nativo. O campo `reserved` fecha o struct em exatamente 256 bytes (8 + 64 + 32 + 24 + 24 + 4 + 16 + 32 + 32 + 20 = 256). Os 24 bytes de embeddings são o que permite manter a tabela **fora** do slab estático.
+> **Por que `#[repr(C, align(256))]`?** O cabeçalho é lido com um único `copy` e interpretado por `bytemuck`; o alinhamento a 256 B garante que o offset 0 do arquivo já é válido para `GPUBuffer` e para `mmap` nativo. O campo `reserved` fecha o struct em exatamente 256 bytes (8 + 64 + 32 + 24 + 24 + 4 + 16 + 4 + 32 + 32 + 16 = 256). **Correção de 2026-11-21:** a versão anterior somava 256 bytes de campos, mas ocupava 264 em `repr(C)` — havia 4 bytes de preenchimento implícito antes de `slab_file_offsets` e 4 no fim —, o que também impede `Pod`; o `_pad0` explícito resolve ([errata E-30](research/ERRATA.md)). Este layout é um **rascunho**: os campos de calibração são específicos do Von, e o formato v1 será definido por RFC, com os metadados de cada modelo num manifesto (atividade `A-06` do roadmap). Os 24 bytes de embeddings são o que permite manter a tabela **fora** do slab estático.
 
 #### Layout dos slabs e das camadas
 
@@ -1583,15 +1673,15 @@ pub fn encode_full_som_forward(
 
             // 2b. FlashAttention-2 bidirecional (global ou local)
             cpass.set_pipeline(&self.pipe_flash_attn);
-            cpass.dispatch_workgroups((seq_len + 31) / 32, self.num_heads, 1);
+            cpass.dispatch_workgroups((seq_len + 15) / 16, self.num_heads, 1);
 
             // 2c. Wo + residual + mlp_norm
             cpass.set_pipeline(&self.pipe_wo_res_mlpnorm);
-            cpass.dispatch_workgroups(tile_m_groups, self.hidden_size / 64, 1);
+            cpass.dispatch_workgroups(seq_len, 1, 1);
 
             // 2d. GeGLU fundida + Wo + residual
             cpass.set_pipeline(&self.pipe_fused_geglu);
-            cpass.dispatch_workgroups(tile_m_groups, self.hidden_size / 64, 1);
+            cpass.dispatch_workgroups(seq_len, 1, 1);
         }
 
         // Fronteira de submit: fecha o pass, submete, reabre
@@ -1631,19 +1721,19 @@ O esqueleto acima é **conceitual**: em wgpu, não se pode “reabrir” o mesmo
 <a id="api"></a>
 ### 6.7 API JavaScript proposta
 
-A API abaixo é **proposta**, não final. O objetivo é ser pequena, tipada e difícil de usar errado. O exemplo do manifesto (`som.eval(...)`) é o nível mais alto; `decide` é o nível explícito.
+A API abaixo é **proposta**, não final — a definitiva nasce de RFC e acompanha a Decisions API. O objetivo é ser pequena, tipada e difícil de usar errado. O exemplo do manifesto (`som.eval(...)`) é o nível mais alto; `decide` é o nível explícito.
 
 ```ts
 import { SOM } from '@som-web/core';
 
 const som = await SOM.load({
-  model: 'ettin-150m-q8',       // ou URL de um .sombin
-  seed: 'ettin-17m-q4',         // opcional: primeira decisão rápida
+  model: 'auto',                // v1.0.0: escolhe pelo dispositivo; ou um id do catálogo ('ts-ettin-17m')
+  seed: 'ts-ettin-17m',         // primeira decisão rápida
   cache: 'opfs',                // 'opfs' | 'memory'
   execution: 'auto',            // 'webgpu' | 'wasm' | 'auto'
-  fallback: 'wasm',             // 'none' | 'wasm' | 'remote'
-  remoteEndpoint: undefined,     // só se fallback === 'remote'
-  privacy: 'local-only',        // 'local-only' | 'allow-remote'
+  fallback: 'wasm',             // 'none' | 'wasm'
+  budget: { latencyMs: 50, maxDownloadMB: 160 }, // orçamento para a escolha do modelo
+  licensePolicy: 'permissive',  // por padrão, só modelos de licença permissiva
   onProgress: (p) => console.log(p.phase, p.loaded, p.total),
 });
 
@@ -1660,11 +1750,11 @@ const choice = await som.decide({
 //   kind: 'choice', choice: 'pedir ajuda', index: 2,
 //   confidence: 0.42, probabilities: [0.18, 0.40, 0.42],
 //   temperature: 1.7465, entropy: 0.91,
-//   latencyMs: 38.2, model: 'ettin-150m-q8', cached: true
+//   latencyMs: 38.2, model: 'ts-ettin-68m', cached: true
 // }
 
-// 2. Condicional abstrata (açúcar sobre choice binário)
-if (await som.eval('O usuário hesita antes de concluir o formulário?')) {
+// 2. Condicional abstrata (açúcar sobre noul: recebe o estado e a afirmação)
+if (await som.eval(state, 'O usuário hesita antes de concluir o formulário.')) {
   showHelp();
 }
 
@@ -1688,14 +1778,15 @@ const label = await som.classify({
 // 6. Ciclo de vida
 som.on('deviceLost', async () => { await som.recover(); });
 som.on('thermalPressure', (level) => { /* reduzir frequência */ });
-await som.preload('laya-multilingual-q8'); // troca de modelo sem baixar de novo
+await som.preload('ts-ettin-68m');          // sobe um degrau da escada
 som.dispose();
 ```
 
 **Contrato:**
 
 - `SOM.load` **não** baixa pesos antes do LCP; o download é explicitamente disparado por `preload()` ou pela primeira decisão.
-- `privacy: 'local-only'` garante que nenhuma chamada de rede ocorre após o modelo estar no OPFS. Se `fallback: 'remote'` for usado, o evento `remoteFallback` é emitido e a UI deve avisar.
+- Nenhuma chamada de rede ocorre depois de o modelo estar no OPFS; o fallback remoto do blueprint original saiu do escopo até a v1.0.0.
+- A superfície final segue a Decisions API (`boolean`, `choice`, `score`; `label`, `probabilities`, `confidence`, `expectedScore`) para funcionar como polyfill dela; `noul` é o nome JEV de `boolean`. A API é definida por RFC (atividades `P-02` e `B-08` do roadmap).
 - `decide`/`score`/`noul` são **idempotentes** para a mesma entrada e modelo; o cache de decisão é opcional e local.
 - `timeoutMs` aborta a decisão e libera o staging buffer; a Promise rejeita com `TimeoutError`.
 - `signal` permite cancelar quando o usuário muda de contexto.
@@ -1770,8 +1861,13 @@ Esta é a seção que separa um blueprint de um desejo. Cada linha tem origem nu
 | 23 | **Chrome ArrayBuffer ~2 GiB** | `fetch().arrayBuffer()` falha em modelos grandes | Streaming por `ReadableStream`; nunca carregar o arquivo inteiro | Teste com `.sombin` > 2 GiB |
 | 24 | **Wasm32 4 GiB** | `WebAssembly.Memory` estoura | Não materializar pesos no Wasm; memória linear < 16 MiB | Medir `memory.buffer.byteLength` durante o load |
 | 25 | **Vazamento de VRAM por `createBuffer`** | Memória cresce a cada decisão; GC não recolhe | Pool pré-alocado; `destroy()` explícito; ring de staging | 1.000 decisões; medir VRAM/`performance.memory` |
+| 26 | **Tokenizador sem paridade** | IDs diferentes dos da referência; respostas erradas sem erro visível | Implementação de referência na PoC; versão enxuta só com 100% de identidade | 10.000 textos com IDs idênticos |
+| 27 | **Suposição de arquitetura herdada da pesquisa** | θ do RoPE, máscara por opção ou layout de tokens errados para o modelo | Tudo vem do manifesto do checkpoint; paridade por camada contra a referência | Corpus dourado com ativações por camada |
+| 28 | **O motor próprio não supera o baseline** | Latência acima da do ONNX Runtime Web no mesmo modelo | Portão `G1`: iterar uma vez; depois, pivotar para um motor de terceiros | Medição lado a lado, na mesma máquina |
+| 29 | **Licença dos pesos** | Os degraus mais fortes são CC BY-NC ou de licença própria | Política de licenças no seletor; o catálogo declara o uso permitido | Auditoria do catálogo |
+| 30 | **Download duplicado por origem** | Cada site baixa a sua cópia do modelo | Semente pequena e limites de download; é o argumento central para a API nativa | Bytes baixados por origem |
 
-**Checklist de “pronto para produção” (v0.1):**
+**Checklist de “pronto para produção”** — herdado do blueprint; os critérios vigentes, por portão, estão no [ROADMAP.md](ROADMAP.md#g4):
 
 - [ ] 1.000 decisões sem `device.lost` em Chrome/Windows D3D12, Safari/iOS e Chrome/Android.
 - [ ] p95 < 50 ms para Ettin-150M em `S=256` num iPhone 15 / M1 e num Android flagship.
@@ -1788,64 +1884,19 @@ Esta é a seção que separa um blueprint de um desejo. Cada linha tem origem nu
 <a id="roadmap"></a>
 ## 8. Roadmap
 
-O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar todos os modelos; é provar o contrato em um modelo, um navegador e um dispositivo — e então expandir.
+O planejamento completo — atividades em DAG, critérios de aceite, portões e riscos — está em **[ROADMAP.md](ROADMAP.md)**. Em resumo:
 
-<a id="fase-0"></a>
-### Fase 0 — Fundação (concluída em 2026-11-18)
+| Marco | Versão | O que prova |
+|---|---|---|
+| **M0 — Fundação e auditoria** | documentação | Plano e pesquisa conferidos em fontes primárias ([errata](research/ERRATA.md)). **Concluído em 2026-11-21.** |
+| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, medido contra o ONNX Runtime Web. Termina num portão de seguir, iterar ou pivotar. |
+| **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, fallback CPU em Wasm SIMD, recuperação de falhas, três motores de navegador, pacote npm alpha. |
+| **M3 — Beta** | `v0.5`–`v0.9` | Escada de modelos (32M, 68M, 150M), análise do dispositivo e escolha automática ([4.5](#analise-dispositivo)), API candidata. |
+| **M4 — v1.0.0** | `v1.0.0` | API estável, catálogo auditado, `model: 'auto'` nos três motores. |
+| **Trilha S — Padronização** | contínua | Alinhamento com a Decisions API, polyfill, evidências e testes de conformidade. |
+| **M5 — Pós-1.0** | `v1.x` | WebNN, multilíngue, multimodal (d1-omni), SDKs nativos, modelos próprios. |
 
-- [x] Ler e catalogar os dois relatórios de pesquisa.
-- [x] Instalar a memória CoALA local (`.agents/som-webcore-coala-agent-skill/`).
-- [x] Escrever este README autossuficiente.
-- [x] Publicar o repositório público com governança open-source.
-- [x] Definir licença, código de conduta, segurança e política de merge.
-
-<a id="fase-1"></a>
-### Fase 1 — Formato e conversor (semanas 1–2)
-
-- [ ] `som-format`: header de 256 B, reader/writer, validação de alinhamento, BLAKE3.
-- [ ] `som-convert`: Ettin-150M safetensors → `.sombin` Q8_0; Q4_0 reempacotado para d1.
-- [ ] Testes golden: header, offsets, `layer_stride`, hash.
-- [ ] Modelo semente Ettin-17M; download em chunks de 8 MiB; OPFS.
-- **Critério de saída:** converter, ler de volta e validar 100% dos tensores; `.sombin` carrega no OPFS em < 2 s num desktop.
-
-<a id="fase-2"></a>
-### Fase 2 — Kernels e paridade numérica (semanas 3–5)
-
-- [ ] `01_embed_norm_pack.wgsl` + `02_qkv_rope_quant.wgsl`.
-- [ ] `03_flash_attn_block_diag.wgsl` (global e local W=128).
-- [ ] `04_wo_res_mlpnorm.wgsl` + `05_fused_geglu_ffn.wgsl`.
-- [ ] `06_calibrate_readout.wgsl` + `DecisionPacket`.
-- [ ] Referência CPU em Rust (`f32`) para paridade.
-- **Critério de saída:** top-1 ≥ 99% igual à referência; ECE dentro de 1%; nenhum NaN/Inf.
-
-<a id="fase-3"></a>
-### Fase 3 — Runtime e API (semanas 6–8)
-
-- [ ] `SomEngine` com dois perfis; slabs; dynamic offsets; chunked submit.
-- [ ] Ring de readback de 4×1.056 B; `device.lost` recovery.
-- [ ] Worker + OPFS + tokenizer; `SOM.load`/`decide`/`eval`/`score`/`noul`.
-- [ ] Modelo semente e troca de modelo sem reload.
-- **Critério de saída:** Ettin-150M choice end-to-end em Chrome desktop; p95 < 70 ms; zero rede após load.
-
-<a id="fase-4"></a>
-### Fase 4 — Mobile, benchmarks e release (semanas 9–12)
-
-- [ ] Safari 26/iOS, Chrome Android, Firefox desktop.
-- [ ] Benchmarks em iPhone 15, Galaxy S26, M1/M4, RTX 4050 (bug D3D12), ARM Mali.
-- [ ] Teste de estresse de 1 h; recuperação de device lost.
-- [ ] Documentação de API, exemplos, guia de conversão.
-- [ ] Release `v0.1.0`; pacote npm `@som-web/core` (se aplicável).
-- **Critério de saída:** matriz de benchmarks publicada; p95 < 50 ms em mobile para S≤256; release assinada.
-
-<a id="fase-5"></a>
-### Fase 5 — Expansão (pós-v0.1)
-
-- [ ] d1-omni tronco textual; depois visão/áudio.
-- [ ] Laya-Multilingual com offload de 256k embeddings.
-- [ ] Fallback Wasm SIMD/Relaxed SIMD multithread.
-- [ ] WebNN/NPU (quando houver API estável).
-- [ ] Proposta de API de inferência de decisão ao W3C/WHATWG.
-- [ ] Suporte a modelos customizados (converter + calibração).
+O roadmap não promete datas: promete critérios. Como se trabalha está em [docs/METHODOLOGY.md](docs/METHODOLOGY.md); onde cada coisa vive, em [docs/STRUCTURE.md](docs/STRUCTURE.md).
 
 ### O que **não** está no roadmap
 
@@ -1854,6 +1905,7 @@ O roadmap é deliberadamente **estreito**. O objetivo da v0.1 não é suportar t
 - Modelos > 1B no browser.
 - Substituir ONNX Runtime/transformers.js para todas as arquiteturas.
 - Rodar em WebGL2.
+- Fallback remoto: nenhum dado do usuário vai a servidores.
 
 ---
 
@@ -1885,7 +1937,7 @@ cargo test --workspace
 cargo build -p som-core --target wasm32-unknown-unknown
 ```
 
-O fluxo de contribuição segue [CONTRIBUTING.md](CONTRIBUTING.md):
+Esse workspace nasce na atividade `P-03` do roadmap. O fluxo de contribuição segue [CONTRIBUTING.md](CONTRIBUTING.md); quem decide o quê está em [GOVERNANCE.md](GOVERNANCE.md) e a barra de qualidade, em [docs/METHODOLOGY.md](docs/METHODOLOGY.md):
 
 - branch `<tipo>/<slug>` (`feat/`, `fix/`, `docs/`, `perf/`, `test/`…);
 - commits Convencionais (`tipo(escopo): descrição`, ≤ 72 chars);
@@ -1934,6 +1986,7 @@ A memória é o ponto de entrada; o código e o estado atuais são a verdade. Co
 <a id="contribuir-issues"></a>
 ### 9.5 Bons primeiros problemas
 
+- Assumir uma atividade `S` das primeiras ondas do marco M1 no [ROADMAP.md](ROADMAP.md#m1) — por exemplo `P-01` (fixar o modelo).
 - Adicionar um teste golden para o header `.sombin`.
 - Implementar `compute_2d_workgroups()` e testar com `N=1.024` e o perfil de stress `N=8.192`.
 - Comparar Q8_0 vs. Q4_0 num kernel de GEMM isolado.
@@ -1961,10 +2014,10 @@ Custo por clique, latência de 300–1.200 ms, dependência de rede e envio de d
 Sim, depois que o modelo está no OPFS. O primeiro acesso baixa o `.sombin`; os seguintes leem do disco local. Não há chamada de rede no caminho da decisão.
 
 **6. Quais navegadores?**
-WebGPU padrão em Safari 26+/iOS 26+, Chrome 113+ (desktop), Chrome 121+ (Android 12+), Firefox 141+ (Windows) / 145+ (macOS Apple Silicon). Cobertura ~89%. Sem WebGPU, há fallback Wasm SIMD/Relaxed SIMD; WebGL2 não serve.
+WebGPU por padrão em Safari 26+ (só nos sistemas 26), Chrome 113+ no desktop, Chrome 121+ em Android 12+ com GPU Adreno ou Mali, Firefox 141+ no Windows e 145+ em Macs com Apple Silicon — sempre dependendo do sistema e da GPU, por isso o SDK detecta o recurso em vez de confiar na versão. Cobertura reportada de ~89%. Sem WebGPU, há fallback Wasm SIMD/Relaxed SIMD; WebGL2 não serve.
 
 **7. Qual o tamanho do modelo?**
-Semente Ettin-17M: ~9,5 MB em 4 bits. Ettin-150M: ~80–112 MB. Laya-Multilingual: ~647 MB em disco. d1-omni-600M: 240–410 MB (texto) / ~670 MB (multimodal). O `.sombin` é gerado localmente; o repositório não distribui pesos.
+Semente TS-Ettin-17M: 17 MB em int8. TS-Ettin-150M: ~144 MB em int8. Laya-Multilingual: ~647 MB em disco. d1-omni-600M: 240–410 MB (texto) / ~670 MB (multimodal). O `.sombin` é gerado localmente; o repositório não distribui pesos.
 
 **8. Meus dados vão para algum lugar?**
 Não por padrão. `privacy: 'local-only'` garante zero rede após o load. O fallback remoto é opt-in e emite um evento; nunca é silencioso.
@@ -1985,7 +2038,7 @@ O d1-omni-600M suporta (SigLIP2 + FastConformer), mas a v0.1 foca no tronco text
 WebGPU não expõe a NPU. O benchmark do S26 mostra a NPU ~1,4–3,3× mais rápida que a GPU, mas não há API web padrão para acessá-la. WebNN é o caminho de futuro; o projeto nasce WebGPU-first e pode ganhar um backend WebNN quando estável.
 
 **14. Está pronto para produção?**
-**Não.** É um RFC/blueprint. O runtime não foi implementado. A seção 7 tem o checklist que precisa ser cumprido antes de uma v0.1.
+**Não.** É um RFC/blueprint auditado. O runtime não foi implementado. O [ROADMAP.md](ROADMAP.md) define o que cada versão precisa provar, da prova de conceito (`v0.1.0`) à `v1.0.0`.
 
 **15. Por que Apache-2.0?**
 É permissiva, tem concessão explícita de patentes e cláusula de retaliação — importante para um projeto de GPU/codecs que pode ser adotado por empresas. Os pesos dos modelos mantêm suas licenças.
@@ -2004,6 +2057,15 @@ Um SOM não gera texto livre, então não alucina no sentido clássico. Mas pode
 
 **20. Como contribuir?**
 Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue` e siga o fluxo de branch/PR. Para pesquisa, use o protocolo de benchmark da seção 9.3. Para segurança, [SECURITY.md](SECURITY.md).
+
+**21. Qual modelo a prova de conceito usa?**
+O `typestrict/TS-Ettin-17M` (Apache-2.0): 16,9M de parâmetros, dos quais 76% são a tabela de embeddings, que fica na CPU. É um modelo fraco sem treino nos dados de quem usa — e isso basta, porque a PoC prova o runtime, cuja obrigação é reproduzir fielmente a referência do modelo.
+
+**22. Como o SDK vai escolher o modelo na v1.0.0?**
+Carrega a semente de 17M, lê os sinais padrão do dispositivo, roda um microbenchmark e escolhe o degrau mais forte que cabe no orçamento de latência e de download declarado pelo desenvolvedor — ver [4.5](#analise-dispositivo).
+
+**23. O navegador não vai ter isso nativamente?**
+É o objetivo. Existe a proposta da Decisions API, com protótipo em Chromium e prévia no Edge. Até ela chegar a todos os motores e dispositivos, este projeto é o polyfill aberto dessa capacidade — e continua útil depois, para quem precisa escolher ou trazer o próprio modelo.
 
 ---
 
@@ -2038,7 +2100,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | **Tint** | Compilador WGSL do Dawn (WGSL → SPIR-V/HLSL/MSL). |
 | **Naga** | Compilador/tradutor WGSL do ecossistema wgpu/Firefox. |
 | **OPFS** | Origin Private File System; armazenamento persistente e isolado por origem. |
-| **Cache API** | Cache HTTP do navegador; limite silencioso de ~200 MB no Chromium. |
+| **Cache API** | Cache HTTP programável do navegador; o “limite de ~200 MB” citado pelo relatório não foi confirmado. |
 | **Wasm32** | WebAssembly com ponteiros de 32 bits; teto de 4 GiB de memória linear. |
 | **UMA** | Unified Memory Architecture; CPU e GPU compartilham a mesma DRAM (Apple Silicon, APUs, SoCs). |
 | **DVFS** | Dynamic Voltage and Frequency Scaling; ajuste de tensão/frequência conforme temperatura/carga. |
@@ -2059,7 +2121,14 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | **`[MASK]`** | Token especial usado como marcador de leitura da decisão. |
 | **`DecisionPacket`** | Estrutura de 64–256 B com a decisão calibrada lida pela CPU. |
 | **Micro-readback** | Ler apenas o pacote de decisão da GPU, em vez de tensores de logits. |
-| **Modelo semente** | Modelo minúsculo (Ettin-17M) para a primeira decisão antes do modelo principal. |
+| **Modelo semente** | Checkpoint de decisão minúsculo (TS-Ettin-17M) para a primeira decisão antes do modelo principal. |
+| **Escada de modelos** | Sequência de checkpoints da mesma arquitetura (17M → 32M → 68M → 150M…) entre os quais o SDK escolhe conforme o dispositivo. |
+| **Tier** | Classe de capacidade de um dispositivo, definida por medição, que determina o degrau da escada. |
+| **`[OPT]`** | Token marcador de opção da família TS-Ettin; o logit de cada opção é lido na sua posição. |
+| **Decisions API** | Proposta de API nativa de decisão (`window.DecisionModel`), do time de Built-in AI do Chrome. |
+| **Decision Index** | Benchmark público de modelos de decisão; fonte das pontuações de qualidade citadas. |
+| **DAG** | Grafo acíclico dirigido; a forma do [roadmap](ROADMAP.md). |
+| **Baseline** | A alternativa existente contra a qual se mede: ONNX Runtime Web com o mesmo modelo. |
 | **LCP / INP** | Largest Contentful Paint / Interaction to Next Paint; Core Web Vitals. |
 | **Jetsam** | Gerenciador de memória do iOS que mata processos sob pressão. |
 | **`device.lost`** | Evento de perda do `GPUDevice` (driver reset, OOM, background). |
@@ -2075,6 +2144,8 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 **Especificação, WebGPU e performance**
 
 - W3C. *WebGPU Specification*. <https://www.w3.org/TR/webgpu/>
+- Google Chrome Built-in AI Team. *Explainer for the Decisions API*. <https://github.com/explainers-by-googlers/decisions-api>
+- Microsoft Edge. *Classify text with the Decisions API*. <https://learn.microsoft.com/en-us/microsoft-edge/web-platform/decisions-api>
 - MDN. *GPUSupportedLimits*. <https://developer.mozilla.org/en-US/docs/Web/API/GPUSupportedLimits>
 - Chrome for Developers. *What's New in WebGPU (Chrome 123)* — `packed_4x8_integer_dot_product`. <https://developer.chrome.com/blog/new-in-webgpu-123>
 - Chrome for Developers. *What's New in WebGPU (Chrome 133)* — limites dinâmicos. <https://developer.chrome.com/blog/new-in-webgpu-133>
@@ -2088,7 +2159,7 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 **Pesquisa e engenharia de inferência no browser**
 
 - Daneel AI. *The three walls of in-browser LLM inference* (2026). <https://daneel.injen.io/research/three-walls-browser-llm-inference-2026.html>
-- Maczan. *Measuring and Reducing WebGPU Dispatch Overhead for LLM Inference* (2026). <https://arxiv.org/abs/2608.08730>
+- Maczan. *Dispatch Overhead, Not Kernel Quality: The Performance Bottleneck in Single-Stream WebGPU LLM Inference* (2026). <https://arxiv.org/abs/2608.08730>
 - *Characterizing WebGPU Dispatch Overhead for LLM Inference*. <https://arxiv.org/html/2604.02344v1>
 - *Llamas on the Web: Memory-Efficient, Performance-Portable Inference*. <https://arxiv.org/html/2605.20706v1>
 - PosttrainLLM. *The WebGPU execution model*. <https://posttrainllm.com/docs/learn/webgpu-execution-model/>
@@ -2111,6 +2182,10 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 - JHU CLSP. *Ettin-Encoder-150M*. <https://huggingface.co/jhu-clsp/ettin-encoder-150m>
 - LightOn. *Introducing Ettin Suite*. <https://lighton.ai/fr-blog-posts/introducing-ettin-suite-the-sota-open-recipe-to-outperform-existing-generative-retrieval-models>
 - TypeStrict. *TS-Ettin-150M*. <https://huggingface.co/typestrict/TS-Ettin-150M>
+- TypeStrict. *TS-Ettin-17M* (modelo da PoC). <https://huggingface.co/typestrict/TS-Ettin-17M>
+- dizyann. *Crivo Web — typed decisions* (decisão tipada no navegador sobre ONNX Runtime Web). <https://huggingface.co/dizyann/crivo-web>
+- Stekel. *Joint or Per-Option? Compact Encoders for Closed-Set Decisions from 17 Million to 1 Billion Parameters* (2026). <https://arxiv.org/abs/2610.30970>
+- *Decision Index* (benchmark e board de modelos de decisão). <https://github.com/apolinario/decision-index>
 - ConvAI Innovations. *Laya*. <https://huggingface.co/convaiinnovations/laya>
 - OrcaRouter. *Laya Explained: A Decision Model With Zero Output Tokens*. <https://www.orcarouter.ai/blog/laya-decision-model-explained>
 - Liquid AI. *d1-omni-600M*. <https://huggingface.co/LiquidAI/d1-omni-600M>
@@ -2357,14 +2432,14 @@ Leia [CONTRIBUTING.md](CONTRIBUTING.md), escolha uma issue com `good first issue
 | Cabeças Q / KV | 12 / 12 | 12 / 12 | 16 / 16 | 16 / 8 | 16 / 16 | 12 / 12 | 16 / 16 |
 | `head_dim` | 64 | 64 | 64 | 64 | 64 | 64 | 64 |
 | `vocab_size` | 50.368 | 256.000 | 50.368 | 65.536 | 50.368 | 128.100 | 128.100 |
-| `max_seq_len` | 8.192 | 8.192 | **512 (treino); backbone 8.192** | 16.384 | 8.192 | 512 | 512 |
-| RoPE global / local | 160.000 / 10.000 | 160.000 / 10.000 | 160.000 / 10.000 | — (LFM2) | 160.000 / 10.000 | relativo | relativo |
+| `max_seq_len` | 7.999 | 8.192 | **512 (treino); backbone 8.192** | 16.384 | 8.192 | 512 | 512 |
+| RoPE global / local | 160.000 / 160.000 | 160.000 / 160.000 | 160.000 / 10.000 | θ = 1.000.000 (LFM2) | 160.000 / 10.000 | relativo | relativo |
 | Normalização | Pre-Norm; layer 0 sem `attn_norm` | idem | idem | RMSNorm (qNorm/kNorm) | idem | Post-Norm/relativo | Post-Norm/relativo |
 | Ativação | GeGLU | GeGLU | GeGLU | SwiGLU | GeGLU | GELU | GELU |
 | Parâmetros totais | 149,01M | 321,94M | 395,83M | 381,00M | 420,78M | 183,83M | 434,01M |
 | Parâmetros do tronco | 110,33M | 125,33M | 343,20M | 313,89M | 369,20M | 85,06M | 302,31M |
 | Embeddings | 38,68M | 196,61M | 51,58M | 67,11M | 51,58M | 98,77M | 131,70M |
-| Licença | Apache-2.0/MIT | Apache-2.0 | ver repo | LFM Open v1.0 | Apache-2.0 | MIT | MIT |
+| Licença | MIT (encoder) | Apache-2.0 | Apache-2.0 | LFM Open v1.0 | Apache-2.0 | MIT | MIT |
 
 > **Atenção:** os valores de `max_seq_len` do DeBERTa e do Von são os padrões de treino; o runtime pode aceitar mais, mas a qualidade fora do contexto treinado não é garantida. O ModernBERT suporta 8.192; o d1-omni, 16.384. **Somas:** no Von, 343,20M (tronco) + 51,58M (embeddings) = 394,78M; o total de 395,83M inclui ~1,05M da cabeça `OptionMarkerScorer`, que não está na coluna “tronco”. No Ettin, 110,33M + 38,68M = 149,01M; os 111,32M do relatório 1 incluem a cabeça de decisão (~1M).
 
@@ -2435,9 +2510,9 @@ confidence = p1 - p2
 #### d1-omni
 
 ```text
-T_choice: 1.7465 (2 opções) → 1.1751 (3–5) → ... → 1.0 (>11)
+T_choice: 1.7465 (2 opções) · 1.3999 (3–5) · 1.1751 (6–10) · 1.3725 (11+)
 T_noul: 1.6663
-T_score: 1.7301 (3–5 níveis) / 1.0
+T_score: 1.7301 (3–5 níveis) · 1.0 (6–10)
 ```
 
 #### ShortConv (LFM2)
@@ -2457,9 +2532,8 @@ out = Linear(y) + x
 # Em vez de sum(x^2) em f16 (overflow > 65504):
 escala = 2^k tal que max|x| * escala < 1
 x' = x * escala
-mean = sum(x'^2) / H          # acumular em f32
-var  = mean - mean(x')^2
-y = x' * rsqrt(var + eps*escala^2) * weight
+ms = sum(x'^2) / H            # acumular em f32; RMSNorm não subtrai a média
+y  = x' * rsqrt(ms + eps*escala^2) * weight
 ```
 
 #### Score e confiança
@@ -2536,7 +2610,7 @@ Os dois PDFs foram produzidos em datas próximas, mas não são idênticos. Esta
 
 **Nível de confiança:**
 
-- **Alto:** especificação W3C, limites de buffer, arquitetura dos modelos (shapes, camadas, vocabulário), licenças, comportamento de OPFS/WebGPU.
+- **Alto (conferido em fonte primária em 2026-11-21 — ver [research/ERRATA.md](research/ERRATA.md)):** limites padrão da WebGPU, geometria dos modelos (camadas, dimensões, vocabulário), licenças e existência dos checkpoints. A auditoria encontrou e corrigiu erros justamente em itens que esta lista dava como seguros: θ do RoPE local do Ettin, contexto e licença do Ettin, data da WebGPU no iOS e tamanho do cabeçalho `.sombin`.
 - **Médio:** latências e footprints medidos por terceiros; variam com device, browser, driver, temperatura e versão do modelo.
 - **Baixo/especulativo:** números de “SLA” universais; cobertura futura de NPU/WebNN; algumas fontes não identificadas nos relatórios.
 

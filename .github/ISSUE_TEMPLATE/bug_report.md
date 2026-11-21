@@ -43,9 +43,12 @@ assignees: ''
 ## Environment
 
 - **som-webcore** version / commit:
-- Runtime / language version:
+- Browser and version (or native target):
 - Operating system and version:
-- Installation method (npm, pip, source, container):
+- GPU adapter info reported by the browser (vendor, architecture), or "no WebGPU":
+- Backend in use (WebGPU, Wasm SIMD, native):
+- Model and variant (e.g. `ts-ettin-17m`, FP16):
+- Installation method (npm, source):
 
 ## Additional context
 

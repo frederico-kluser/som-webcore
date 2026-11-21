@@ -17,6 +17,20 @@ Closes #
 
 <!-- Approach taken, alternatives considered, trade-offs. -->
 
+## Roadmap
+
+<!-- Which ROADMAP.md activity does this advance or complete? e.g. "Advances P-08" / "Completes P-05".
+     Write "none" for fixes and maintenance that are not a roadmap activity. -->
+
+Activity:
+
+## Evidence
+
+<!-- Whatever applies (see CONTRIBUTING.md, section 5):
+     - numeric path touched → parity suite result;
+     - performance claim → before/after report from the harness, same machine;
+     - new number in the docs → evidence label and primary source with date. -->
+
 ## Checklist
 
 - [ ] PR title follows [Conventional Commits](https://www.conventionalcommits.org/) (it becomes the squash-merge commit message).
@@ -24,9 +38,10 @@ Closes #
 - [ ] Description explains **what** and **why**.
 - [ ] Related issues are linked with `Closes #<issue>`.
 - [ ] Tests added or updated for behavioural changes (bug fixes include a regression test).
-- [ ] Documentation updated (`README.md`, `docs/`, API reference) where behaviour changed.
-- [ ] Changelog updated — entries are generated from commit messages at release time (see `CHANGELOG.md`).
-- [ ] Local quality gates are green: `npm run lint`, `npm run format:check`, `npm test`.
+- [ ] Documentation updated where behaviour changed; every new number carries an evidence label and a source.
+- [ ] Architecture decision recorded as an ADR; public API / format change backed by an accepted RFC.
+- [ ] Local gates are green: `python3 scripts/check-docs.py` (includes the roadmap DAG check).
+- [ ] If a roadmap activity changed state, the table was updated and `python3 scripts/roadmap.py render` was run.
 - [ ] **Breaking changes** are flagged below and use `!`/`BREAKING CHANGE:` in the commit message.
 
 ## Breaking changes
