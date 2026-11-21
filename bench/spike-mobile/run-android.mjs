@@ -10,7 +10,8 @@
 // --flags    Chrome command-line flags (written to /data/local/tmp/chrome-command-line; Chrome
 //            reads it because the runner marks it as the debug app). "" = no extra flags.
 // --timeout  seconds to wait for the result (default 900)
-// --sample   seconds between memory samples of the Chrome processes (default 2; 0 = off)
+// --sample   seconds between memory samples of the Chrome processes (default 5; 0 = off)
+// --keep-data keep Chrome's data (by default it is cleared before the run: no restored tabs, no cache)
 //
 // After the page posts its result, the runner adds `device` (build, Chrome version, flags) and
 // `androidMemory` (PSS of every Chrome process over time, from `dumpsys meminfo`) to the JSON.
@@ -20,6 +21,7 @@ import { existsSync, readFileSync, statSync, writeFileSync, mkdtempSync, rmSync 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeTimeoutResult } from "./timeout-result.mjs";
 
 const HERE = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const RESULTS = resolve(HERE, "..", "results");
@@ -34,7 +36,7 @@ const resultName = opt("result");
 const flags = opt("flags", "");
 const port = Number(opt("port", "8377"));
 const timeout = Number(opt("timeout", "900")) * 1000;
-const sampleEvery = Number(opt("sample", "2")) * 1000;
+const sampleEvery = Number(opt("sample", "5")) * 1000;
 const CHROME = "com.android.chrome";
 
 function fail(what, how) { console.error(`Erro: ${what} — Solução: ${how}`); process.exit(1); }
@@ -47,20 +49,35 @@ const resultFile = join(RESULTS, resultName.endsWith(".json") ? resultName : `${
 const mtime = () => (existsSync(resultFile) ? statSync(resultFile).mtimeMs : 0);
 
 function chromeMemory() {
-  // "Total PSS by process:" section of `dumpsys meminfo`, one line per process:
-  //   "    107,599K: com.android.chrome (pid 13123 / activities)"
-  const lines = adb("shell", "dumpsys", "meminfo").split(/\r?\n/);
-  const first = lines.findIndex((l) => l.startsWith("Total PSS by process"));
+  // `dumpsys meminfo --package com.android.chrome`: one block per Chrome process,
+  //   "** MEMINFO in pid 13190 [com.android.chrome:privileged_process0] **" ... "        TOTAL    40593 ..."
+  // (Pss Total in KB). Only Chrome's processes: the full `dumpsys meminfo` every few seconds
+  // froze the emulator under load on 2026-11-21.
+  const lines = adb("shell", "dumpsys", "meminfo", "--package", CHROME).split(/\r?\n/);
   const processes = {};
-  for (let i = first + 1; first >= 0 && i < lines.length && lines[i].trim(); i++) {
-    const m = lines[i].match(/^\s*([\d,]+)K:\s*(\S+)\s*\(pid (\d+)/);
-    if (m && m[2].startsWith(CHROME)) processes[`${m[2]}#${m[3]}`] = Number(m[1].replace(/,/g, "")) * 1024;
+  let current = null;
+  for (const line of lines) {
+    const head = line.match(/^\*\* MEMINFO in pid (\d+) \[([^\]]+)\] \*\*/);
+    if (head) { current = `${head[2]}#${head[1]}`; continue; }
+    const total = line.match(/^\s*TOTAL\s+(\d+)\s/);
+    if (current && total && !(current in processes)) processes[current] = Number(total[1]) * 1024;
   }
   return processes;
 }
 
+// Command line of the emulator process on this computer (Windows), to record the GPU mode in use.
+function emulatorCommandLine() {
+  if (process.platform !== "win32" || !serial.startsWith("emulator-")) return null;
+  try {
+    const out = execFileSync("powershell", ["-NoProfile", "-Command",
+      "Get-CimInstance Win32_Process -Filter \"name like 'qemu-system%'\" | Select-Object -ExpandProperty CommandLine"], { encoding: "utf8", timeout: 30000 }).trim();
+    return out || null;
+  } catch { return null; }
+}
+
 const device = {
   serial,
+  emulatorCommandLine: emulatorCommandLine(),
   fingerprint: adb("shell", "getprop", "ro.build.fingerprint"),
   androidRelease: adb("shell", "getprop", "ro.build.version.release"),
   sdk: adb("shell", "getprop", "ro.build.version.sdk"),
@@ -70,6 +87,13 @@ const device = {
   chrome: (adb("shell", "dumpsys", "package", CHROME).match(/versionName=(\S+)/) || [])[1] || null,
   chromeFlags: flags,
 };
+
+// Fresh Chrome data before every run (unless --keep-data): Chrome on Android restores the tabs of the
+// previous session, and on 2026-11-21 restored test pages ran again next to the run being measured,
+// overwrote older result files and piled up until the emulator ran out of memory. A cleared profile
+// is also a true first visit (no HTTP or code cache).
+device.chromeDataCleared = !argv.includes("--keep-data");
+if (device.chromeDataCleared) adb("shell", "pm", "clear", CHROME);
 
 // Chrome flags: mark Chrome as the debug app so it reads the command-line file.
 const tmp = mkdtempSync(join(tmpdir(), "som-android-"));
@@ -97,10 +121,14 @@ while (Date.now() - start < timeout) {
   if (mtime() > before) { ok = true; break; }
   await sleep(500);
 }
-if (!ok) fail(`a página não postou o resultado em ${timeout / 1000} s`, "veja a tela do emulador (android ui dump -Text) e o log do serve.mjs");
+if (!ok) {
+  await writeTimeoutResult({ resultFile, resultName, pageUrl: url, seconds: timeout / 1000, port, runner: "run-android.mjs" });
+  console.error(`Erro: a página não postou o resultado em ${timeout / 1000} s — Solução: veja a tela do emulador (android ui dump -Text); a falha foi gravada em ${resultFile}`);
+}
 
 const data = JSON.parse(readFileSync(resultFile, "utf8"));
 data.device = device;
 data.androidMemory = { method: "dumpsys meminfo --package com.android.chrome (Total PSS by process), bytes", samples };
 writeFileSync(resultFile, JSON.stringify(data, null, 2));
 console.log(`result: ${resultFile} (${samples.length} memory samples)`);
+if (!ok) process.exit(1);

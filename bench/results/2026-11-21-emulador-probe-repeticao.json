@@ -1,6 +1,6 @@
 {
   "kind": "environment-probe",
-  "startedAt": "2026-11-21T20:37:26.274Z",
+  "startedAt": "2026-11-21T21:30:08.805Z",
   "page": "http://localhost:8377/probe.html?name=2026-11-21-emulador-probe-repeticao",
   "environment": {
     "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36",
@@ -67,6 +67,10 @@
       "platform": "Android",
       "platformVersion": "16.0.0"
     },
+    "webgl": {
+      "vendor": "Google (Google Inc.)",
+      "renderer": "Android Emulator OpenGL ES Translator (Google SwiftShader)"
+    },
     "webgpu": {
       "hasNavigatorGpu": true,
       "preferredCanvasFormat": "rgba8unorm",
@@ -79,9 +83,10 @@
       }
     }
   },
-  "finishedAt": "2026-11-21T20:37:26.302Z",
+  "finishedAt": "2026-11-21T21:30:09.066Z",
   "device": {
     "serial": "emulator-5554",
+    "emulatorCommandLine": "C:\\Users\\kluse\\AppData\\Local\\Android\\Sdk\\emulator\\qemu\\windows-x86_64\\qemu-system-x86_64-headless.exe -avd jev_playstore_36 -port 5554 -no-boot-anim -no-snapshot -accel on -netfast -no-metrics -no-audio -no-window -gpu swiftshader_indirect",
     "fingerprint": "google/sdk_gphone64_x86_64/emu64xa:16/BE2A.250530.026.D1/13818094:user/release-keys",
     "androidRelease": "16",
     "sdk": "36",
@@ -96,9 +101,7 @@
     "samples": [
       {
         "t": 0,
-        "pss": {
-          "com.android.chrome_zygote#3614": 4614144
-        }
+        "pss": {}
       }
     ]
   }

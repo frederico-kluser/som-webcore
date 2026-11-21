@@ -64,8 +64,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 80 (7 feitos) · **arestas:** 124.
-- **Esforço relativo:** 22/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 80 (8 feitos) · **arestas:** 124.
+- **Esforço relativo:** 25/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro (117 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-08` → `DT-01` → `T-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -250,7 +250,7 @@ O que foi conferido na máquina de desenvolvimento em 2026-11-21, antes de qualq
 | Chrome Canary | 160.0.8174.2, instalado nesta revisão | Mesmo comportamento; o binário cita dois backends para a API: `embedding_gemma_v1` e `language_model` |
 | Superfície observada | estáticos `availability` e `create`; na instância `decide`, `destroy` e `preference` | `preference` não está no explainer: a referência é a implementação (`T-05`) |
 | Limites lidos no binário | até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções | Valem para o Canary 160; no estável 157 o `score` vai de 2 a 9 níveis (`T-05`, [especificação](docs/spec/decisions-api-surface.md)) |
-| Modelo embutido | `availability()` devolveu `unavailable` num perfil novo, em modo headless | Ainda não se sabe se fica disponível num perfil real; se não ficar, bifurcação `DT-02` |
+| Modelo embutido | `availability()` devolveu `unavailable` num perfil novo, em modo headless | **[MEDIDO na `T-05`]** no Canary 160, num perfil de teste com o interruptor “On-device AI” ligado, fica `downloadable`; com um gesto do usuário o `create()` baixa o modelo do backend padrão (`embedding-gemma-v1`, só inglês) e passa a `available`. No estável 157 continua `unavailable` ([especificação](docs/spec/decisions-api-surface.md#5-availability)) |
 | Edge estável | 158.0.4370.33; o binário contém a mesma API | Não testado em execução; o Edge Canary não está instalado |
 | Emulador Android | aceleração WHPX utilizável; aparelhos virtuais `jev_playstore_36`, `jev_google_36` e `jev_atd_36` (Android 36, x86_64) | Usar o `jev_playstore_36`. Na `T-07` a imagem de sistema do Android 36 estava ausente e foi reinstalada; o Chrome é o 133 da imagem, porque a Play Store pede uma conta Google que o emulador não tem ([EMULADOR.md](bench/spike-mobile/EMULADOR.md)) |
 | GPU do emulador | `hw.gpu.mode=swiftshader_indirect` — por software | **[MEDIDO na `T-07`]** sem WebGPU no Chrome do emulador: `requestAdapter()` devolve `null` com GPU por software e com `-gpu host`, com e sem `--enable-unsafe-webgpu` |
@@ -314,10 +314,10 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 | `T-05` | **Padrão de chamada idêntico** — fixar a superfície da Decisions API em uma especificação e em declarações de tipos | `G0` | `docs/spec/decisions-api-surface.md`, `bench/spike-mobile/decision-model.d.ts` | cada membro da API do explainer está nas declarações, com o commit de origem; nenhum nome próprio do projeto na superfície pública | S | feito |
 | `T-06` | **Levantamento dos motores leves** — listar os motores que já rodam modelos de decisão no navegador e escolher os candidatos | `G0` | `docs/reports/motores-existentes.md` | por candidato: licença, tamanho do runtime, backends, modelos e precisões aceitos, estado de manutenção, com fonte primária e data; 1 ou 2 candidatos escolhidos, com o motivo | S | feito |
 | `T-07` | **Emulador Android pronto** — subir um aparelho virtual com Chrome pela skill `/android-agent-skill` e deixar reproduzível como servir a página e recolher os resultados | `G0` | `bench/spike-mobile/EMULADOR.md` | o Chrome do emulador abre uma página servida pelo computador e devolve um arquivo de resultado; versões registradas; presença ou ausência de WebGPU registrada | S | feito |
-| `T-01` | **Página de teste** — página estática que usa só a API de `T-05` e faz as mesmas perguntas, em português e em inglês, a cada motor candidato | `T-05`, `T-06` | `bench/spike-mobile/` | registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados, memória e as respostas; exporta um JSON; o que não rodar fica registrado como resultado | S | a fazer |
-| `T-08` | **Medição no emulador** — rodar a página no Chrome do emulador Android, em Wasm e, se houver, em WebGPU | `T-01`, `T-07` | `bench/results/` (arquivos marcados como emulador) | modelos de 17M e de 32M; cada medição repetida duas vezes; nenhuma latência de emulador apresentada como latência de celular | S | a fazer |
-| `T-09` | **Teste do motor existente** — conferir se responde certo e aguenta: respostas contra a referência do modelo, forma da API e 200 decisões seguidas | `T-01` | seção do relatório, `bench/results/` | mesmas respostas da referência, dentro da tolerância da variante; forma do resultado idêntica à de `T-05`; nenhuma falha nem crescimento de memória nas 200 decisões | S | a fazer |
-| `T-03` | **API nativa** — rodar a página de conformidade na Decisions API do Chrome (flag `decisions-api`) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; valor de `availability()` num perfil real registrado | S | a fazer |
+| `T-01` | **Página de teste** — página estática que usa só a API de `T-05` e faz as mesmas perguntas, em português e em inglês, a cada motor candidato | `T-05`, `T-06` | `bench/spike-mobile/` | registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados, memória e as respostas; exporta um JSON; o que não rodar fica registrado como resultado | S | em curso |
+| `T-08` | **Medição no emulador** — rodar a página no Chrome do emulador Android, em Wasm e, se houver, em WebGPU | `T-01`, `T-07` | `bench/results/` (arquivos marcados como emulador) | modelos de 17M e de 32M; cada medição repetida duas vezes; nenhuma latência de emulador apresentada como latência de celular | S | em curso |
+| `T-09` | **Teste do motor existente** — conferir se responde certo e aguenta: respostas contra a referência do modelo, forma da API e 200 decisões seguidas | `T-01` | seção do relatório, `bench/results/` | mesmas respostas da referência, dentro da tolerância da variante; forma do resultado idêntica à de `T-05`; nenhuma falha nem crescimento de memória nas 200 decisões | S | em curso |
+| `T-03` | **API nativa** — rodar a página de conformidade na Decisions API do Chrome (flag `decisions-api`) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; valor de `availability()` num perfil real registrado | S | em curso |
 | `DT-02` | **Bifurcação DT-02** — o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | `T-03` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; se o modelo ficar disponível, fecha como “não se aplica” | — | a fazer |
 | `DT-01` | **Bifurcação DT-01** — o emulador basta, ou medimos em aparelho real? | `T-08`, `T-09` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | a fazer |
 | `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone | `DT-01` (se aparelho real) | `bench/results/` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | a fazer |
@@ -332,10 +332,10 @@ flowchart LR
     T05["T-05 · Padrão de chamada idêntico"]:::done
     T06["T-06 · Levantamento dos motores leves"]:::done
     T07["T-07 · Emulador Android pronto"]:::done
-    T01["T-01 · Página de teste"]:::todo
-    T08["T-08 · Medição no emulador"]:::todo
-    T09["T-09 · Teste do motor existente"]:::todo
-    T03["T-03 · API nativa"]:::todo
+    T01["T-01 · Página de teste"]:::doing
+    T08["T-08 · Medição no emulador"]:::doing
+    T09["T-09 · Teste do motor existente"]:::doing
+    T03["T-03 · API nativa"]:::doing
     DT01{"DT-01 · o emulador basta, ou medimos em aparelho real?"}:::fork
     DT02{"DT-02 · o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo?"}:::fork
     T02["T-02 · Medição em celulares reais"]:::opt
@@ -640,6 +640,20 @@ Entregável: docs/reports/base-do-fork.md e uma ADR. Não faça o fork ainda.
 ```
 
 **Validação:** a licença foi lida na fonte e permite o fork e a redistribuição · cada mudança proposta aponta para uma limitação medida na `T-10` · existe o plano para acompanhar o projeto original.
+
+<!-- prompt:S-01 -->
+#### `S-01` — Prior art e posicionamento
+
+```text
+Atividade S-01 do ROADMAP.md: levantar o prior art e dizer o papel do projeto frente a cada item.
+1. Cubra, com fonte primária e data de consulta: a Decisions API (explainer, implementação no Chrome, prévia no Edge Canary, polyfill do GoogleChromeLabs); as demais APIs de IA embutidas (Prompt, Summarizer, Writer, Rewriter, Proofreader, Translator, Language Detector); a WebNN; a Cross-Origin Storage; e as bibliotecas que já rodam modelos de decisão no navegador (docs/reports/motores-existentes.md).
+2. Para cada item: o que é, em que estado está (rascunho, trial, enviado; em quais motores de navegador) e o que cobre ou não cobre do problema do projeto.
+3. Escreva o papel do projeto frente a cada item numa frase.
+Reaproveite o que a T-05 e a T-06 já conferiram; o resto, abra na fonte. O que não puder ser aberto fica fora.
+Entregável: docs/standards/prior-art.md, em inglês.
+```
+
+**Validação:** cada item tem fonte primária e data de consulta · o papel do projeto frente a cada item cabe numa frase · nenhuma afirmação sem fonte.
 
 ---
 
@@ -1100,7 +1114,7 @@ O caminho usual da plataforma web é: *explainer* → incubação num Community 
 
 | ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
 |---|---|---|---|---|:---:|---|
-| `S-01` | **Prior art e posicionamento** — Decisions API (explainer e protótipos), WebNN, APIs de IA embutidas e Cross-Origin Storage | `G0` | `docs/standards/prior-art.md` | cada item com fonte primária e data; o papel do projeto frente a cada um cabe em uma frase | M | a fazer |
+| `S-01` | **Prior art e posicionamento** — Decisions API (explainer e protótipos), WebNN, APIs de IA embutidas e Cross-Origin Storage | `G0` | `docs/standards/prior-art.md` | cada item com fonte primária e data; o papel do projeto frente a cada um cabe em uma frase | M | feito |
 | `S-02` | **Alinhamento com a Decisions API** — tabela de equivalência entre o nosso contrato e `DecisionModel`, e lista de lacunas | `P-02`, `S-01` | `docs/standards/decisions-api-alignment.md` (em inglês) | cada membro da API do explainer está mapeado; cada divergência tem justificativa; o documento é revisto a cada mudança do explainer | M | a fazer |
 | `S-03` | **Pacote de evidências** — medições em hardware modesto, paridade entre motores e integrações reais | `G2`, `S-02` | `docs/standards/evidence.md` | dados reproduzíveis nos três motores de navegador; ≥ 3 integrações reais descritas | M | a fazer |
 | `S-04` | **Contribuição ao explainer e ao WebML Community Group** — levar evidências e lacunas ao repositório do explainer e ao grupo | `S-03` | issues e PRs públicos | contribuições abertas no repositório do explainer; tema levado ao WebML Community Group; feedback acompanhado em issues públicas | M | a fazer |
@@ -1117,7 +1131,7 @@ flowchart LR
     B08(["B-08"]):::ext
     B09(["B-09"]):::ext
     G4(["G4"]):::ext
-    S01["S-01 · Prior art e posicionamento"]:::todo
+    S01["S-01 · Prior art e posicionamento"]:::done
     S02["S-02 · Alinhamento com a Decisions API"]:::todo
     S03["S-03 · Pacote de evidências"]:::todo
     S04["S-04 · Contribuição ao explainer e ao WebML Community Group"]:::todo

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>T milestone test page</title>
+  <link rel="icon" href="data:,">
+  <script type="importmap">
+  {
+    "imports": {
+      "@huggingface/tokenizers": "/node_modules/@huggingface/tokenizers/dist/tokenizers.min.mjs",
+      "@johnhenry/tensor-backend": "/node_modules/@johnhenry/tensor-backend/dist/index.js",
+      "@johnhenry/backend-cpu": "/node_modules/@johnhenry/backend-cpu/dist/index.js",
+      "@johnhenry/backend-webgpu": "/node_modules/@johnhenry/backend-webgpu/dist/index.js",
+      "#dawn": "/node_modules/@johnhenry/backend-webgpu/dist/dawn-browser.js",
+      "@johnhenry/modernbert": "/node_modules/@johnhenry/modernbert/dist/index.js",
+      "@johnhenry/math-plus-safetensors": "/node_modules/@johnhenry/math-plus-safetensors/dist/index.js",
+      "@johnhenry/math-plus-tensor-cpu": "/node_modules/@johnhenry/math-plus-tensor-cpu/dist/index.js",
+      "@johnhenry/math-plus-tensor-core": "/node_modules/@johnhenry/math-plus-tensor-core/dist/index.js",
+      "@johnhenry/math-plus-tensor-core/kernels": "/node_modules/@johnhenry/math-plus-tensor-core/dist/public-kernels.js",
+      "@johnhenry/math-plus-special": "/node_modules/@johnhenry/math-plus-special/dist/index.js"
+    }
+  }
+  </script>
+  <style>
+    body { font: 14px/1.45 system-ui, sans-serif; margin: 16px; max-width: 960px; }
+    pre { white-space: pre-wrap; font-size: 12px; background: #f4f4f5; padding: 8px; }
+    td, th { padding: 2px 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>T milestone test page</h1>
+  <p>Asks the fixed question set (<code>corpus.json</code>) through the Decisions API, on one engine per run, and posts a JSON report to the local server.
+     Query: <code>engine</code> (native, ort-wasm, ort-webgpu, jh-cpu, jh-webgpu), <code>model</code>, <code>variant</code>, <code>threads</code>,
+     <code>warm</code> (timed decisions, default 120), <code>endurance</code> (consecutive decisions), <code>lang</code> (pt, en or all), <code>debug=1</code> (token ids), <code>name</code> (result file).</p>
+  <p id="status">running…</p>
+  <table id="summary"></table>
+  <pre id="log"></pre>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
