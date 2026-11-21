@@ -28,7 +28,9 @@ Quando houver um segundo mantenedor com permissão de escrita:
 1. subir `required_approving_review_count` para **1** (ou 2, se houver um time);
 2. ligar `require_code_owner_review: true` **só** se o CODEOWNERS tiver um owner
    diferente do autor;
-3. reconciliar com `bash scripts/oss-enforce.sh` (a cópia do projeto é a verdade).
+3. reconciliar com o `oss-enforce.sh` da skill `opensource-project` (o comando completo está em
+   `AGENTS.md`; o script vive na instalação da skill, não em `scripts/` deste repositório). A cópia
+   do projeto é a verdade.
 
 > **Transparência:** esta é uma adaptação consciente, não um bypass silencioso. O
 > objetivo é manter o cofre fechado para commits diretos sem tornar o projeto

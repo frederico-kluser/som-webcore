@@ -27,8 +27,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI de documentação** (`scripts/check-docs.py`) que valida links, âncoras, tabelas, figuras,
   placeholders e o contrato mínimo do README.
 
+- **Roadmap em DAG** (`ROADMAP.md`): 62 atividades com dependências, entregável e critério de
+  aceite; portões G0–G4; prova de conceito com o TS-Ettin-17M antes de qualquer otimização; v1.0.0
+  com análise do dispositivo e escolha automática do modelo. `scripts/roadmap.py` valida o grafo e
+  gera os diagramas, as ondas de execução e o caminho crítico; a CI executa a validação.
+- **Auditoria da pesquisa** (`research/ERRATA.md`): afirmações dos dois relatórios conferidas em
+  fontes primárias em 2026-11-21, com marcação nos próprios relatórios.
+- **Metodologia** (`docs/METHODOLOGY.md`), **estrutura do repositório** (`docs/STRUCTURE.md`) e
+  **governança** (`GOVERNANCE.md`); modelos de issue para atividade do roadmap, errata, benchmark
+  e compatibilidade de modelo.
+- **README:** seção 1.4 (valor: decisão local como padrão da web) e seção 4.5 (análise do
+  dispositivo e escada de modelos da v1.0.0).
+
 ### Changed
 
+- **Padronização realinhada:** já existe a proposta da Decisions API (`window.DecisionModel`); o
+  projeto passa a posicionar-se como polyfill aberto, fonte de evidência e de testes de
+  conformidade, em vez de propor um padrão concorrente.
+- **Catálogo de modelos:** a escada da v1.0.0 é a família Ettin (17M → 1B, uma arquitetura), com
+  licença declarada por checkpoint; o fallback remoto saiu do escopo até a v1.0.0.
+- **`CONTRIBUTING.md` reescrito** para o projeto real: atividades do DAG, barra por tipo de
+  mudança, sincronização por merge (a instrução antiga de rebase contradizia a política do repo).
+- **`scripts/check-docs.py`:** links relativos passam a resolver a partir da pasta do documento e
+  âncoras entre documentos são verificadas.
 - O escopo desta primeira entrega é **memória + documentação**; o runtime Rust/Wasm32 e os
   shaders WGSL ainda não foram implementados.
 - A política de revisão foi adaptada para **mantenedor único**: PR obrigatório, `build` verde e
@@ -52,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fatos corrigidos no README** (detalhe e fontes em `research/ERRATA.md`): RoPE local do Ettin e
+  do mmBERT (θ = 160.000, não 10.000); contexto (7.999) e licença (MIT) do Ettin; a semente é um
+  checkpoint de decisão (TS-Ettin-17M), não o encoder Ettin-17M; a WebGPU só vem ativa por padrão
+  no Safari 26, nos sistemas 26; licenças do Von e do d1-omni; temperaturas do d1-omni e fórmula
+  do RMSNorm no apêndice; cabeçalho `.sombin` (ocupava 264 bytes, não 256); título de referência.
 - Nenhuma correção de código nesta versão; o projeto ainda não tem runtime.
 
 <!--

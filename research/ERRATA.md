@@ -1,0 +1,98 @@
+# Errata da pesquisa — auditoria de 2026-11-21
+
+> Os dois relatórios desta pasta foram produzidos com assistência de IA e extraídos de PDF. São **fonte não confiável até verificação** (ver [metodologia](../docs/METHODOLOGY.md#pesquisa)).
+> Esta errata registra o que foi conferido em fontes primárias em **2026-11-21**: o que estava errado, o que é verdade, e o que isso muda. Os trechos afetados estão marcados nos próprios relatórios com `[ERRATA E-nn]`, e o README foi corrigido no mesmo PR.
+
+**Como a auditoria foi feita.** (1) Leitura integral dos dois relatórios e do README. (2) Consulta direta à API e aos arquivos do Hugging Face (`config.json`, cartões, código de referência, listas de arquivos e hashes), ao GitHub (repositórios e issues citados), ao arXiv, ao crates.io e ao docs.rs. (3) Uma pesquisa profunda com verificação adversarial: 26 fontes primárias lidas, 130 afirmações extraídas, 25 submetidas a três verificadores independentes — 24 confirmadas, 1 refutada. (4) Recálculo de toda aritmética verificável (parâmetros, tamanhos de struct, footprints).
+
+**Legenda:** ❌ falso · ⚠️ impreciso ou fora de contexto · ❓ não verificável · ✅ conferido e correto.
+
+---
+
+## 1. Modelos
+
+| ID | Onde | O que estava escrito | O que é verdade | Fonte primária | Impacto |
+|---|---|---|---|---|---|
+| E-01 ❌ | Relatório 2 (cabeçalho `.sombin`, p. 29); README §4.1, §4.2.1, §13.A | RoPE local com θ = 10.000 para ModernBERT, Ettin e Laya | Só `answerdotai/ModernBERT-base` e `-large` usam 10.000 nas camadas locais. **Ettin (todas as escalas) e mmBERT-base usam 160.000** nas camadas globais e locais | `config.json` de `jhu-clsp/ettin-encoder-17m`, `-150m`, `jhu-clsp/mmBERT-base`, `answerdotai/ModernBERT-base`, `-large` | Com θ errado, toda camada local produz ativações erradas. θ passa a vir do manifesto de cada checkpoint |
+| E-02 ⚠️ | README §4.1, §4.2.1, §13.A | Ettin com contexto de 8.192 tokens | `max_position_embeddings = 7999` em todos os encoders Ettin; 8.192 é do ModernBERT e do mmBERT. As cabeças TS-Ettin aceitam requisições de até 8.192 tokens e recusam as maiores, sem truncar | `config.json` dos seis encoders; `dinah.py` do TS-Ettin-17M | Limite por modelo no manifesto; erro tipado acima dele |
+| E-03 ❌ | README §4.1, §4.4, §13.A | Ettin sob “Apache-2.0 / MIT” | Encoders `jhu-clsp/ettin-encoder-*`: **MIT**. Rerankers `cross-encoder/ettin-reranker-*` e família `typestrict/TS-Ettin-*`: Apache-2.0. ModernBERT: Apache-2.0 | cartões e API do Hugging Face | Catálogo com licença por checkpoint |
+| E-04 ❌ | Relatório 1 (§3.4); README §3.1, §3.6, §4.3 | “Ettin-17M” como modelo semente, “~9,5 MB em 4 bits / ~18 MB em 8 bits” | `jhu-clsp/ettin-encoder-17m` é um encoder MLM **sem cabeça de decisão**. Nenhum arquivo publicado tem 9,5 MB: int8 = 17,0 MB; o menor de 4 bits = 28,1 MB (a tabela de embeddings fica em FP16). A semente é um checkpoint de decisão: `typestrict/TS-Ettin-17M` (int8 ONNX de 17,2 MB; safetensors FP32 de 67,5 MB) | listas de arquivos no Hugging Face | A PoC usa o TS-Ettin-17M; 9,5 MB exigiria embeddings em 4 bits, que ninguém publicou nem avaliou |
+| E-05 ❌ | README §4.1, §4.2.1 | TS-Ettin: “cabeça tipada sobre pooled/span outputs”; cabeça como artefato separado (`option_marker.pt`) | Sequência `[CLS] instruções [SEP] estado [SEP] [OPT] opção₁ [OPT] opção₂ …`; token `[OPT]` com id 50368 (vocabulário 50.369); embedding do tipo de pergunta somado aos estados ocultos; por opção, `LayerNorm → Linear → GELU → Linear → logit`; temperatura por (tipo, 2–9 opções); confiança por MLP de 7 características + Platt. Tudo num único `model.safetensors` | `dinah.py`, `config.json` e `decision_ai.json` de `typestrict/TS-Ettin-17M` | Define o contrato numérico da PoC |
+| E-06 ⚠️ | Relatório 2 (Pilar 3.2); README §2.2, §3.3 | Máscara bloco-diagonal e reset de posições apresentados como propriedade de todo SOM | É a opção `independent_options` do **Von**. TS-Ettin e Crivo usam atenção conjunta sobre todas as opções — a escolha entre os dois desenhos é o tema do artigo do Crivo | `dinah.py`; arXiv 2610.30970 | Aplicar a máscara a um modelo que não foi treinado com ela produz respostas erradas. Opção por modelo, desligada na PoC |
+| E-07 ⚠️ | README §3.4; relatórios | Probabilidades “calibradas” como propriedade do sistema | Calibração é do **modelo**. O TS-Ettin-17M é publicado com temperatura 1,0 e Platt identidade, e o cartão avisa: “not calibrated yet”. O reranker Ettin emite um logit sem limite. O d1-omni aplica temperatura só no caminho de texto | `config.json` e cartões | O runtime aplica fielmente o que o checkpoint traz; o catálogo declara o estado de calibração |
+| E-08 ❌ | Relatório 1 (tabela, p. 6 e §1.3) | Tronco do d1-omni-600M com “18 blocos” | 16 camadas: 10 de convolução e 6 de atenção | `config.json` de `LiquidAI/d1-omni-600M` (`layer_types`) | Já corrigido no README em revisão anterior; marcado no relatório |
+| E-09 ❌ | Relatório 2 (p. 5) | `projector_hidden_size = 2560` | 2048 | `config.json` do d1-omni-600M | Já corrigido no README |
+| E-10 ❌ | README §13.B | Temperaturas do d1-omni: “1,7465 (2 opções) → 1,1751 (3–5) → … → 1,0 (>11)” | `choice:2` 1,7465 · `choice:3-5` 1,3999 · `choice:6-10` 1,1751 · `choice:11+` 1,3725 · `noul:2` 1,6663 · `score:3-5` 1,7301 · `score:6-10` 1,0 | `config.json` do d1-omni-600M | O apêndice contradizia a seção 3.4 do próprio README |
+| E-11 ⚠️ | README §4.1, §4.4 | d1-omni “ativo (SOTA multimodal)”, licença com “restrições comerciais próprias” | 587.161.089 parâmetros. Licença **LFM Open License v1.0**: não é open source; uso comercial só para quem fatura menos de US$ 10 milhões por ano (receita do grupo). O repositório oficial traz um único safetensors FP32 de 2,35 GB; ONNX e GGUF são de terceiros ou de repositórios irmãos. No Decision Index 0.4 (2026-11-21) pontua 11,75 — o nível de modelos de 17M | cartão, arquivo `LICENSE`, board do Decision Index | Fica como trilha multimodal pós-1.0 (`X-03`), nunca no filtro padrão do catálogo |
+| E-12 ❌ | README §4.4 | Von sob “licença do repositório” | Apache-2.0, no GitHub e no Hugging Face. Repositório arquivado ✅ | API do GitHub e do Hugging Face | Tabela de licenças corrigida |
+| E-13 ⚠️ | README §4.1, §4.3 | Prioridade do catálogo: Ettin-150M, Laya, Von, d1-omni | No Decision Index 0.4 (board de 2026-11-21, pontuação “Full”): Laya 9,21 · Von 1.3 11,65 · d1-omni-600M 11,75 — contra Crivo-17M 11,65 e Amber-17M 11,99, com **17M** de parâmetros. Na família Ettin: Crivo-68M 19,51 · Amber-150M 24,67 · Crivo-400M 23,74 · Crivo-1B 29,25. Referência Jev 1.14: 60,24 | board `multimodalart/jev-decision-index` | A escada da v1.0.0 é a família Ettin (17M → 1B, uma arquitetura). Atenção às licenças: TS-Ettin é Apache-2.0; Crivo, Amber e Mola são CC BY-NC 4.0 |
+| E-14 ⚠️ | README §4.2.5 | DeBERTa-v3 como “contraexemplo” | O argumento de custo de implementação em WGSL continua válido, mas o melhor modelo de até 0,5B no board é baseado em DeBERTa-v3-large (GLiClass v4.1 edge, 32,47) | board do Decision Index | Registrar o custo como troca, não como veredito de qualidade |
+| E-15 ✅ | README §3.4 | TS-Ettin-150M: 0,704 (ONNX int8) contra 0,709 (PyTorch FP32) | Confere. Para o TS-Ettin-17M: 0,533 e 0,529 | cartões dos modelos | — |
+| E-16 ✅ | README §4 | Geometria do Ettin (7/10/19/22/28/28 camadas; H 256…1792), ModernBERT-large, mmBERT (vocabulário 256.000), d1-omni (16 camadas, 16/8 cabeças, FFN 4608), Laya (421,3M e 321,9M de parâmetros, Apache-2.0), existência de Von, Kev, Bespoke Nimble, TS-Ettin, Mola | Confere | `config.json` e API do Hugging Face | — |
+
+## 2. Plataforma web
+
+| ID | Onde | O que estava escrito | O que é verdade | Fonte primária | Impacto |
+|---|---|---|---|---|---|
+| E-20 ❌ | Relatório 1 (§2.1); README §5.4 | WebGPU “ativada por padrão no iOS 18.2 (dez/2024)” | No Safari, WebGPU só vem ativa por padrão a partir do **Safari 26**, e apenas em macOS 26, iOS 26, iPadOS 26 e visionOS 26. Do 17.4 ao 18.x ficava atrás de flag. O Safari 26 em macOS anterior não expõe `navigator.gpu` | wiki de status de implementação do gpuweb; notas do Safari 26 | Detecção de recurso sempre; nunca inferir pela versão |
+| E-21 ⚠️ | Relatório 1 (§2.1); README §5.4, FAQ 6 | “Chrome 121+ no Android”, “Chrome 113+ no desktop” | Depende do sistema **e** do fabricante da GPU. Android: ARM Mali e Qualcomm Adreno em Android 12+ (Chrome 121), Intel em Android 12+, Imagination em Android 16+ (Chrome 139); Samsung Xclipse e os demais, sem versão. Linux: Intel Gen12+ desde o Chrome 144; NVIDIA em Wayland desde o 147; AMD e outros, atrás de flag | wiki do gpuweb; notas “What's New in WebGPU” | A matriz de navegadores (`A-05`) testa hardware, não versões |
+| E-22 ✅ | README §3.2, §5.4 | Limites padrão: binding de storage 128 MiB, buffer 256 MiB, workgroup storage 16.384 B, 8 storage buffers por estágio, alinhamento 256 B | Confere com o rascunho de Candidate Recommendation de 16/11/2026. O alinhamento de 256 B é o pior caso | especificação WebGPU do W3C | — |
+| E-23 ✅ | README §3.2 | A WebGPU não expõe VRAM total nem livre | Confere. `GPUAdapterInfo` tem sete atributos e os quatro textuais podem vir vazios; os navegadores não podem revelar mais de 32 configurações distinguíveis; o pedido de um sinal grosseiro de memória (gpuweb #6957) foi fechado como “não planejado” em 24/09/2026; o #5505 segue aberto | especificação; issues do gpuweb | A análise do dispositivo usa limites, recursos, `isFallbackAdapter` e microbenchmark |
+| E-24 ✅ | README §5.4 | Firefox: WebGPU por padrão só em Windows (141) e Macs com Apple Silicon (145/147) | Confere; em Linux e Macs Intel só no Nightly; no Android, desativada | wiki do gpuweb; notas da Mozilla | — |
+| E-25 ❓ | Relatório 1 (§1.1); README §3.1, glossário | Cache API com “limite silencioso de ~200 MB no Chromium” | A fonte é um tutorial, não documentação. Não foi encontrada fonte primária; projetos em produção guardam arquivos de centenas de MiB pela Cache API | — | A escolha do OPFS mantém-se por outros méritos (acesso síncrono em Worker, escrita em streaming); o “limite” sai do texto como fato |
+| E-26 ❓ | Relatório 1; README §5.4 | Cobertura global de WebGPU de 88,6–89,46% e tabela de cobertura de recursos (`shader-f16` 94,15%, `subgroups` 69,54%) | Não foi possível confirmar em fonte primária nesta auditoria | — | Mantidos como **[REPORTADO]**, sem uso em critérios de aceite |
+| E-27 ⚠️ | README §3.2 | `navigator.deviceMemory` descrito sem as mudanças recentes | Desde o Chrome 147 (abril de 2026) os valores possíveis são 2, 4, 8, 16 e 32 no desktop e 1, 2, 4 e 8 no Android. Continua sendo RAM, não VRAM, e só existe em Chromium | notas de release do Chrome 147 | Sinal auxiliar da sonda (`B-04`), nunca decisivo |
+| E-28 ⚠️ | Relatório 1 (§3.4); README §3.2 | Relaxed SIMD “ativo por padrão no Firefox 128+” | Segundo a tabela de recursos do WebAssembly: Chrome desde o 114, Firefox desde o 145; no Safari, só atrás de flag | webassembly.org/features | O fallback CPU precisa de um caminho SIMD128 puro e de detecção em tempo de execução |
+
+## 3. Estruturas, código e aritmética
+
+| ID | Onde | O que estava escrito | O que é verdade | Como foi conferido | Impacto |
+|---|---|---|---|---|---|
+| E-30 ❌ | Relatório 2 (p. 29–30); README §6.3 | Cabeçalho `SomBinHeader` de “256 bytes exatos”, `Pod` | Em `repr(C)` o struct tem **264 bytes**: 4 de preenchimento implícito antes de `slab_file_offsets` (campo `u64` em offset não múltiplo de 8) e 4 no fim. Com `align(256)` passa a 512. `bytemuck::Pod` recusa structs com preenchimento. Vale para as duas versões (com `reserved` de 44 e de 20 bytes) | layout calculado com as regras de C | O README traz o struct corrigido como rascunho; o formato v1 é definido por RFC com offsets explícitos (`A-06`) |
+| E-31 ⚠️ | Relatório 2 (cabeçalho); README §6.3 | Calibração do Von (`calib_bias`, `calib_w_entropy`, …) embutida no cabeçalho binário | Cada família calibra de um jeito: tabela de temperaturas e Platt (TS-Ettin), temperaturas por faixa (d1-omni), temperatura dinâmica (Von). Um cabeçalho fixo só serve a uma delas | `config.json` dos modelos | Metadados específicos do modelo vão para um manifesto, não para campos fixos |
+| E-32 ❌ | README §13.B | “RMSNorm FP16-safe” com `var = mean - mean(x')^2` | RMSNorm não subtrai a média — isso é LayerNorm. O correto é `ms = sum(x'^2) / H` e `y = x' * rsqrt(ms + eps * escala^2) * weight` | definição de RMSNorm | Fórmula corrigida |
+| E-33 ⚠️ | README §6.5 (shader 1) | Redução com `sg_id = tid / sg_size` | A WGSL não garante que subgrupos sejam blocos contíguos de `local_invocation_index`; a redução de segundo nível também falha quando há mais subgrupos do que lanes | especificação WGSL (subgroups) | Os shaders do README são **esboços não compilados**. Kernels reais nascem com teste de paridade (`P-08`) |
+| E-34 ⚠️ | README §6.6 | Esqueleto Rust despacha a atenção em blocos de 32 e os shaders 4 e 5 em grade 2D | A tabela de shaders do próprio README define blocos de 16 e grade `(seq_len, 1, 1)` | leitura cruzada | Esqueleto alinhado à tabela |
+| E-35 ⚠️ | Relatório 2 (Pilar 2, perfil nativo); README §3.5, §6.2 | `Features::PUSH_CONSTANTS`, `set_push_constants`, `SPIRV_SHADER_PASSTHROUGH` | O wgpu está na versão **30.0.2**. `PUSH_CONSTANTS` foi substituído por `IMMEDIATES`; o passthrough de SPIR-V passou a um recurso genérico de shaders em passthrough. `MAPPABLE_PRIMARY_BUFFERS`, `BUFFER_BINDING_ARRAY`, `SUBGROUP`, `SHADER_F16` e `CooperativeMatrixProperties` existem | docs.rs do wgpu 30.0.2; crates.io | Fixar a versão do wgpu e validar os nomes contra ela (`P-03`) |
+| E-36 ⚠️ | README §5.1, §5.2 | FLOPs a 1.024 tokens e intensidades aritméticas | Já sinalizados no README como não reconciliáveis. O valor “~1,2 TFLOPS efetivos em WGSL numa GPU móvel” é uma premissa, não uma medição | recálculo | Todo o modelo de latência é **[HIPÓTESE]** até `P-14` |
+
+## 4. Posicionamento e comparativos
+
+| ID | Onde | O que estava escrito | O que é verdade | Fonte primária | Impacto |
+|---|---|---|---|---|---|
+| E-40 ❌ | README §5.6 | “Ser o primeiro runtime aberto cujo contrato é uma decisão tipada” | O pacote npm `crivo-web` já executa `choice`, `noul` e `score` no navegador (ONNX Runtime Web, Wasm e WebGPU, seis tamanhos de 17M a 1B). Também existem o pacote Flutter `decision_ai` e demonstrações do d1-omni em WebGPU | cartão de `dizyann/crivo-web` | O diferencial tem de ser medido contra esse baseline (`P-12`, `G1`) |
+| E-41 ⚠️ | Relatório 1 (§4); README §5.6, FAQ 10 | ONNX Runtime Web com “~11 s de cold start” | O número vem de um LLM. Para encoders de decisão, o `crivo-web` reporta preparo de sessão a partir do cache de 0,2 s (17M) a 1,6 s (150M) em WebGPU, e latência quente de 12,6 ms (17M) a 68,4 ms (150M) por requisição de três perguntas num Apple M4 | cartão de `dizyann/crivo-web` (ORT Web 1.30.0, Chromium 154) | Os “alvos” do motor próprio no comparativo são **[ALVO]**; o baseline real é o da atividade `P-12` |
+| E-42 ⚠️ | README §5.6 | INT8 em WebGPU tratado só como “bug do ORT” | O `crivo-web` confirma: em WebGPU só FP32 atingiu paridade; INT8 reduz o download, não a latência, e desloca probabilidades em até 0,03–0,09 | cartão de `dizyann/crivo-web` | Quantização entra depois da PoC, com orçamento de paridade próprio (`A-07`) |
+| E-43 ⚠️ | README §12 | Maczan (arXiv 2608.08730) citado como “Measuring and Reducing WebGPU Dispatch Overhead for LLM Inference” | O título atual é “Dispatch Overhead, Not Kernel Quality: The Performance Bottleneck in Single-Stream WebGPU LLM Inference” | arXiv | Referência corrigida |
+| E-44 ❓ | Relatório 2 (Pilar 3); README §3.3, §7, §12 | Issues do ONNX Runtime #34078 (bug AMD RDNA1 em `subgroupMax`), #34087, #26790 e PR #27910 | Não foi possível abrir: as consultas ao repositório devolveram 404 em 2026-11-21 | — | O cuidado (reduzir para f32 escalar antes de operações de subgrupo) é inofensivo e fica; a citação fica marcada como não verificada |
+| E-45 ✅ | README §12 | arXiv 2604.02344, 2605.20706, 2610.18773, 2610.17321, 2607.25180; issues TVM #19342, PlayCanvas #9297, PixiJS #12163, llama.cpp #19563, wgpu #5555 e #8202, gpuweb #5505; repositórios Von, Kev, fusor-ai, webgpu-device-hung-test | Existem, com os títulos citados | API do arXiv e do GitHub | — |
+
+<a id="decisions-api"></a>
+## 5. O que os relatórios não viram: a Decisions API
+
+Os relatórios e o README tratavam a padronização como algo a propor do zero (“demonstrar aos comitês que a inferência de decisão precisa virar uma API padrão”). **Já existe uma proposta**, anterior aos dois relatórios:
+
+| Fato | Fonte primária (consultada em 2026-11-21) |
+|---|---|
+| Explainer “Decisions API”, do time de Built-in AI do Google Chrome: API `window.DecisionModel` para decisões on-device em passada única. Repositório criado em 2026-09-30, último commit em 2026-11-11, licença CC-BY-4.0 | `github.com/explainers-by-googlers/decisions-api` |
+| Três tipos de pergunta — `boolean`, `choice` e `score` — e, por pergunta, `label`, `probabilities`, `confidence` e `expectedScore`. Métodos `DecisionModel.availability()`, `DecisionModel.create()`, `decide()` e `destroy()`. A forma ainda muda entre commits | README do explainer |
+| “Early design sketch… has not been approved to ship in Chrome.” Existe um protótipo DevTrial em Chromium | README do explainer |
+| O Microsoft Edge documenta uma prévia para desenvolvedores, no Edge Canary, atrás de flag, apoiada no modelo embutido do navegador | `learn.microsoft.com/en-us/microsoft-edge/web-platform/decisions-api` (ms.date 2026-11-18) |
+| Executar pesos fornecidos pelo desenvolvedor é **não-objetivo**: fica para WebNN e WebGPU. A alternativa de bibliotecas com modelo próprio é descrita como um obstáculo operacional, com custo de download e de armazenamento duplicado por origem — “potencialmente mitigado por Cross-Origin Storage” | README do explainer |
+| Sem feedback registrado de WebKit, Mozilla, TAG ou WebML Community Group; sem texto de especificação | README do explainer |
+| Cross-Origin Storage é uma proposta em incubação no WICG, sem suporte nativo; WebNN é Candidate Recommendation Draft e não define primitivas de decisão | blog do Chrome (2026-11-10); `w3.org/TR/webnn` |
+
+**Consequência.** O projeto não propõe um padrão concorrente. Passa a ser o **polyfill aberto e a implementação de referência** dessa superfície — funcionando onde o nativo não existe —, a fonte de **evidência** sobre encoders compactos em hardware modesto e de **testes de conformidade**, e a via para **modelos abertos e próprios**, que a API nativa não cobre. Ver a [seção 1](../ROADMAP.md#valor) e a [trilha S](../ROADMAP.md#trilha-s) do roadmap.
+
+---
+
+## 6. O que continua sem verificação
+
+Não é o mesmo que falso. Ficam rotulados como **[REPORTADO]** e não sustentam critério de aceite:
+
+- os percentuais de cobertura da WebGPU e de seus recursos opcionais, e a distribuição de limites por dispositivo;
+- as medições de terceiros citadas pelos relatórios (custos de dispatch, ganhos de subgrupos, latências por dispositivo, orçamentos de memória por aba);
+- os modos de falha de driver (perda de dispositivo com command buffers grandes; `DXGI_ERROR_DEVICE_HUNG`) — os repositórios e issues citados existem, mas os limiares numéricos não foram reproduzidos;
+- os detalhes internos de Laya, Von, Kev e Bespoke Nimble além de existência, tamanho e licença.
+
+Para acrescentar ou contestar um item, abra uma issue com o modelo “Research erratum”.

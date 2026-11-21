@@ -18,7 +18,9 @@ Exit codes: 0 ok · 1 falha de contrato · 2 uso inválido.
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import unquote
@@ -28,17 +30,28 @@ README = ROOT / "README.md"
 
 MD_FILES = [
     README,
+    ROOT / "ROADMAP.md",
     ROOT / "CONTRIBUTING.md",
+    ROOT / "GOVERNANCE.md",
     ROOT / "SECURITY.md",
     ROOT / "CODE_OF_CONDUCT.md",
     ROOT / "CHANGELOG.md",
+    ROOT / "docs" / "METHODOLOGY.md",
+    ROOT / "docs" / "STRUCTURE.md",
+    ROOT / "research" / "ERRATA.md",
 ]
 
 REQUIRED_FILES = [
     "LICENSE",
     "NOTICE",
     "README.md",
+    "ROADMAP.md",
     "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "docs/METHODOLOGY.md",
+    "docs/STRUCTURE.md",
+    "research/ERRATA.md",
+    "scripts/roadmap.py",
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
     "CODEOWNERS",
@@ -54,7 +67,7 @@ REQUIRED_FILES = [
 ]
 
 REQUIRED_ANCHORS = [
-    "status", "tldr", "manifesto", "jev", "pilares", "nao-e",
+    "status", "tldr", "manifesto", "jev", "pilares", "nao-e", "valor", "analise-dispositivo",
     "arquitetura", "diagrama", "caminho", "fisica",
     "especificacao", "armazenamento", "memoria", "shaders", "calibracao",
     "ponte", "carregamento", "modelos", "matriz", "fichas", "escolher",
@@ -160,6 +173,9 @@ def check_tables(text: str, rel: str, errors: list[str]) -> None:
 
 
 def check_links(text: str, rel: str, anchors: set[str], errors: list[str]) -> None:
+    # Links relativos resolvem-se a partir da pasta do próprio documento (como no GitHub),
+    # não da raiz do repositório.
+    base = (ROOT / rel).parent
     clean = strip_fences(text)
     targets = LINK_RE.findall(clean) + HTML_SRC_RE.findall(clean)
     for raw in targets:
@@ -171,7 +187,7 @@ def check_links(text: str, rel: str, anchors: set[str], errors: list[str]) -> No
         path_part = unquote(raw.split("#", 1)[0].split("?", 1)[0])
         if not path_part:
             continue
-        candidate = (ROOT / path_part).resolve()
+        candidate = (base / path_part).resolve()
         try:
             candidate.relative_to(ROOT)
         except ValueError:
@@ -179,6 +195,12 @@ def check_links(text: str, rel: str, anchors: set[str], errors: list[str]) -> No
             continue
         if not candidate.exists():
             errors.append(f"{rel}: link local inexistente: {raw}")
+            continue
+        # Âncora noutro documento Markdown do repositório: tem de existir lá.
+        fragment = raw.split("#", 1)[1] if "#" in raw else ""
+        if fragment and candidate.suffix.lower() == ".md":
+            if fragment not in collect_anchors(read(candidate)):
+                errors.append(f"{rel}: âncora inexistente em {path_part}: #{fragment}")
 
 
 def check_placeholders(text: str, rel: str, errors: list[str]) -> None:
@@ -247,6 +269,20 @@ def main() -> int:
     for needle in ["flowchart LR", "sequenceDiagram", "DecisionPacket", "`.sombin`"]:
         if needle not in readme:
             warnings.append(f"README: elemento esperado não encontrado: {needle!r}")
+
+    # O roadmap é um DAG: valida IDs, dependências, ciclos e blocos gerados.
+    roadmap_check = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "roadmap.py"), "check"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        check=False,
+    )
+    print(roadmap_check.stdout.strip())
+    if roadmap_check.returncode != 0:
+        errors.append("ROADMAP.md: DAG inválido ou blocos gerados desatualizados (ver mensagens acima)")
 
     for warning in warnings:
         print(f"WARN  {warning}")
