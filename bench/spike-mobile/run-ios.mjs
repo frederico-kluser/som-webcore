@@ -83,29 +83,38 @@ const deviceInfo = {
   dataErased: !flag("keep-data"),
 };
 
-// RSS (bytes, from the Mac) of every WebContent process running inside this simulator device.
+// RSS (bytes, from the Mac) of the WebKit processes (WebContent, GPU, Networking) of this device:
+// simulator processes are Mac processes whose environment carries SIMULATOR_UDID.
 function webContentMemory() {
-  const services = simctl("spawn", udid, "launchctl", "list").split("\n");
   const processes = {};
-  for (const line of services) {
-    const [pid, , label] = line.trim().split(/\s+/);
-    if (!label || !/WebContent|GPU|Networking/.test(label) || !/^\d+$/.test(pid)) continue;
-    try { processes[`${label}#${pid}`] = Number(run("ps", ["-o", "rss=", "-p", pid])) * 1024; } catch { /* exited */ }
+  for (const line of run("ps", ["-axo", "pid=,rss=,command="]).split("\n")) {
+    const m = line.match(/^\s*(\d+)\s+(\d+)\s+(.*com\.apple\.WebKit\.(WebContent|GPU|Networking)\b.*)$/);
+    if (!m || !m[3].includes("RuntimeRoot")) continue;
+    let env = "";
+    try { env = run("ps", ["-E", "-p", m[1], "-o", "command="]); } catch { continue; }
+    if (env.includes(`SIMULATOR_UDID=${udid}`)) processes[`${m[4]}#${m[1]}`] = Number(m[2]) * 1024;
   }
   return processes;
 }
 
-const url = `http://localhost:${port}${path}`;
-const before = mtime();
-console.log(`open ${url} on ${deviceName} (${runtime.identifier}, Safari ${deviceInfo.mobileSafari.version})`);
-// Right after an erase and boot the device is still setting itself up, and `openurl` can time out
-// (seen on 2026-11-21: NSPOSIXErrorDomain 60): try again a few times.
-for (let attempt = 1; ; attempt++) {
-  try { simctl("openurl", udid, url); break; } catch (error) {
-    if (attempt >= 6) throw error;
-    await sleep(10000);
+// Right after an erase and boot, the device is still setting itself up: `openurl` can time out
+// (NSPOSIXErrorDomain 60) and Safari's first navigation stalls on the start page (both seen on
+// 2026-11-21). Open a tiny page first, then the measured one.
+async function openUrl(target) {
+  for (let attempt = 1; ; attempt++) {
+    try { simctl("openurl", udid, target); return; } catch (error) {
+      if (attempt >= 6) throw error;
+      await sleep(10000);
+    }
   }
 }
+
+const url = `http://localhost:${port}${path}`;
+await openUrl(`http://localhost:${port}/ready.html`);
+await sleep(10000);
+const before = mtime();
+console.log(`open ${url} on ${deviceName} (${runtime.identifier}, Safari ${deviceInfo.mobileSafari.version})`);
+await openUrl(url);
 
 const samples = [];
 const start = Date.now();
