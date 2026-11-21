@@ -98,7 +98,14 @@ function webContentMemory() {
 const url = `http://localhost:${port}${path}`;
 const before = mtime();
 console.log(`open ${url} on ${deviceName} (${runtime.identifier}, Safari ${deviceInfo.mobileSafari.version})`);
-simctl("openurl", udid, url);
+// Right after an erase and boot the device is still setting itself up, and `openurl` can time out
+// (seen on 2026-11-21: NSPOSIXErrorDomain 60): try again a few times.
+for (let attempt = 1; ; attempt++) {
+  try { simctl("openurl", udid, url); break; } catch (error) {
+    if (attempt >= 6) throw error;
+    await sleep(10000);
+  }
+}
 
 const samples = [];
 const start = Date.now();
