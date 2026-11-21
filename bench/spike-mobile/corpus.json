@@ -1,0 +1,252 @@
+{
+  "version": 1,
+  "description": "Fixed question set of the T milestone (activity T-01). Each item is one decide() call: an input text and the schema it is asked against. Portuguese schemas do not declare expectedInputs languages on purpose: TS-Ettin-17M and Chrome's default backend declare English only, and this corpus measures the runtime (parity, latency, memory), not language quality. The field-classification labels avoid credential-like names (a secret scanner reads a username and password key pair followed by a value as a credential). Four items are long (about 300 to 500 tokens) to exercise the 128-token local attention window; some carry characters outside the Basic Multilingual Plane.",
+  "schemas": {
+    "en-support": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "wants_refund", "type": "boolean", "prompt": "Does the customer ask for a refund?" },
+        { "id": "topic", "type": "choice", "prompt": "What is the message mainly about?", "options": [
+          { "label": "billing", "description": "Charges, invoices, payments or refunds" },
+          { "label": "delivery", "description": "Shipping time, tracking, lost or damaged parcels" },
+          { "label": "account", "description": "Login, password, profile or account settings" },
+          { "label": "other", "description": "Anything else" }
+        ] },
+        { "id": "urgency", "type": "score", "prompt": "From 1 (low) to 5 (high), how urgent is the message?" }
+      ]
+    },
+    "en-hotel": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "pet_friendly", "type": "boolean", "prompt": "Does the traveler require pet-friendly accommodations?" },
+        { "id": "property_type", "type": "choice", "prompt": "Which property type best matches the traveler's request?", "options": [
+          { "label": "hotel", "description": "Standard hotel, resort, or boutique inn" },
+          { "label": "rental", "description": "Entire apartment, house, or cabin rental" },
+          { "label": "hostel", "description": "Shared dormitory or budget hostel" },
+          { "label": "any", "description": "No specific property type mentioned" }
+        ] },
+        { "id": "price_tier", "type": "score", "prompt": "Rate the target price tier from 1 (budget) to 4 (luxury).", "options": [
+          { "label": "1", "description": "Budget or inexpensive stay" },
+          { "label": "2", "description": "Moderate or mid-range price" },
+          { "label": "3", "description": "Upscale or premium property" },
+          { "label": "4", "description": "Luxury or five-star resort" }
+        ] }
+      ]
+    },
+    "en-command": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "command", "type": "choice", "prompt": "Which command best fulfills the user's goal?", "options": [
+          { "label": "export_pdf", "description": "Download or save the document as a PDF" },
+          { "label": "share_link", "description": "Invite collaborators or copy a sharing link" },
+          { "label": "archive_doc", "description": "Move the document to trash or archive" },
+          { "label": "rename_doc", "description": "Change the title of the document" },
+          { "label": "print_doc", "description": "Send the document to a printer" },
+          { "label": "undo_change", "description": "Revert the last edit" }
+        ] }
+      ]
+    },
+    "en-draft": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "has_repro_steps", "type": "boolean", "prompt": "Does the draft include steps to reproduce the issue?" },
+        { "id": "contains_pii", "type": "boolean", "prompt": "Does the draft contain personal contact info, API keys, or passwords?" },
+        { "id": "clarity", "type": "score", "prompt": "How clear is the bug report?", "options": [
+          { "label": "poor" }, { "label": "fair" }, { "label": "good" }, { "label": "excellent" }
+        ] }
+      ]
+    },
+    "en-field": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "field_purpose", "type": "choice", "prompt": "What type of user credential or data does this input field expect?", "options": [
+          { "label": "account", "description": "Account email, login ID, or handle" },
+          { "label": "sign_in", "description": "Existing password for signing in" },
+          { "label": "sign_up", "description": "New or updated password being created" },
+          { "label": "one_time_code", "description": "Two-factor verification or SMS code" },
+          { "label": "other", "description": "Unrelated input field" }
+        ] }
+      ]
+    },
+    "en-review": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "sentiment", "type": "choice", "prompt": "What is the overall sentiment of the review?", "options": [
+          { "label": "negative" }, { "label": "neutral" }, { "label": "positive" }
+        ] },
+        { "id": "aspect", "type": "choice", "prompt": "Which aspect of the product does the review talk about the most?", "options": [
+          { "label": "price", "description": "Cost, value for money or discounts" },
+          { "label": "quality", "description": "Build quality, materials or finish" },
+          { "label": "delivery", "description": "Shipping speed or packaging" },
+          { "label": "support", "description": "Customer service or warranty" },
+          { "label": "design", "description": "Looks, size or style" },
+          { "label": "durability", "description": "How long it lasts" },
+          { "label": "ease_of_use", "description": "Setup, controls or instructions" },
+          { "label": "other", "description": "Anything else" }
+        ] },
+        { "id": "rating", "type": "score", "prompt": "From 1 to 5 stars, what rating does the reviewer imply?" }
+      ]
+    },
+    "en-moderation": {
+      "expectedInputs": [{ "type": "text", "languages": ["en"] }],
+      "questions": [
+        { "id": "action", "type": "choice", "prompt": "Should this comment be published as is or sent to a moderator?", "options": [
+          { "label": "allow", "description": "Publish the comment" },
+          { "label": "review", "description": "Hold the comment for a human moderator" }
+        ] },
+        { "id": "is_spam", "type": "boolean", "prompt": "Is the comment spam or an advertisement?" }
+      ]
+    },
+    "pt-atendimento": {
+      "questions": [
+        { "id": "quer_reembolso", "type": "boolean", "prompt": "O cliente pede reembolso?" },
+        { "id": "assunto", "type": "choice", "prompt": "Qual é o assunto da mensagem?", "options": [
+          { "label": "pagamento", "description": "Cobrança, fatura ou estorno" },
+          { "label": "entrega", "description": "Prazo, rastreio ou extravio" },
+          { "label": "outro", "description": "Qualquer outro assunto" }
+        ] },
+        { "id": "urgencia", "type": "score", "prompt": "De 1 (baixa) a 5 (alta), qual a urgência?" }
+      ]
+    },
+    "pt-imoveis": {
+      "questions": [
+        { "id": "aceita_pet", "type": "boolean", "prompt": "A pessoa precisa de um imóvel que aceite animais de estimação?" },
+        { "id": "tipo", "type": "choice", "prompt": "Que tipo de imóvel a pessoa procura?", "options": [
+          { "label": "apartamento", "description": "Apartamento comum em prédio" },
+          { "label": "casa", "description": "Casa térrea ou sobrado" },
+          { "label": "kitnet", "description": "Quitinete ou estúdio pequeno" },
+          { "label": "cobertura", "description": "Cobertura ou apartamento no último andar" },
+          { "label": "qualquer", "description": "Nenhum tipo específico" }
+        ] },
+        { "id": "faixa_preco", "type": "score", "prompt": "De 1 (econômico) a 4 (alto padrão), qual a faixa de preço procurada?", "options": [
+          { "label": "1", "description": "Econômico, aluguel barato" },
+          { "label": "2", "description": "Preço médio" },
+          { "label": "3", "description": "Acima da média" },
+          { "label": "4", "description": "Alto padrão ou luxo" }
+        ] }
+      ]
+    },
+    "pt-encaminhamento": {
+      "questions": [
+        { "id": "departamento", "type": "choice", "prompt": "Para qual departamento a mensagem deve ser encaminhada?", "options": [
+          { "label": "financeiro", "description": "Pagamentos, notas fiscais e reembolsos" },
+          { "label": "juridico", "description": "Contratos, processos e questões legais" },
+          { "label": "rh", "description": "Férias, salário, contratação e benefícios" },
+          { "label": "ti", "description": "Computadores, senhas, sistemas e rede" },
+          { "label": "vendas", "description": "Orçamentos, propostas e novos clientes" },
+          { "label": "logistica", "description": "Estoque, transporte e entregas" },
+          { "label": "outro", "description": "Qualquer outro assunto" }
+        ] }
+      ]
+    },
+    "pt-moderacao": {
+      "questions": [
+        { "id": "contem_ofensa", "type": "boolean", "prompt": "O comentário contém ofensa ou insulto?" },
+        { "id": "acao", "type": "choice", "prompt": "O comentário pode ser publicado ou deve ir para revisão?", "options": [
+          { "label": "publicar", "description": "Publicar o comentário" },
+          { "label": "revisar", "description": "Enviar para um moderador humano" }
+        ] },
+        { "id": "gravidade", "type": "score", "prompt": "Qual a gravidade do problema no comentário?", "options": [
+          { "label": "leve" }, { "label": "moderada" }, { "label": "grave" }
+        ] }
+      ]
+    },
+    "pt-avaliacao": {
+      "questions": [
+        { "id": "sentimento", "type": "choice", "prompt": "Qual é o sentimento geral da avaliação?", "options": [
+          { "label": "negativo" }, { "label": "neutro" }, { "label": "positivo" }
+        ] },
+        { "id": "aspecto", "type": "choice", "prompt": "De qual aspecto do produto a avaliação mais fala?", "options": [
+          { "label": "preco", "description": "Preço, custo-benefício ou desconto" },
+          { "label": "qualidade", "description": "Acabamento, materiais ou construção" },
+          { "label": "entrega", "description": "Prazo de entrega ou embalagem" },
+          { "label": "atendimento", "description": "Atendimento ao cliente ou garantia" },
+          { "label": "design", "description": "Aparência, tamanho ou estilo" },
+          { "label": "durabilidade", "description": "Quanto tempo o produto dura" },
+          { "label": "facilidade_de_uso", "description": "Instalação, comandos ou manual" },
+          { "label": "outro", "description": "Qualquer outro aspecto" }
+        ] },
+        { "id": "nota", "type": "score", "prompt": "De 1 a 5 estrelas, que nota a pessoa daria?" }
+      ]
+    },
+    "pt-formulario": {
+      "questions": [
+        { "id": "campo", "type": "choice", "prompt": "Que dado este campo do formulário espera?", "options": [
+          { "label": "cpf", "description": "Número do CPF" },
+          { "label": "email", "description": "Endereço de e-mail" },
+          { "label": "telefone", "description": "Número de telefone ou celular" },
+          { "label": "cep", "description": "Código postal (CEP)" },
+          { "label": "outro", "description": "Outro tipo de dado" }
+        ] }
+      ]
+    }
+  },
+  "items": [
+    { "id": "en-01", "lang": "en", "schema": "en-support", "input": "I was charged twice for my last order and I need this fixed today." },
+    { "id": "en-02", "lang": "en", "schema": "en-support", "input": "My package says delivered but it is not at my door. Can you check the tracking?" },
+    { "id": "en-03", "lang": "en", "schema": "en-support", "input": "I can't log in since yesterday, the password reset email never arrives." },
+    { "id": "en-04", "lang": "en", "schema": "en-support", "input": "Just wanted to say the new update looks great, no action needed." },
+    { "id": "en-05", "lang": "en", "schema": "en-support", "input": "The blender arrived broken. Please send my money back, I don't want a replacement." },
+    { "id": "en-06", "lang": "en", "schema": "en-support", "input": "Hello, I am writing about an order I placed three weeks ago for a set of kitchen chairs, a dining table and two lamps. At checkout the site showed a delivery estimate of five business days, and I received a confirmation email with a tracking number the next morning. For the first few days the tracking page showed the parcel moving between two distribution centers, which seemed normal. Then it stopped updating. It has now said 'in transit' for twelve days without any new scan. I called the carrier twice. The first agent told me the parcel was probably delayed because of the holiday volume and that I should wait. The second agent said that the tracking number did not match any parcel in their system and that I should contact the seller. I have also noticed that my card statement shows two charges for the same amount on the day I placed the order, one of which was never refunded even though your chat assistant told me it was only a pre-authorization that would disappear in a few days. I have family visiting next weekend and I bought the table specifically for that dinner. At this point I would like to know where the furniture actually is, whether it will arrive before Friday, and why I was charged twice. If the order cannot be delivered by Friday, please cancel it and refund both charges to my card. I have attached screenshots of the tracking page and of my statement. I would appreciate a reply today, because I need to make other arrangements if this is not going to arrive." },
+    { "id": "en-07", "lang": "en", "schema": "en-hotel", "input": "dog-friendly hotel downtown that won't break the bank" },
+    { "id": "en-08", "lang": "en", "schema": "en-hotel", "input": "luxury five-star resort with a spa for our anniversary" },
+    { "id": "en-09", "lang": "en", "schema": "en-hotel", "input": "cheapest bed in a shared dorm near the train station" },
+    { "id": "en-10", "lang": "en", "schema": "en-hotel", "input": "a whole cabin in the mountains where we can bring our two cats" },
+    { "id": "en-11", "lang": "en", "schema": "en-hotel", "input": "somewhere to stay in Lisbon for three nights in May" },
+    { "id": "en-12", "lang": "en", "schema": "en-command", "input": "let my coworkers view this file" },
+    { "id": "en-13", "lang": "en", "schema": "en-command", "input": "save a copy I can email as a pdf" },
+    { "id": "en-14", "lang": "en", "schema": "en-command", "input": "oops, bring back the paragraph I just deleted" },
+    { "id": "en-15", "lang": "en", "schema": "en-command", "input": "call this doc Q3 planning instead" },
+    { "id": "en-16", "lang": "en", "schema": "en-command", "input": "I don't need this anymore, get rid of it" },
+    { "id": "en-17", "lang": "en", "schema": "en-draft", "input": "The app crashes. Please fix." },
+    { "id": "en-18", "lang": "en", "schema": "en-draft", "input": "Steps: 1. Open settings. 2. Tap Export. 3. Choose CSV. Expected: a file is saved. Actual: the app closes. Android 14, version 3.2.1." },
+    { "id": "en-19", "lang": "en", "schema": "en-draft", "input": "Login fails with error 500. You can reach me at ana.souza@example.com or +1 555 0100 if you need logs." },
+    { "id": "en-20", "lang": "en", "schema": "en-draft", "input": "Here is my config: api_key=demo-0000-not-a-real-key and the sync never starts after I paste it." },
+    { "id": "en-21", "lang": "en", "schema": "en-draft", "input": "Sometimes the chart flickers when I resize the window, but I could not find a pattern yet." },
+    { "id": "en-22", "lang": "en", "schema": "en-field", "input": "Label: \"Enter the 6-digit security code sent to your phone\" | Placeholder: \"000000\"" },
+    { "id": "en-23", "lang": "en", "schema": "en-field", "input": "Label: \"Email or username\" | Placeholder: \"you@example.com\"" },
+    { "id": "en-24", "lang": "en", "schema": "en-field", "input": "Label: \"Create a password (at least 12 characters)\" | Placeholder: \"\"" },
+    { "id": "en-25", "lang": "en", "schema": "en-field", "input": "Label: \"Favorite color\" | Placeholder: \"e.g. blue\"" },
+    { "id": "en-26", "lang": "en", "schema": "en-review", "input": "Great value for the price, works exactly as described. 👍" },
+    { "id": "en-27", "lang": "en", "schema": "en-review", "input": "Stopped working after two weeks. Support never answered my emails. 😡" },
+    { "id": "en-28", "lang": "en", "schema": "en-review", "input": "It's fine. Looks a bit cheaper than in the photos." },
+    { "id": "en-29", "lang": "en", "schema": "en-review", "input": "Setup took five minutes and the app is really intuitive." },
+    { "id": "en-30", "lang": "en", "schema": "en-review", "input": "I have owned this coffee grinder for a little over a year now, and I want to write a review that covers more than the first impressions you usually see. When it arrived, the packaging was excellent: every part was wrapped separately and nothing rattled in the box. The first thing I noticed was the weight; it feels solid, with a metal body and a glass container that does not scratch easily. Setting it up was straightforward, although the manual is short and the diagrams are tiny, so I had to watch a video to understand how to calibrate the burrs. For the first few months it was a joy to use. The grind was consistent for espresso and for a coarse French press, and the timer meant I could start it and walk away. Around the sixth month, the motor started making a high-pitched noise on the finest setting. I contacted support, and to their credit they replied within a day and sent a replacement gear at no cost, but I had to install it myself, which took most of an afternoon. Since then it has worked well, but the noise is back now and then. The price is high compared with similar grinders, and I am not convinced the build justifies it, since the part that failed is made of plastic. Overall I still use it every day and the coffee tastes better than with my old blade grinder, but I would think twice before paying full price again, and I would only recommend it if you find it on sale." },
+    { "id": "en-31", "lang": "en", "schema": "en-moderation", "input": "Thanks for the detailed write-up, this helped me fix my router." },
+    { "id": "en-32", "lang": "en", "schema": "en-moderation", "input": "BUY CHEAP FOLLOWERS NOW!!! visit followers-4-u dot example 💰💰" },
+    { "id": "en-33", "lang": "en", "schema": "en-moderation", "input": "This is the dumbest thing I have read all week, you clearly have no idea what you're talking about." },
+    { "id": "en-34", "lang": "en", "schema": "en-moderation", "input": "Does anyone know if this also works on the older model?" },
+    { "id": "pt-01", "lang": "pt", "schema": "pt-atendimento", "input": "Fui cobrado duas vezes e preciso disso resolvido hoje." },
+    { "id": "pt-02", "lang": "pt", "schema": "pt-atendimento", "input": "Meu pedido está parado na transportadora há dez dias. Cadê o rastreio?" },
+    { "id": "pt-03", "lang": "pt", "schema": "pt-atendimento", "input": "Quero cancelar a compra e receber meu dinheiro de volta, o produto veio quebrado." },
+    { "id": "pt-04", "lang": "pt", "schema": "pt-atendimento", "input": "Olá! Só queria elogiar o atendimento de ontem, foi ótimo." },
+    { "id": "pt-05", "lang": "pt", "schema": "pt-atendimento", "input": "A fatura deste mês veio com um valor diferente do contratado. Podem verificar?" },
+    { "id": "pt-06", "lang": "pt", "schema": "pt-atendimento", "input": "Boa tarde. Escrevo sobre a compra de uma geladeira duplex que fiz no dia 3, com entrega prometida em sete dias úteis. No dia combinado, ninguém apareceu, e o rastreio mostrava apenas que o produto tinha saído do centro de distribuição. Liguei para a central e me disseram que houve um problema com o caminhão e que a entrega seria remarcada para a semana seguinte. Aceitei, organizei minha agenda e fiquei em casa o dia inteiro, mas de novo ninguém veio. Na terceira tentativa, o entregador chegou à noite, depois das 21h, e disse que não podia subir com a geladeira porque o elevador de serviço do prédio estava fechado naquele horário. Ele foi embora com o produto. Desde então, o rastreio diz que o pedido foi devolvido ao remetente, mas o valor continua cobrado no meu cartão, em dez parcelas, e a primeira já foi paga. Minha geladeira antiga parou de funcionar e estou há quase três semanas sem ter onde guardar comida, comprando tudo no dia. Já abri dois chamados pelo aplicativo e um pelo chat, e todos foram encerrados sem resposta. Quero saber se ainda é possível entregar o produto nesta semana, em horário comercial, ou, se não for, que a compra seja cancelada e o valor integral seja estornado no cartão, incluindo a parcela já paga. Também gostaria de um número de protocolo, porque pretendo registrar uma reclamação se não houver solução até sexta-feira." },
+    { "id": "pt-07", "lang": "pt", "schema": "pt-imoveis", "input": "apartamento de dois quartos perto do metrô que aceite cachorro" },
+    { "id": "pt-08", "lang": "pt", "schema": "pt-imoveis", "input": "cobertura com piscina e vista para o mar, orçamento sem limite" },
+    { "id": "pt-09", "lang": "pt", "schema": "pt-imoveis", "input": "quitinete barata perto da faculdade, só para mim" },
+    { "id": "pt-10", "lang": "pt", "schema": "pt-imoveis", "input": "casa com quintal grande para meus três gatos e um cachorro" },
+    { "id": "pt-11", "lang": "pt", "schema": "pt-imoveis", "input": "algo para alugar em Curitiba a partir de março" },
+    { "id": "pt-12", "lang": "pt", "schema": "pt-encaminhamento", "input": "Meu notebook não liga e preciso acessar o sistema de pedidos." },
+    { "id": "pt-13", "lang": "pt", "schema": "pt-encaminhamento", "input": "Quando cai o adiantamento das férias de janeiro?" },
+    { "id": "pt-14", "lang": "pt", "schema": "pt-encaminhamento", "input": "O cliente quer revisar a cláusula de multa do contrato antes de assinar." },
+    { "id": "pt-15", "lang": "pt", "schema": "pt-encaminhamento", "input": "Precisamos de um orçamento para 300 unidades até sexta." },
+    { "id": "pt-16", "lang": "pt", "schema": "pt-encaminhamento", "input": "O caminhão chegou com metade das caixas faltando." },
+    { "id": "pt-17", "lang": "pt", "schema": "pt-moderacao", "input": "Ótima explicação, obrigado por compartilhar!" },
+    { "id": "pt-18", "lang": "pt", "schema": "pt-moderacao", "input": "Que texto ridículo, quem escreveu isso deveria ter vergonha." },
+    { "id": "pt-19", "lang": "pt", "schema": "pt-moderacao", "input": "Discordo da conclusão, mas os dados são interessantes." },
+    { "id": "pt-20", "lang": "pt", "schema": "pt-moderacao", "input": "Você é um idiota e todo mundo aqui sabe disso 🤬" },
+    { "id": "pt-21", "lang": "pt", "schema": "pt-moderacao", "input": "Ganhe dinheiro fácil trabalhando de casa, chama no privado!!!" },
+    { "id": "pt-22", "lang": "pt", "schema": "pt-avaliacao", "input": "Chegou antes do prazo e funciona perfeitamente. Recomendo! 😍" },
+    { "id": "pt-23", "lang": "pt", "schema": "pt-avaliacao", "input": "Parou de funcionar em um mês e a garantia não quis trocar." },
+    { "id": "pt-24", "lang": "pt", "schema": "pt-avaliacao", "input": "Bonito, mas o tamanho é bem menor do que parece nas fotos." },
+    { "id": "pt-25", "lang": "pt", "schema": "pt-avaliacao", "input": "Caro demais pelo que entrega." },
+    { "id": "pt-26", "lang": "pt", "schema": "pt-avaliacao", "input": "Instalei sozinho em dez minutos, o manual é bem claro." },
+    { "id": "pt-27", "lang": "pt", "schema": "pt-avaliacao", "input": "Comprei esta cafeteira há pouco mais de um ano e resolvi escrever uma avaliação mais completa, porque as que eu li antes de comprar falavam só da primeira semana de uso. A entrega foi rápida e a embalagem era muito boa, com cada peça protegida separadamente. Logo de cara, gostei do peso e do acabamento: o corpo é de metal e a jarra é de vidro grosso, que não risca com facilidade. A instalação foi simples, mas o manual é curto e as figuras são pequenas, então precisei assistir a um vídeo para entender como regular a moagem. Nos primeiros meses, foi uma maravilha. O café saía sempre no ponto e o temporizador me deixava programar a primeira xícara do dia. Por volta do sexto mês, a máquina começou a fazer um barulho agudo na moagem mais fina. Entrei em contato com o atendimento, que respondeu em um dia e mandou uma peça nova sem custo, mas tive de trocar eu mesmo, e isso levou uma tarde inteira. Desde então ela funciona bem, embora o barulho volte de vez em quando. O preço é alto comparado com modelos parecidos, e não sei se a construção justifica, já que a peça que quebrou é de plástico. No geral, uso todos os dias e o café ficou melhor do que com a minha cafeteira antiga, mas pensaria duas vezes antes de pagar o preço cheio de novo, e só recomendaria se estiver em promoção." },
+    { "id": "pt-28", "lang": "pt", "schema": "pt-formulario", "input": "Rótulo: \"Informe seu CPF (somente números)\" | Exemplo: \"00000000000\"" },
+    { "id": "pt-29", "lang": "pt", "schema": "pt-formulario", "input": "Rótulo: \"E-mail para contato\" | Exemplo: \"voce@exemplo.com\"" },
+    { "id": "pt-30", "lang": "pt", "schema": "pt-formulario", "input": "Rótulo: \"Celular com DDD\" | Exemplo: \"(11) 90000-0000\"" },
+    { "id": "pt-31", "lang": "pt", "schema": "pt-formulario", "input": "Rótulo: \"CEP\" | Exemplo: \"00000-000\"" },
+    { "id": "pt-32", "lang": "pt", "schema": "pt-formulario", "input": "Rótulo: \"Como você conheceu a loja?\" | Exemplo: \"indicação de amigo\"" }
+  ]
+}

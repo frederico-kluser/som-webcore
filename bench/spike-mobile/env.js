@@ -44,6 +44,19 @@ async function describeWebGpu() {
   return gpu;
 }
 
+// The GPU behind WebGL tells software rendering (SwiftShader) from the host GPU on the emulator.
+function describeWebGl() {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    if (!gl) return null;
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    return {
+      vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR),
+      renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+    };
+  } catch (error) { return { error: String(error?.message ?? error) }; }
+}
+
 export async function probeEnvironment() {
   const env = {
     userAgent: navigator.userAgent,
@@ -70,6 +83,7 @@ export async function probeEnvironment() {
   try {
     env.userAgentData = await navigator.userAgentData?.getHighEntropyValues(["fullVersionList", "platform", "platformVersion", "architecture", "model", "mobile"]);
   } catch (error) { env.userAgentDataError = String(error?.message ?? error); }
+  env.webgl = describeWebGl();
   env.webgpu = await describeWebGpu();
   return env;
 }

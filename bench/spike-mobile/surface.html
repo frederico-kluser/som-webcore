@@ -4,12 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DecisionModel surface capture</title>
+  <link rel="icon" href="data:,">
+  <script type="importmap">
+  {
+    "imports": {
+      "@huggingface/tokenizers": "/node_modules/@huggingface/tokenizers/dist/tokenizers.min.mjs",
+      "@johnhenry/tensor-backend": "/node_modules/@johnhenry/tensor-backend/dist/index.js",
+      "@johnhenry/backend-cpu": "/node_modules/@johnhenry/backend-cpu/dist/index.js",
+      "@johnhenry/backend-webgpu": "/node_modules/@johnhenry/backend-webgpu/dist/index.js",
+      "#dawn": "/node_modules/@johnhenry/backend-webgpu/dist/dawn-browser.js",
+      "@johnhenry/modernbert": "/node_modules/@johnhenry/modernbert/dist/index.js",
+      "@johnhenry/math-plus-safetensors": "/node_modules/@johnhenry/math-plus-safetensors/dist/index.js",
+      "@johnhenry/math-plus-tensor-cpu": "/node_modules/@johnhenry/math-plus-tensor-cpu/dist/index.js",
+      "@johnhenry/math-plus-tensor-core": "/node_modules/@johnhenry/math-plus-tensor-core/dist/index.js",
+      "@johnhenry/math-plus-tensor-core/kernels": "/node_modules/@johnhenry/math-plus-tensor-core/dist/public-kernels.js",
+      "@johnhenry/math-plus-special": "/node_modules/@johnhenry/math-plus-special/dist/index.js"
+    }
+  }
+  </script>
   <style>body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; } pre { white-space: pre-wrap; font-size: 12px; }</style>
 </head>
 <body>
   <h1>DecisionModel surface capture</h1>
-  <p>Enumerates the native <code>DecisionModel</code> surface and its validation behaviour, then posts the JSON to the local server.
-     Query: <code>?name=&lt;result file&gt;</code>, <code>&amp;activate=1</code> to wait for a click before <code>create()</code>.</p>
+  <p>Enumerates the <code>DecisionModel</code> surface and its validation behaviour, then posts the JSON to the local server.
+     Query: <code>?name=&lt;result file&gt;</code>, <code>&amp;activate=1</code> to wait for a click before <code>create()</code>,
+     <code>&amp;engine=&lt;id&gt;</code> to capture this project's polyfill instead of the native implementation.</p>
   <button id="go" type="button">create() with user activation</button>
   <pre id="out">running…</pre>
   <script type="module" src="surface.js"></script>

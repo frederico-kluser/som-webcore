@@ -1,10 +1,19 @@
-// Captures the native DecisionModel surface: members, descriptors, availability values,
-// validation errors and, when a session can be created, the result shape.
-// Writes only what the browser reports; nothing here is inferred.
+// Captures the DecisionModel surface: members, descriptors, availability values, validation errors
+// and, when a session can be created, the result shape. Writes only what the implementation reports.
+// Default: the browser's own DecisionModel. With ?engine=<id> (engines/registry.js), the same capture
+// runs against this project's polyfill, so both can be compared case by case.
+
+import { getDecisionModel } from "./engines/registry.js";
 
 const params = new URLSearchParams(location.search);
+const engineParam = params.get("engine");
+// eslint-disable-next-line no-shadow
+let DecisionModel = globalThis.DecisionModel;
+if (engineParam && engineParam !== "native") {
+  ({ DecisionModel } = await getDecisionModel({ engine: engineParam, model: params.get("model") || "ts-ettin-17m", variant: params.get("variant"), threads: 1 }));
+}
 const out = document.getElementById("out");
-const report = { kind: "decision-model-surface", startedAt: new Date().toISOString(), page: location.href, cases: [] };
+const report = { kind: "decision-model-surface", implementation: engineParam || "native", startedAt: new Date().toISOString(), page: location.href, cases: [] };
 
 function describeError(error) {
   if (error === undefined) return null;

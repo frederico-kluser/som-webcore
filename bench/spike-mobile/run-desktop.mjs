@@ -21,6 +21,7 @@ import { existsSync, rmSync, statSync, mkdirSync, readFileSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeTimeoutResult } from "./timeout-result.mjs";
 
 const HERE = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const RESULTS = resolve(HERE, "..", "results");
@@ -170,6 +171,10 @@ if (ok && selector) {
   console.log(`clicked ${selector} through CDP (user activation)`);
   ok = await waitForResult(first, "result after click");
   if (ok) console.log(`result (after click): ${resultFile}`);
+}
+if (!ok) {
+  await writeTimeoutResult({ resultFile, resultName, pageUrl: url, seconds: timeout / 1000, runner: "run-desktop.mjs", extra: { browser: exe } });
+  console.error(`wrote a failure result (timeout): ${resultFile}`);
 }
 if (collector) { await sleep(500); await attachConsole(collector); collector.cdp.close(); }
 if (!flag("keep")) { await closeBrowser(); await sleep(1500); try { child.kill(); } catch { /* ignore */ } }
