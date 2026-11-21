@@ -172,7 +172,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 
 | Valor | Na prática |
 |---|---|
-| **Padrão antes de produto** | A API pública acompanha a proposta da Decisions API e tem forma de polyfill; nada prende ninguém ao nosso motor ou ao nosso formato. |
+| **Padrão antes de produto** | A API pública é **idêntica** à Decisions API do Chrome ([padrão de chamada](ROADMAP.md#padrao-chamada)); nada prende ninguém ao nosso motor ou ao nosso formato. |
 | **Para todo programador** | Um import, uma chamada, resposta tipada; dispositivo, modelo e backend ficam escondidos, mas inspecionáveis. |
 | **Celular primeiro** | O celular é a prioridade: é onde a API nativa não está prevista e onde menos se mediu. Do aparelho de entrada ao desktop, com degradação explícita. |
 | **Evidência antes de afirmação** | Todo número é rotulado como medido, reportado, alvo ou hipótese; erros viram [errata](research/ERRATA.md). |
@@ -1723,7 +1723,7 @@ O esqueleto acima é **conceitual**: em wgpu, não se pode “reabrir” o mesmo
 <a id="api"></a>
 ### 6.7 API JavaScript proposta
 
-A API abaixo é **proposta**, não final — a definitiva nasce de RFC e acompanha a Decisions API. O objetivo é ser pequena, tipada e difícil de usar errado. O exemplo do manifesto (`som.eval(...)`) é o nível mais alto; `decide` é o nível explícito.
+> **Decisão de 2026-11-21: a API pública será idêntica à Decisions API do Chrome** — `DecisionModel.availability()`, `DecisionModel.create()`, `decide()` e `destroy()`, com perguntas `boolean`, `choice` e `score`. O padrão está em [ROADMAP.md](ROADMAP.md#padrao-chamada). O exemplo abaixo é o desenho anterior, mantido como histórico até a RFC-0001: nomes como `som.decide`, `som.eval` e `noul` **não** farão parte da superfície pública. O objetivo é ser pequena, tipada e difícil de usar errado. O exemplo do manifesto (`som.eval(...)`) é o nível mais alto; `decide` é o nível explícito.
 
 ```ts
 import { SOM } from '@som-web/core';
@@ -1891,7 +1891,7 @@ O planejamento completo — atividades em DAG, critérios de aceite, portões e 
 | Marco | Versão | O que prova |
 |---|---|---|
 | **M0 — Fundação e auditoria** | documentação | Plano e pesquisa conferidos em fontes primárias ([errata](research/ERRATA.md)). **Concluído em 2026-11-21.** |
-| **Marco T — Teste em celular** | — | Em celulares reais, um motor pronto serve? A resposta decide se o motor será o pronto ou um próprio. **É o próximo passo.** |
+| **Marco T — API igual à do Chrome e teste do motor existente** | — | Fixa a API idêntica à Decisions API, testa no emulador Android o motor leve que já existe e analisa se há uma janela para um motor nosso em WebGPU, do zero ou como fork. Cada bifurcação passa por consulta ao usuário. **É o próximo passo.** |
 | **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, sobre o motor que o teste escolher. Suspenso até o marco T. |
 | **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, fallback CPU em Wasm SIMD, recuperação de falhas, três motores de navegador, pacote npm alpha. |
 | **M3 — Beta** | `v0.5`–`v0.9` | Escada de modelos (32M, 68M, 150M), análise do dispositivo e escolha automática ([4.5](#analise-dispositivo)), API candidata. |
