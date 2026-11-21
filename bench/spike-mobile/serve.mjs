@@ -16,7 +16,7 @@
 // page is http://localhost:8377 — a secure context, which the Decisions API requires.
 
 import { createServer } from "node:http";
-import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync, renameSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, renameSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve, sep } from "node:path";
@@ -30,6 +30,7 @@ const args = process.argv.slice(2);
 const PORT = Number(args[args.indexOf("--port") + 1] || 0) || 8377;
 const COMPRESS = !args.includes("--no-compress");
 const BR_CACHE = join(tmpdir(), "som-spike-br");
+const PROGRESS = new Map();
 
 function modelCache() {
   if (process.env.SOM_MODEL_CACHE) return process.env.SOM_MODEL_CACHE;
@@ -103,6 +104,16 @@ const server = createServer(async (req, res) => {
       console.log(`[page] ${(await readBody(req, 1 << 20)).toString("utf8").slice(0, 4000)}`);
       return send(res, 200, { ok: true });
     }
+    // Last stage a page reached, kept in memory: a runner reads it when the page stops answering.
+    if (url.pathname === "/api/progress") {
+      const name = (url.searchParams.get("name") || "").replace(/[^A-Za-z0-9._-]/g, "");
+      if (!name) return send(res, 400, { ok: false, error: "missing ?name" });
+      if (req.method === "POST") {
+        PROGRESS.set(name, { ...JSON.parse((await readBody(req, 1 << 16)).toString("utf8")), receivedAt: new Date().toISOString() });
+        return send(res, 200, { ok: true });
+      }
+      return PROGRESS.has(name) ? send(res, 200, PROGRESS.get(name)) : send(res, 404, { ok: false });
+    }
     if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, { ok: false });
 
     let file = null;
@@ -136,6 +147,21 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// Brotli at quality 11 takes tens of seconds for the large Wasm files. Compress them before
+// listening (the result is cached on disk), so no measured run pays for the compression.
+function precompress() {
+  if (!COMPRESS) return;
+  const dist = join(HERE, "node_modules", "onnxruntime-web", "dist");
+  const files = existsSync(dist) ? readdirSync(dist).filter((f) => /\.(wasm|mjs)$/.test(f)).map((f) => join(dist, f)) : [];
+  for (const entry of readdirSync(modelCache(), { recursive: true }).map(String)) {
+    if (/(^|[\\/])(tokenizer|tokenizer_config|config)\.json$/.test(entry)) files.push(join(modelCache(), entry));
+  }
+  const started = Date.now();
+  for (const file of files) brotli(file, statSync(file));
+  console.log(`precompressed ${files.length} files in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+}
+
+precompress();
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`serve.mjs ready on http://localhost:${PORT}/ (models: ${modelCache()}, results: ${RESULTS}, brotli: ${COMPRESS})`);
 });

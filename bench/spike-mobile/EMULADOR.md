@@ -62,11 +62,14 @@ node bench/spike-mobile/run-android.mjs --result 2026-11-21-emulador-probe-swift
 
 O `run-android.mjs`:
 
-1. marca o Chrome como app de depuração (`am set-debug-app --persistent com.android.chrome`), o que faz o Chrome ler `/data/local/tmp/chrome-command-line`;
-2. grava nesse arquivo `--disable-fre --no-default-browser-check --no-first-run` (pula a tela de boas-vindas) e as flags pedidas em `--flags`;
-3. faz `adb reverse tcp:8377 tcp:8377`: no emulador, `http://localhost:8377` é o servidor do computador — e `localhost` é **contexto seguro**, que a Decisions API e o isolamento de origem exigem (`10.0.2.2` não seria);
-4. reinicia o Chrome e abre a página com `am start -a android.intent.action.VIEW`;
-5. espera a página postar o JSON em `bench/results/` e acrescenta `device` (imagem, versão do Chrome, flags) e `androidMemory` (PSS de cada processo do Chrome, de `dumpsys meminfo`, a cada 2 s).
+1. apaga os dados do Chrome (`pm clear com.android.chrome`; `--keep-data` desliga): o Chrome do Android **restaura as abas da sessão anterior**, e em 2026-11-21 páginas de execuções antigas voltaram a rodar ao lado da execução medida, regravaram resultados antigos e se acumularam até o Android do emulador parar de responder. Com os dados apagados, cada execução é também uma primeira visita de verdade (sem cache);
+2. marca o Chrome como app de depuração (`am set-debug-app --persistent com.android.chrome`), o que faz o Chrome ler `/data/local/tmp/chrome-command-line`;
+3. grava nesse arquivo `--disable-fre --no-default-browser-check --no-first-run` (pula a tela de boas-vindas) e as flags pedidas em `--flags`;
+4. faz `adb reverse tcp:8377 tcp:8377`: no emulador, `http://localhost:8377` é o servidor do computador — e `localhost` é **contexto seguro**, que a Decisions API e o isolamento de origem exigem (`10.0.2.2` não seria);
+5. reinicia o Chrome e abre a página com `am start -a android.intent.action.VIEW`;
+6. espera a página postar o JSON em `bench/results/` e acrescenta `device` (imagem, versão do Chrome, flags, linha de comando do emulador) e `androidMemory` (PSS de cada processo do Chrome, de `dumpsys meminfo --package com.android.chrome`, a cada 5 s). Se a página não postar no prazo, grava a falha com a última etapa que ela reportou.
+
+A amostragem é só do Chrome e espaçada para pesar pouco no aparelho durante a medição.
 
 O aviso de notificações que o Chrome mostra não impede a página de rodar. Para fechá-lo: `android.ps1 ui dump -Text` e `android.ps1 tap <x> <y>` em “No thanks”.
 
@@ -94,6 +97,8 @@ Página [`probe.html`](probe.html), quatro configurações, uma execução cada 
 
 WebAssembly, nas quatro: SIMD **sim**, SIMD relaxado **sim**, JSPI **não**, `Float16Array` **não**. Threads só com a página isolada (`?coi=1`, que faz o `serve.mjs` mandar COOP e COEP): [`…-swiftshader-coi.json`](../results/2026-11-21-emulador-probe-swiftshader-coi.json) mostra `crossOriginIsolated: true`, `SharedArrayBuffer` e threads.
 
+**Confira a GPU em uso antes de medir.** O `avd start` da skill reaproveita um emulador que já esteja ligado — mesmo que tenha sido aberto com outra GPU. Desde 2026-11-21 o `run-android.mjs` grava em cada resultado a linha de comando do processo do emulador (`device.emulatorCommandLine`, com o `-gpu` usado), e a página registra o renderizador WebGL (`environment.webgl`): com GPU por software ele é “Android Emulator OpenGL ES Translator (Google SwiftShader)”.
+
 ## 6. Repetição
 
-Seguindo só este arquivo, uma segunda execução — emulador reiniciado pela skill (GPU por software) e a mesma sonda — chegou ao mesmo resultado: [`2026-11-21-emulador-probe-repeticao.json`](../results/2026-11-21-emulador-probe-repeticao.json).
+Seguindo só este arquivo, uma segunda execução — emulador reiniciado pela skill (linha de comando com `-no-window -gpu swiftshader_indirect`; renderizador WebGL SwiftShader) e a mesma sonda — chegou ao mesmo resultado: [`2026-11-21-emulador-probe-repeticao.json`](../results/2026-11-21-emulador-probe-repeticao.json).
