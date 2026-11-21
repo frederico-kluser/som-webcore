@@ -27,7 +27,7 @@
 >
 > O objetivo desta fase é permitir que qualquer pessoa entenda, critique e implemente o motor **sem precisar dos PDFs originais**. O código nascerá nas fases seguintes do [roadmap](#roadmap).
 >
-> **O que mudou em 2026-11-21.** A pesquisa foi conferida em fontes primárias e os erros estão em [research/ERRATA.md](research/ERRATA.md). O planejamento passou a ser um DAG com critérios de aceite ([ROADMAP.md](ROADMAP.md)): primeiro um **teste em celulares reais**, que decide se o motor será um pronto ou um próprio ([marco T](ROADMAP.md#mt)); depois uma **prova de conceito com um modelo de 17M de parâmetros** (TS-Ettin-17M); a **v1.0.0** analisa o dispositivo e recomenda o modelo ([seção 4.5](#analise-dispositivo)). As seções 2, 3 e 6 descrevem a **arquitetura-alvo da v1.0.0**; a PoC implementa um subconjunto deliberadamente simples.
+> **O que mudou em 2026-11-21.** A pesquisa foi conferida em fontes primárias e os erros estão em [research/ERRATA.md](research/ERRATA.md). O planejamento passou a ser um DAG com critérios de aceite ([ROADMAP.md](ROADMAP.md)): primeiro o [marco T](ROADMAP.md#mt) — API idêntica à do Chrome e teste do motor leve existente no Android, que decide se o motor será o existente ou um nosso; depois uma **prova de conceito com um modelo de 17M de parâmetros** (TS-Ettin-17M); a **v1.0.0** analisa o dispositivo e recomenda o modelo ([seção 4.5](#analise-dispositivo)). As seções 2, 3 e 6 descrevem a **arquitetura-alvo da v1.0.0**; a PoC implementa um subconjunto deliberadamente simples.
 
 ---
 
@@ -98,7 +98,7 @@
 | **Qual o alvo de latência?** | **[ALVO, ainda não medido]** **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo alvo de p95. |
 | **Como?** | Streaming direto OPFS → VRAM, embeddings fora da GPU, quantização Q8_0/Q4_0, 6 shaders WGSL, calibração in-shader e **micro-readback de 64–256 bytes**. |
 | **Estado?** | **RFC/blueprint auditado.** Pesquisa conferida ([errata](research/ERRATA.md)) e plano em DAG ([ROADMAP.md](ROADMAP.md)). Código ainda não escrito. |
-| **Por onde começa?** | Por um **teste em celulares reais** ([marco T do roadmap](ROADMAP.md#mt)): mede-se um motor pronto com um modelo de 17M antes de decidir se vale construir um motor próprio. **O celular é a prioridade.** |
+| **Por onde começa?** | Pelo **marco T do [roadmap](ROADMAP.md#mt)**: fixar a API idêntica à Decisions API do Chrome e testar, no Android, o motor leve que já existe com um modelo de 17M — antes de decidir se vale um motor nosso em WebGPU. **O celular é a prioridade.** |
 | **E a v1.0.0?** | O SDK **analisa o dispositivo** e baixa o modelo mais forte que couber no orçamento declarado — de 17M a 150M no catálogo padrão ([seção 4.5](#analise-dispositivo)). |
 | **Licença?** | **Apache-2.0** para o código/documentação. Os pesos dos modelos têm licenças próprias. |
 
@@ -134,6 +134,8 @@ Com as **Condicionais Abstratas**, o código passa a decidir por similaridade se
 // O futuro: decisão semântica instantânea on-device via WebGPU
 if (await som.eval("usuário hesita antes de concluir o formulário")) { ... }
 ```
+
+> O trecho acima é ilustrativo. A chamada real usa `DecisionModel`, a mesma API do Chrome — ver [6.7](#api).
 
 O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar uma resposta”, o modelo responde a uma pergunta fechada com uma das três primitivas:
 
@@ -1723,76 +1725,44 @@ O esqueleto acima é **conceitual**: em wgpu, não se pode “reabrir” o mesmo
 <a id="api"></a>
 ### 6.7 API JavaScript proposta
 
-> **Decisão de 2026-11-21: a API pública será idêntica à Decisions API do Chrome** — `DecisionModel.availability()`, `DecisionModel.create()`, `decide()` e `destroy()`, com perguntas `boolean`, `choice` e `score`. O padrão está em [ROADMAP.md](ROADMAP.md#padrao-chamada). O exemplo abaixo é o desenho anterior, mantido como histórico até a RFC-0001: nomes como `som.decide`, `som.eval` e `noul` **não** farão parte da superfície pública. O objetivo é ser pequena, tipada e difícil de usar errado. O exemplo do manifesto (`som.eval(...)`) é o nível mais alto; `decide` é o nível explícito.
+> **Decisão de 2026-11-21: a API pública é idêntica à Decisions API do Chrome.** O padrão completo está em [ROADMAP.md](ROADMAP.md#padrao-chamada). A API existe no Chrome estável 157 e no Canary 160, atrás da flag `decisions-api`; onde ela não existe, a biblioteca oferece a mesma superfície.
 
-```ts
-import { SOM } from '@som-web/core';
+```js
+const schema = {
+  expectedInputs: [{ type: "text", languages: ["pt", "en"] }],
+  questions: [
+    { id: "quer_reembolso", type: "boolean", prompt: "O cliente pede reembolso?" },
+    {
+      id: "assunto",
+      type: "choice",
+      prompt: "Qual é o assunto da mensagem?",
+      options: [
+        { label: "pagamento", description: "Cobrança, fatura ou estorno" },
+        { label: "entrega", description: "Prazo, rastreio ou extravio" },
+        { label: "outro", description: "Qualquer outro assunto" }
+      ]
+    },
+    { id: "urgencia", type: "score", prompt: "De 1 (baixa) a 5 (alta), qual a urgência?" }
+  ]
+};
 
-const som = await SOM.load({
-  model: 'auto',                // v1.0.0: escolhe pelo dispositivo; ou um id do catálogo ('ts-ettin-17m')
-  seed: 'ts-ettin-17m',         // primeira decisão rápida
-  cache: 'opfs',                // 'opfs' | 'memory'
-  execution: 'auto',            // 'webgpu' | 'wasm' | 'auto'
-  fallback: 'wasm',             // 'none' | 'wasm'
-  budget: { latencyMs: 50, maxDownloadMB: 160 }, // orçamento para a escolha do modelo
-  licensePolicy: 'permissive',  // por padrão, só modelos de licença permissiva
-  onProgress: (p) => console.log(p.phase, p.loaded, p.total),
-});
-
-// 1. Decisão explícita (choice)
-const choice = await som.decide({
-  state: 'O usuário preencheu 3 de 4 campos e voltou ao primeiro.',
-  question: 'Qual é a intenção mais provável?',
-  options: ['continuar', 'desistir', 'pedir ajuda'],
-  kind: 'choice',
-  timeoutMs: 120,
-  signal: abortController.signal,
-});
-// choice = {
-//   kind: 'choice', choice: 'pedir ajuda', index: 2,
-//   confidence: 0.42, probabilities: [0.18, 0.40, 0.42],
-//   temperature: 1.7465, entropy: 0.91,
-//   latencyMs: 38.2, model: 'ts-ettin-68m', cached: true
-// }
-
-// 2. Condicional abstrata (açúcar sobre noul: recebe o estado e a afirmação)
-if (await som.eval(state, 'O usuário hesita antes de concluir o formulário.')) {
-  showHelp();
+const status = await DecisionModel.availability(schema);
+if (status === "available" || status === "downloadable") {
+  const model = await DecisionModel.create(schema);
+  const result = await model.decide("Fui cobrado duas vezes e preciso disso resolvido hoje.");
+  // result.assunto  -> { id, label, confidence, probabilities }
+  // result.urgencia -> { id, label, confidence, probabilities, expectedScore }
+  model.destroy();
 }
-
-// 3. Score (2–10 níveis ordenados)
-const score = await som.score({
-  state, question: 'Qual a urgência deste ticket?', levels: 5,
-});
-// score = { kind: 'score', value: 3.7, probabilities: [...], confidence: 0.31 }
-
-// 4. Noul (sim/não calibrado, com banda opcional)
-const noul = await som.noul({
-  state, question: 'O texto contém uma ameaça?', band: true,
-});
-// noul = { kind: 'noul', probability: 0.83, decision: true, confidence: 0.33 }
-
-// 5. Classificação com rótulos livres
-const label = await som.classify({
-  state, labels: ['spam', 'suporte', 'vendas', 'outro'],
-});
-
-// 6. Ciclo de vida
-som.on('deviceLost', async () => { await som.recover(); });
-som.on('thermalPressure', (level) => { /* reduzir frequência */ });
-await som.preload('ts-ettin-68m');          // sobe um degrau da escada
-som.dispose();
 ```
 
 **Contrato:**
 
-- `SOM.load` **não** baixa pesos antes do LCP; o download é explicitamente disparado por `preload()` ou pela primeira decisão.
-- Nenhuma chamada de rede ocorre depois de o modelo estar no OPFS; o fallback remoto do blueprint original saiu do escopo até a v1.0.0.
-- A superfície final segue a Decisions API (`boolean`, `choice`, `score`; `label`, `probabilities`, `confidence`, `expectedScore`) para funcionar como polyfill dela; `noul` é o nome JEV de `boolean`. A API é definida por RFC (atividades `P-02` e `B-08` do roadmap).
-- `decide`/`score`/`noul` são **idempotentes** para a mesma entrada e modelo; o cache de decisão é opcional e local.
-- `timeoutMs` aborta a decisão e libera o staging buffer; a Promise rejeita com `TimeoutError`.
-- `signal` permite cancelar quando o usuário muda de contexto.
-- `latencyMs` é medido no Worker, do início do dispatch ao readback; `queueMs` e `gpuMs` podem ser expostos via `timestamp-query` quando disponível.
+- A superfície pública é a da Decisions API: `DecisionModel.availability()`, `DecisionModel.create()`, `decide()` e `destroy()`, com perguntas `boolean`, `choice` e `score` e resultado indexado pelo `id` da pergunta. Os nomes do desenho anterior — `SOM.load`, `som.decide`, `som.eval`, `noul` — não fazem parte dela; `noul` é `boolean`.
+- O mesmo código de aplicação roda sobre a implementação nativa e sobre a biblioteca. Quando o `DecisionModel` do navegador existe, a biblioteca não o substitui.
+- O que é só nosso — escolha do modelo, orçamento de download, política de licença e diagnóstico — fica fora dessa superfície, num ponto de configuração separado, a definir na RFC-0001.
+- Nenhuma chamada de rede ocorre depois de o modelo estar em cache, e nenhum dado do usuário sai do dispositivo.
+- A referência é a implementação do Chrome: quando ela e o explainer divergem, vale a implementação.
 
 <a id="erros"></a>
 ### 6.8 Erros, recuperação e privacidade

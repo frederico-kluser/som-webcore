@@ -71,9 +71,12 @@ $COALA add --type episodic   --content "AAAA-MM-DD: …o que aconteceu e o que s
 
 Fontes em `ingest.json` (é teu: o instalador nunca o reescreve):
 
-- `readme` — `README.md` → markdown · semantic · origem `agent` · tags `docs,readme`
-- `raiz` — `CHANGELOG.md`, `CONTRIBUTING.md` → markdown · semantic · origem `agent` · tags `docs,{stem}`
-- chaves de supersessão: `proj/<ficheiro>#<segmento>` (estáveis → re-ingestão idempotente)
+- `readme` — `README.md` → markdown · semantic · origem `agent` · tags `docs,readme,manifesto,jev,arquitetura`
+- `planejamento` — `ROADMAP.md`, `docs/METHODOLOGY.md`, `docs/STRUCTURE.md`, `research/ERRATA.md` → markdown · semantic · origem `agent` · tags `docs,roadmap,dag,metodologia,estrutura,errata,{stem}`
+- `pesquisa-arquitetura` — `research/01-*.txt` → text · semantic · origem `untrusted` · tags `research,webgpu,wasm32,arquitetura,pdf-fonte,{stem}`
+- `pesquisa-runtime` — `research/02-*.txt` → text · semantic · origem `untrusted` · tags `research,wgpu,wgsl,runtime,sombin,pdf-fonte,{stem}`
+- `governanca` — `CONTRIBUTING.md`, `GOVERNANCE.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md` → markdown · semantic · origem `agent` · tags `docs,governanca,{stem}`
+- chaves de supersessão: `som/<ficheiro>#<segmento>` (estáveis → re-ingestão idempotente)
 - `código` — automático: todos os ficheiros de código do repositório (respeita o .gitignore) → um cartão por ficheiro + símbolos com linha
 
 `$COALA sync` é idempotente: igual = NO-OP · mudou = nova versão por supersessão · removido = expira.
