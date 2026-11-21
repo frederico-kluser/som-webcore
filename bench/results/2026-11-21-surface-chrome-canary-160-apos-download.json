@@ -1,0 +1,1984 @@
+{
+  "kind": "decision-model-surface",
+  "startedAt": "2026-11-21T20:33:21.732Z",
+  "page": "http://localhost:8377/surface.html?name=2026-11-21-surface-chrome-canary-160-apos-download",
+  "cases": [
+    {
+      "name": "no-arguments",
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': DecisionModel requires a non-empty questions array.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "empty-options",
+      "schema": {},
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': DecisionModel requires a non-empty questions array.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "empty-questions",
+      "schema": {
+        "questions": []
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': DecisionModel requires a non-empty questions array.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': DecisionModel requires a non-empty questions array.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "boolean-minimal",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "roadmap-example",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "pt",
+              "en"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "quer_reembolso",
+            "type": "boolean",
+            "prompt": "O cliente pede reembolso?"
+          },
+          {
+            "id": "assunto",
+            "type": "choice",
+            "prompt": "Qual é o assunto da mensagem?",
+            "options": [
+              {
+                "label": "pagamento",
+                "description": "Cobrança, fatura ou estorno"
+              },
+              {
+                "label": "entrega",
+                "description": "Prazo, rastreio ou extravio"
+              },
+              {
+                "label": "outro",
+                "description": "Qualquer outro assunto"
+              }
+            ]
+          },
+          {
+            "id": "urgencia",
+            "type": "score",
+            "prompt": "De 1 (baixa) a 5 (alta), qual a urgência?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      }
+    },
+    {
+      "name": "languages-en",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "en"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "languages-pt",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "pt"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      }
+    },
+    {
+      "name": "languages-pt-BR",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "pt-BR"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      }
+    },
+    {
+      "name": "languages-xx",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "xx"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      }
+    },
+    {
+      "name": "languages-invalid-tag",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "text",
+            "languages": [
+              "not a tag!"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "RangeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Invalid language tag: not a tag!",
+          "constructor": "RangeError"
+        }
+      }
+    },
+    {
+      "name": "input-image",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "image"
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "NotSupportedError",
+          "message": "Only 'text' expectedInputs modality is currently supported.",
+          "constructor": "DOMException"
+        }
+      }
+    },
+    {
+      "name": "input-bogus-type",
+      "schema": {
+        "expectedInputs": [
+          {
+            "type": "bogus"
+          }
+        ],
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Failed to read the 'expectedInputs' property from 'DecisionModelCreateCoreOptions': Failed to read the 'type' property from 'LanguageModelExpected': The provided value 'bogus' is not a valid enum value of type LanguageModelMessageType.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "questions-16",
+      "schema": {
+        "questions": [
+          {
+            "id": "q0",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q1",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q2",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q3",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q4",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q5",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q6",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q7",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q8",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q9",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q10",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q11",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q12",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q13",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q14",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q15",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "questions-17",
+      "schema": {
+        "questions": [
+          {
+            "id": "q0",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q1",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q2",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q3",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q4",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q5",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q6",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q7",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q8",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q9",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q10",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q11",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q12",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q13",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q14",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q15",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q16",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': DecisionModel supports at most 16 questions per schema.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': DecisionModel supports at most 16 questions per schema.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "choice-0-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "choice-1-option",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "o1",
+                "description": "option 1"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "choice-2-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "o1",
+                "description": "option 1"
+              },
+              {
+                "label": "o2",
+                "description": "option 2"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "choice-26-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "o1",
+                "description": "option 1"
+              },
+              {
+                "label": "o2",
+                "description": "option 2"
+              },
+              {
+                "label": "o3",
+                "description": "option 3"
+              },
+              {
+                "label": "o4",
+                "description": "option 4"
+              },
+              {
+                "label": "o5",
+                "description": "option 5"
+              },
+              {
+                "label": "o6",
+                "description": "option 6"
+              },
+              {
+                "label": "o7",
+                "description": "option 7"
+              },
+              {
+                "label": "o8",
+                "description": "option 8"
+              },
+              {
+                "label": "o9",
+                "description": "option 9"
+              },
+              {
+                "label": "o10",
+                "description": "option 10"
+              },
+              {
+                "label": "o11",
+                "description": "option 11"
+              },
+              {
+                "label": "o12",
+                "description": "option 12"
+              },
+              {
+                "label": "o13",
+                "description": "option 13"
+              },
+              {
+                "label": "o14",
+                "description": "option 14"
+              },
+              {
+                "label": "o15",
+                "description": "option 15"
+              },
+              {
+                "label": "o16",
+                "description": "option 16"
+              },
+              {
+                "label": "o17",
+                "description": "option 17"
+              },
+              {
+                "label": "o18",
+                "description": "option 18"
+              },
+              {
+                "label": "o19",
+                "description": "option 19"
+              },
+              {
+                "label": "o20",
+                "description": "option 20"
+              },
+              {
+                "label": "o21",
+                "description": "option 21"
+              },
+              {
+                "label": "o22",
+                "description": "option 22"
+              },
+              {
+                "label": "o23",
+                "description": "option 23"
+              },
+              {
+                "label": "o24",
+                "description": "option 24"
+              },
+              {
+                "label": "o25",
+                "description": "option 25"
+              },
+              {
+                "label": "o26",
+                "description": "option 26"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "choice-27-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "o1",
+                "description": "option 1"
+              },
+              {
+                "label": "o2",
+                "description": "option 2"
+              },
+              {
+                "label": "o3",
+                "description": "option 3"
+              },
+              {
+                "label": "o4",
+                "description": "option 4"
+              },
+              {
+                "label": "o5",
+                "description": "option 5"
+              },
+              {
+                "label": "o6",
+                "description": "option 6"
+              },
+              {
+                "label": "o7",
+                "description": "option 7"
+              },
+              {
+                "label": "o8",
+                "description": "option 8"
+              },
+              {
+                "label": "o9",
+                "description": "option 9"
+              },
+              {
+                "label": "o10",
+                "description": "option 10"
+              },
+              {
+                "label": "o11",
+                "description": "option 11"
+              },
+              {
+                "label": "o12",
+                "description": "option 12"
+              },
+              {
+                "label": "o13",
+                "description": "option 13"
+              },
+              {
+                "label": "o14",
+                "description": "option 14"
+              },
+              {
+                "label": "o15",
+                "description": "option 15"
+              },
+              {
+                "label": "o16",
+                "description": "option 16"
+              },
+              {
+                "label": "o17",
+                "description": "option 17"
+              },
+              {
+                "label": "o18",
+                "description": "option 18"
+              },
+              {
+                "label": "o19",
+                "description": "option 19"
+              },
+              {
+                "label": "o20",
+                "description": "option 20"
+              },
+              {
+                "label": "o21",
+                "description": "option 21"
+              },
+              {
+                "label": "o22",
+                "description": "option 22"
+              },
+              {
+                "label": "o23",
+                "description": "option 23"
+              },
+              {
+                "label": "o24",
+                "description": "option 24"
+              },
+              {
+                "label": "o25",
+                "description": "option 25"
+              },
+              {
+                "label": "o26",
+                "description": "option 26"
+              },
+              {
+                "label": "o27",
+                "description": "option 27"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Choice DecisionModelQuestion requires between 2 and 26 options.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "score-no-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "score-empty-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": []
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "score-1-level",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "score-2-levels",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              },
+              {
+                "label": "2"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "score-9-levels",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              },
+              {
+                "label": "2"
+              },
+              {
+                "label": "3"
+              },
+              {
+                "label": "4"
+              },
+              {
+                "label": "5"
+              },
+              {
+                "label": "6"
+              },
+              {
+                "label": "7"
+              },
+              {
+                "label": "8"
+              },
+              {
+                "label": "9"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "score-10-levels",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              },
+              {
+                "label": "2"
+              },
+              {
+                "label": "3"
+              },
+              {
+                "label": "4"
+              },
+              {
+                "label": "5"
+              },
+              {
+                "label": "6"
+              },
+              {
+                "label": "7"
+              },
+              {
+                "label": "8"
+              },
+              {
+                "label": "9"
+              },
+              {
+                "label": "10"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "score-11-levels",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              },
+              {
+                "label": "2"
+              },
+              {
+                "label": "3"
+              },
+              {
+                "label": "4"
+              },
+              {
+                "label": "5"
+              },
+              {
+                "label": "6"
+              },
+              {
+                "label": "7"
+              },
+              {
+                "label": "8"
+              },
+              {
+                "label": "9"
+              },
+              {
+                "label": "10"
+              },
+              {
+                "label": "11"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      },
+      "create": {
+        "ok": true,
+        "value": "[object DecisionModel]"
+      }
+    },
+    {
+      "name": "score-12-levels",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "score",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "1"
+              },
+              {
+                "label": "2"
+              },
+              {
+                "label": "3"
+              },
+              {
+                "label": "4"
+              },
+              {
+                "label": "5"
+              },
+              {
+                "label": "6"
+              },
+              {
+                "label": "7"
+              },
+              {
+                "label": "8"
+              },
+              {
+                "label": "9"
+              },
+              {
+                "label": "10"
+              },
+              {
+                "label": "11"
+              },
+              {
+                "label": "12"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Score DecisionModelQuestion options must have between 2 and 11 levels when specified.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "boolean-empty-options",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?",
+            "options": []
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "boolean-1-option",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "o1",
+                "description": "option 1"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Boolean DecisionModelQuestion must not specify options.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "duplicate-question-id",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          },
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Duplicate DecisionModelQuestion id: 'q'.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Duplicate DecisionModelQuestion id: 'q'.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "blank-question-id",
+      "schema": {
+        "questions": [
+          {
+            "id": "  ",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Each DecisionModelQuestion must have a non-empty id.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Each DecisionModelQuestion must have a non-empty id.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "blank-prompt",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": " "
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Each DecisionModelQuestion must have a non-empty prompt.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Each DecisionModelQuestion must have a non-empty prompt.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "missing-prompt",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Failed to read the 'questions' property from 'DecisionModelCreateCoreOptions': Failed to read the 'prompt' property from 'DecisionModelQuestion': Required member is undefined.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "duplicate-option-label",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "a"
+              },
+              {
+                "label": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Duplicate DecisionModelOption label: 'a'.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Duplicate DecisionModelOption label: 'a'.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "blank-option-label",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "a"
+              },
+              {
+                "label": " "
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Each DecisionModelOption must have a non-empty label.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Each DecisionModelOption must have a non-empty label.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "option-without-description",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "choice",
+            "prompt": "Is this a test?",
+            "options": [
+              {
+                "label": "a"
+              },
+              {
+                "label": "b"
+              }
+            ]
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "unknown-question-type",
+      "schema": {
+        "questions": [
+          {
+            "id": "q",
+            "type": "rating",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Failed to read the 'questions' property from 'DecisionModelCreateCoreOptions': Failed to read the 'type' property from 'DecisionModelQuestion': The provided value 'rating' is not a valid enum value of type DecisionModelQuestionType.",
+          "constructor": "TypeError"
+        }
+      },
+      "create": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'create' on 'DecisionModel': Failed to read the 'questions' property from 'DecisionModelCreateCoreOptions': Failed to read the 'type' property from 'DecisionModelQuestion': The provided value 'rating' is not a valid enum value of type DecisionModelQuestionType.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "preference-speed",
+      "schema": {
+        "preference": "speed",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "preference-capability",
+      "schema": {
+        "preference": "capability",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "preference-bogus",
+      "schema": {
+        "preference": "bogus",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Failed to read the 'preference' property from 'DecisionModelCreateCoreOptions': The provided value 'bogus' is not a valid enum value of type PerformancePreference.",
+          "constructor": "TypeError"
+        }
+      }
+    },
+    {
+      "name": "context-member",
+      "schema": {
+        "context": "Some shared context.",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "backend-embedding-gemma-v1",
+      "schema": {
+        "devTrialBackend": "embedding-gemma-v1",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "available"
+      }
+    },
+    {
+      "name": "backend-language-model",
+      "schema": {
+        "devTrialBackend": "language-model",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "unavailable"
+      }
+    },
+    {
+      "name": "backend-laya-en-wint8",
+      "schema": {
+        "devTrialBackend": "laya-en-wint8",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "downloadable"
+      }
+    },
+    {
+      "name": "backend-laya-ml-wint8",
+      "schema": {
+        "devTrialBackend": "laya-ml-wint8",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": true,
+        "value": "downloadable"
+      }
+    },
+    {
+      "name": "backend-bogus",
+      "schema": {
+        "devTrialBackend": "bogus",
+        "questions": [
+          {
+            "id": "q",
+            "type": "boolean",
+            "prompt": "Is this a test?"
+          }
+        ]
+      },
+      "availability": {
+        "ok": false,
+        "error": {
+          "name": "TypeError",
+          "message": "Failed to execute 'availability' on 'DecisionModel': Failed to read the 'devTrialBackend' property from 'DecisionModelCreateCoreOptions': The provided value 'bogus' is not a valid enum value of type DecisionModelBackend.",
+          "constructor": "TypeError"
+        }
+      }
+    }
+  ],
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/160.0.0.0 Safari/537.36",
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "hasDecisionModel": "function",
+    "hasLanguageModel": "function",
+    "hasCreateMonitor": "function",
+    "hasGpu": true,
+    "userAgentData": {
+      "architecture": "x86",
+      "brands": [
+        {
+          "brand": "Chromium",
+          "version": "160"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "160"
+        },
+        {
+          "brand": "Not)A;Brand",
+          "version": "99"
+        }
+      ],
+      "fullVersionList": [
+        {
+          "brand": "Chromium",
+          "version": "160.0.8174.2"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "160.0.8174.2"
+        },
+        {
+          "brand": "Not)A;Brand",
+          "version": "99.0.0.0"
+        }
+      ],
+      "mobile": false,
+      "model": "",
+      "platform": "Windows",
+      "platformVersion": "19.0.0"
+    }
+  },
+  "static": {
+    "length": {
+      "kind": "data",
+      "getter": false,
+      "setter": false,
+      "enumerable": false,
+      "configurable": true,
+      "writable": false,
+      "value": 0
+    },
+    "name": {
+      "kind": "data",
+      "getter": false,
+      "setter": false,
+      "enumerable": false,
+      "configurable": true,
+      "writable": false,
+      "value": "DecisionModel"
+    },
+    "prototype": {
+      "kind": "data",
+      "getter": false,
+      "setter": false,
+      "enumerable": false,
+      "configurable": false,
+      "writable": false
+    },
+    "availability": {
+      "kind": "method",
+      "length": 0,
+      "getter": false,
+      "setter": false,
+      "enumerable": true,
+      "configurable": true,
+      "writable": true,
+      "native": true
+    },
+    "create": {
+      "kind": "method",
+      "length": 0,
+      "getter": false,
+      "setter": false,
+      "enumerable": true,
+      "configurable": true,
+      "writable": true,
+      "native": true
+    }
+  },
+  "prototype": {
+    "preference": {
+      "kind": "accessor",
+      "getter": true,
+      "setter": false,
+      "enumerable": true,
+      "configurable": true
+    },
+    "decide": {
+      "kind": "method",
+      "length": 1,
+      "getter": false,
+      "setter": false,
+      "enumerable": true,
+      "configurable": true,
+      "writable": true,
+      "native": true
+    },
+    "destroy": {
+      "kind": "method",
+      "length": 0,
+      "getter": false,
+      "setter": false,
+      "enumerable": true,
+      "configurable": true,
+      "writable": true,
+      "native": true
+    },
+    "constructor": {
+      "kind": "method",
+      "length": 0,
+      "getter": false,
+      "setter": false,
+      "enumerable": false,
+      "configurable": true,
+      "writable": true,
+      "native": true
+    },
+    "Symbol(Symbol.toStringTag)": {
+      "kind": "data",
+      "getter": false,
+      "setter": false,
+      "enumerable": false,
+      "configurable": true,
+      "writable": false,
+      "value": "DecisionModel"
+    }
+  },
+  "prototypeParent": "Object.prototype",
+  "interfaceLength": 0,
+  "toStringTag": "DecisionModel",
+  "construct": {
+    "ok": false,
+    "error": {
+      "name": "TypeError",
+      "message": "Failed to construct 'DecisionModel': Illegal constructor",
+      "constructor": "TypeError"
+    }
+  },
+  "createWithoutActivation": {
+    "label": "without-activation",
+    "userActivation": {
+      "isActive": false,
+      "hasBeenActive": false
+    },
+    "monitorEvents": [
+      {
+        "loaded": 0,
+        "total": 1
+      },
+      {
+        "loaded": 1,
+        "total": 1
+      }
+    ],
+    "create": {
+      "ok": true,
+      "value": "created"
+    },
+    "instanceMembers": {
+      "preference": {
+        "kind": "accessor",
+        "getter": true,
+        "setter": false,
+        "enumerable": true,
+        "configurable": true
+      },
+      "decide": {
+        "kind": "method",
+        "length": 1,
+        "getter": false,
+        "setter": false,
+        "enumerable": true,
+        "configurable": true,
+        "writable": true,
+        "native": true
+      },
+      "destroy": {
+        "kind": "method",
+        "length": 0,
+        "getter": false,
+        "setter": false,
+        "enumerable": true,
+        "configurable": true,
+        "writable": true,
+        "native": true
+      },
+      "constructor": {
+        "kind": "method",
+        "length": 0,
+        "getter": false,
+        "setter": false,
+        "enumerable": false,
+        "configurable": true,
+        "writable": true,
+        "native": true
+      },
+      "Symbol(Symbol.toStringTag)": {
+        "kind": "data",
+        "getter": false,
+        "setter": false,
+        "enumerable": false,
+        "configurable": true,
+        "writable": false,
+        "value": "DecisionModel"
+      }
+    },
+    "preference": "auto",
+    "result": {
+      "wants_refund": {
+        "confidence": 0.5119115710258484,
+        "id": "wants_refund",
+        "label": "true",
+        "probabilities": {
+          "true": 0.5119115710258484,
+          "false": 0.4880883991718292
+        }
+      },
+      "topic": {
+        "confidence": 0.9975261092185974,
+        "id": "topic",
+        "label": "payment",
+        "probabilities": {
+          "payment": 0.9975261092185974,
+          "delivery": 0.0017159676644951105,
+          "other": 0.0007579234661534429
+        }
+      },
+      "urgency": {
+        "confidence": 0.6891757845878601,
+        "expectedScore": 1.889953374862671,
+        "id": "urgency",
+        "label": "2",
+        "probabilities": {
+          "1": 0.23508258163928986,
+          "2": 0.6891757845878601,
+          "3": 0.04539095237851143,
+          "4": 0.011407053098082542,
+          "5": 0.01894364133477211
+        }
+      }
+    },
+    "resultKeys": [
+      "wants_refund",
+      "topic",
+      "urgency"
+    ],
+    "resultFieldTypes": {
+      "wants_refund": {
+        "confidence": "number",
+        "id": "string",
+        "label": "string",
+        "probabilities": "object"
+      },
+      "topic": {
+        "confidence": "number",
+        "id": "string",
+        "label": "string",
+        "probabilities": "object"
+      },
+      "urgency": {
+        "confidence": "number",
+        "expectedScore": "number",
+        "id": "string",
+        "label": "string",
+        "probabilities": "object"
+      }
+    },
+    "decide": {
+      "ok": true,
+      "value": "decided"
+    },
+    "decideEmpty": {
+      "ok": false,
+      "error": {
+        "name": "TypeError",
+        "message": "Failed to execute 'decide' on 'DecisionModel': DecisionModel.decide() input cannot be empty.",
+        "constructor": "TypeError"
+      }
+    },
+    "decideAborted": {
+      "ok": false,
+      "error": {
+        "name": "AbortError",
+        "message": "Failed to execute 'decide' on 'DecisionModel': signal is aborted without reason",
+        "constructor": "DOMException"
+      }
+    },
+    "destroy": {
+      "ok": true
+    },
+    "decideAfterDestroy": {
+      "ok": false,
+      "error": {
+        "name": "AbortError",
+        "message": "Failed to execute 'decide' on 'DecisionModel': signal is aborted without reason",
+        "constructor": "DOMException"
+      }
+    }
+  },
+  "finishedAt": "2026-11-21T20:33:31.276Z",
+  "browserConsole": [
+    {
+      "source": "network",
+      "level": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "source": "javascript",
+      "level": "warning",
+      "text": "The requested language options are not supported."
+    },
+    {
+      "source": "other",
+      "level": "error",
+      "text": "Unsupported DecisionModel API languages were specified, and the request was aborted. API calls must only specify supported languages to ensure successful processing and guarantee output characteristics. Please only specify supported language codes: [de, en, es, fr, ja]"
+    },
+    {
+      "source": "javascript",
+      "level": "warning",
+      "text": "The requested language options are not supported."
+    },
+    {
+      "source": "javascript",
+      "level": "warning",
+      "text": "The requested language options are not supported."
+    },
+    {
+      "source": "javascript",
+      "level": "warning",
+      "text": "The requested language options are not supported."
+    },
+    {
+      "source": "javascript",
+      "level": "warning",
+      "text": "The feature flag gating model execution was disabled."
+    }
+  ]
+}

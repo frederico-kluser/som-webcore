@@ -1,0 +1,108 @@
+{
+  "$comment": "Pinned models of the T milestone. Revisions also pinned in ROADMAP.md; sha256 of LFS files from the Hugging Face API, of small files computed at the pinned revision.",
+  "checked": "2026-11-21",
+  "models": [
+    {
+      "id": "ts-ettin-17m",
+      "repo": "typestrict/TS-Ettin-17M",
+      "revision": "026af312e41d24a1126f8d927bb6314fc2d5f592",
+      "license": "apache-2.0",
+      "files": {
+        "config.json": {
+          "size": 2648,
+          "sha256": "752ea5df70d202898dac926dafa70d33245030247cfd966b02c9c68296582099"
+        },
+        "tokenizer.json": {
+          "size": 3583508,
+          "sha256": "858fe1cd418807d6c71c01e24b6d3239a224a1e3c995472fef20841e09eab056"
+        },
+        "tokenizer_config.json": {
+          "size": 359,
+          "sha256": "161842780334b636ba99f5e8a3bf9ee9cea9bf6d70079237e63fd19017fae1c9"
+        },
+        "special_tokens_map.json": {
+          "size": 175,
+          "sha256": "0bdfb00d5ae34dbdefe382d8d4b46f9ba5a1e2c56be66a9ed32e123926037220"
+        },
+        "decision_ai.json": {
+          "size": 979,
+          "sha256": "12dd06969e75268e6b32d1a691cf9bcdd01e8d121c1f9d3f574e2b9504165f16"
+        },
+        "dinah.py": {
+          "size": 13364,
+          "sha256": "ccd83f84579f4ea62737b5816e94368be7706524b989eaadd34496ba7e7b2030"
+        },
+        "LICENSE": {
+          "size": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        "model.safetensors": {
+          "size": 67484624,
+          "sha256": "c6a6876a8e7ad234454a7fe6ad44f5935c553f90968b828446ab6d4dddf57a76",
+          "lfs": true
+        },
+        "onnx/model_int8.onnx": {
+          "size": 17180077,
+          "sha256": "15e2a7125a016951768cf9b80c8a0d88ad1c6da3fdb81ef2d58fff9cba344be5",
+          "lfs": true
+        },
+        "onnx/model_8bit.onnx": {
+          "size": 17657261,
+          "sha256": "57d6916c6f09fb4860e8c9c7925a648a10081f334dc9e0953d5011e235c5d905",
+          "lfs": true
+        }
+      }
+    },
+    {
+      "id": "ts-ettin-32m",
+      "repo": "typestrict/TS-Ettin-32M",
+      "revision": "a0f7b67dc8618365792896f46d52ec4013b899de",
+      "license": "apache-2.0",
+      "files": {
+        "config.json": {
+          "size": 2721,
+          "sha256": "132181c1cf0c3a64ee45f7e0aa0926057c102a6189747acad1f0da88fcdc7366"
+        },
+        "tokenizer.json": {
+          "size": 3583508,
+          "sha256": "858fe1cd418807d6c71c01e24b6d3239a224a1e3c995472fef20841e09eab056"
+        },
+        "tokenizer_config.json": {
+          "size": 359,
+          "sha256": "161842780334b636ba99f5e8a3bf9ee9cea9bf6d70079237e63fd19017fae1c9"
+        },
+        "special_tokens_map.json": {
+          "size": 175,
+          "sha256": "0bdfb00d5ae34dbdefe382d8d4b46f9ba5a1e2c56be66a9ed32e123926037220"
+        },
+        "decision_ai.json": {
+          "size": 979,
+          "sha256": "cd592f75a16063f249559d803090f32f67ef60604bb679e3b9fd99ce43bfe17f"
+        },
+        "dinah.py": {
+          "size": 13364,
+          "sha256": "5169240ddade218845af53fa2ecfe05e140136a10e4e748e5a06db741d00830b"
+        },
+        "LICENSE": {
+          "size": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        "model.safetensors": {
+          "size": 128161120,
+          "sha256": "457ab061d628c98022c0aac42da8101385d939677ac05f8e3350d7a04835bb05",
+          "lfs": true
+        },
+        "onnx/model_int8.onnx": {
+          "size": 32492842,
+          "sha256": "f38597af9363fef29528d69ae3879525760c74dcc2ff30341eee6a4fb2ce6b0c",
+          "lfs": true
+        },
+        "onnx/model_8bit.onnx": {
+          "size": 34047948,
+          "sha256": "68caf78630aae3e0e4236593e81ddeaf99beb7d8ce340b90687478da3475c75e",
+          "lfs": true
+        }
+      }
+    }
+  ]
+}
