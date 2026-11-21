@@ -34,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ROADMAP = ROOT / "ROADMAP.md"
 
-ID_RE = r"(?:[A-Z]-\d{2}|G\d)"
+ID_RE = r"(?:[A-Z]-\d{2}|G[0-9T])"
 ROW_RE = re.compile(r"^\|\s*`(" + ID_RE + r")`\s*\|")
 REF_RE = re.compile(r"`(" + ID_RE + r")`")
 LABEL_RE = re.compile(r"\*\*(.+?)\*\*")
@@ -43,6 +43,7 @@ LABEL_RE = re.compile(r"\*\*(.+?)\*\*")
 GROUPS = OrderedDict(
     [
         ("M0", "Marco M0 — Fundação e auditoria"),
+        ("T", "Marco T — Teste em celular e decisão do motor"),
         ("M1", "Marco M1 — Prova de conceito (v0.1.0)"),
         ("M2", "Marco M2 — Alpha"),
         ("M3", "Marco M3 — Beta"),
@@ -51,8 +52,10 @@ GROUPS = OrderedDict(
         ("M5", "Marco M5 — Pós-1.0"),
     ]
 )
-PREFIX_GROUP = {"F": "M0", "P": "M1", "A": "M2", "B": "M3", "V": "M4", "S": "S", "X": "M5"}
-GATE_GROUP = {"G0": "M0", "G1": "M1", "G2": "M2", "G3": "M3", "G4": "M4"}
+PREFIX_GROUP = {"F": "M0", "T": "T", "P": "M1", "A": "M2", "B": "M3", "V": "M4", "S": "S", "X": "M5"}
+GATE_GROUP = {"G0": "M0", "GT": "T", "G1": "M1", "G2": "M2", "G3": "M3", "G4": "M4"}
+# Ordem dos portões no tempo (GT vem entre G0 e G1; IDs nunca são renumerados).
+GATE_ORDER = ["G0", "GT", "G1", "G2", "G3", "G4"]
 
 SIZES = {"S": 1, "M": 3, "L": 8, "XL": 13, "—": 0}
 STATES = {"feito", "em curso", "a fazer"}
@@ -116,7 +119,7 @@ def validate(nodes):
     errors = []
     for node in nodes.values():
         if node.group == "?":
-            errors.append(f"`{node.id}`: prefixo desconhecido (use F, P, A, B, V, S, X ou G0–G4)")
+            errors.append(f"`{node.id}`: prefixo desconhecido (use F, T, P, A, B, V, S, X, G0–G4 ou GT)")
         if node.size not in SIZES:
             errors.append(f"`{node.id}`: tamanho inválido {node.size!r} (use S, M, L, XL ou —)")
         if node.state not in STATES:
@@ -136,7 +139,7 @@ def validate(nodes):
     if len(roots) != 1:
         errors.append(f"o grafo deve ter exatamente uma raiz; encontradas: {', '.join(roots) or 'nenhuma'}")
     # Portões encadeados: G(n) tem de ser alcançável a partir de G(n-1).
-    gates = sorted(g for g in nodes if g in GATE_GROUP)
+    gates = [g for g in GATE_ORDER if g in nodes]
     for previous, current in zip(gates, gates[1:]):
         if previous not in ancestors(nodes, current):
             errors.append(f"portão `{current}` não depende (direta ou indiretamente) de `{previous}`")
@@ -210,7 +213,7 @@ def critical_path(nodes, order):
         else:
             best[nid] = weight
             back[nid] = None
-    gates = sorted(g for g in nodes if g in GATE_GROUP)
+    gates = [g for g in GATE_ORDER if g in nodes]
     if not gates:
         return [], 0
     target = gates[-1]

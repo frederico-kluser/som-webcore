@@ -66,6 +66,8 @@
 | E-43 ⚠️ | README §12 | Maczan (arXiv 2608.08730) citado como “Measuring and Reducing WebGPU Dispatch Overhead for LLM Inference” | O título atual é “Dispatch Overhead, Not Kernel Quality: The Performance Bottleneck in Single-Stream WebGPU LLM Inference” | arXiv | Referência corrigida |
 | E-44 ❓ | Relatório 2 (Pilar 3); README §3.3, §7, §12 | Issues do ONNX Runtime #34078 (bug AMD RDNA1 em `subgroupMax`), #34087, #26790 e PR #27910 | Não foi possível abrir: as consultas ao repositório devolveram 404 em 2026-11-21 | — | O cuidado (reduzir para f32 escalar antes de operações de subgrupo) é inofensivo e fica; a citação fica marcada como não verificada |
 | E-45 ✅ | README §12 | arXiv 2604.02344, 2605.20706, 2610.18773, 2610.17321, 2607.25180; issues TVM #19342, PlayCanvas #9297, PixiJS #12163, llama.cpp #19563, wgpu #5555 e #8202, gpuweb #5505; repositórios Von, Kev, fusor-ai, webgpu-device-hung-test | Existem, com os títulos citados | API do arXiv e do GitHub | — |
+| E-46 ⚠️ | ROADMAP e README, na revisão desta mesma auditoria | O projeto como “o polyfill aberto” da Decisions API; “o motor pronto resolve” | Já existe um polyfill no npm (`built-in-ai-task-apis-polyfills`, v2.1.2, citado pelo próprio explainer). E a medição do motor pronto é de desktop (Apple M4): não há nenhuma em celular, que é a prioridade do projeto | registro do npm; cartão de `dizyann/crivo-web` | Marco T do roadmap: medir em celulares reais antes de escolher o motor |
+| E-47 ✅ | — | Peso do runtime do motor pronto | `onnxruntime-web` 1.31.1: `.wasm` de 14,8 MB (CPU) e 29,5 MB (WebGPU); 3,2 MB e 4,8 MB comprimidos | arquivos publicados no npm, 2026-11-21 | Entra no critério de download do portão `GT` |
 
 <a id="decisions-api"></a>
 ## 5. O que os relatórios não viram: a Decisions API
@@ -81,8 +83,10 @@ Os relatórios e o README tratavam a padronização como algo a propor do zero (
 | Executar pesos fornecidos pelo desenvolvedor é **não-objetivo**: fica para WebNN e WebGPU. A alternativa de bibliotecas com modelo próprio é descrita como um obstáculo operacional, com custo de download e de armazenamento duplicado por origem — “potencialmente mitigado por Cross-Origin Storage” | README do explainer |
 | Sem feedback registrado de WebKit, Mozilla, TAG ou WebML Community Group; sem texto de especificação | README do explainer |
 | Cross-Origin Storage é uma proposta em incubação no WICG, sem suporte nativo; WebNN é Candidate Recommendation Draft e não define primitivas de decisão | blog do Chrome (2026-11-10); `w3.org/TR/webnn` |
+| Já existe um polyfill: o explainer aponta para o pacote npm `built-in-ai-task-apis-polyfills` (v2.1.2), que cobre `DecisionModel` | README do explainer; registro do npm |
+| Nem o explainer nem a documentação do Edge mencionam Android ou iOS | README do explainer; documentação do Edge |
 
-**Consequência.** O projeto não propõe um padrão concorrente. Passa a ser o **polyfill aberto e a implementação de referência** dessa superfície — funcionando onde o nativo não existe —, a fonte de **evidência** sobre encoders compactos em hardware modesto e de **testes de conformidade**, e a via para **modelos abertos e próprios**, que a API nativa não cobre. Ver a [seção 1](../ROADMAP.md#valor) e a [trilha S](../ROADMAP.md#trilha-s) do roadmap.
+**Consequência.** O projeto não propõe um padrão concorrente, e não é o único a rodar essas decisões no navegador. Cobre **o que falta**, com o celular em primeiro lugar: **evidência** medida em celulares reais, **escolha automática do modelo** por aparelho, **testes de conformidade** e a via para **modelos abertos e próprios**, que a API nativa não cobre. Ver a [seção 1](../ROADMAP.md#valor) e a [trilha S](../ROADMAP.md#trilha-s) do roadmap.
 
 ---
 

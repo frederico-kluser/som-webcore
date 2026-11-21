@@ -27,7 +27,7 @@
 >
 > O objetivo desta fase é permitir que qualquer pessoa entenda, critique e implemente o motor **sem precisar dos PDFs originais**. O código nascerá nas fases seguintes do [roadmap](#roadmap).
 >
-> **O que mudou em 2026-11-21.** A pesquisa foi conferida em fontes primárias e os erros estão em [research/ERRATA.md](research/ERRATA.md). O planejamento passou a ser um DAG com critérios de aceite ([ROADMAP.md](ROADMAP.md)): primeiro uma **prova de conceito com um modelo de 17M de parâmetros** (TS-Ettin-17M); a **v1.0.0** analisa o dispositivo e recomenda o modelo ([seção 4.5](#analise-dispositivo)). As seções 2, 3 e 6 descrevem a **arquitetura-alvo da v1.0.0**; a PoC implementa um subconjunto deliberadamente simples.
+> **O que mudou em 2026-11-21.** A pesquisa foi conferida em fontes primárias e os erros estão em [research/ERRATA.md](research/ERRATA.md). O planejamento passou a ser um DAG com critérios de aceite ([ROADMAP.md](ROADMAP.md)): primeiro um **teste em celulares reais**, que decide se o motor será um pronto ou um próprio ([marco T](ROADMAP.md#mt)); depois uma **prova de conceito com um modelo de 17M de parâmetros** (TS-Ettin-17M); a **v1.0.0** analisa o dispositivo e recomenda o modelo ([seção 4.5](#analise-dispositivo)). As seções 2, 3 e 6 descrevem a **arquitetura-alvo da v1.0.0**; a PoC implementa um subconjunto deliberadamente simples.
 
 ---
 
@@ -98,7 +98,7 @@
 | **Qual o alvo de latência?** | **[ALVO, ainda não medido]** **< 50 ms** por decisão em mobile para modelos de 150M em sequências de até ~240 tokens; 15–40 ms em desktop; modelos de 380–395M ficam em 80–88 tokens no mesmo alvo de p95. |
 | **Como?** | Streaming direto OPFS → VRAM, embeddings fora da GPU, quantização Q8_0/Q4_0, 6 shaders WGSL, calibração in-shader e **micro-readback de 64–256 bytes**. |
 | **Estado?** | **RFC/blueprint auditado.** Pesquisa conferida ([errata](research/ERRATA.md)) e plano em DAG ([ROADMAP.md](ROADMAP.md)). Código ainda não escrito. |
-| **Por onde começa?** | Por uma **prova de conceito** com um modelo de 17M de parâmetros (TS-Ettin-17M, Apache-2.0), medida contra o ONNX Runtime Web. |
+| **Por onde começa?** | Por um **teste em celulares reais** ([marco T do roadmap](ROADMAP.md#mt)): mede-se um motor pronto com um modelo de 17M antes de decidir se vale construir um motor próprio. **O celular é a prioridade.** |
 | **E a v1.0.0?** | O SDK **analisa o dispositivo** e baixa o modelo mais forte que couber no orçamento declarado — de 17M a 150M no catálogo padrão ([seção 4.5](#analise-dispositivo)). |
 | **Licença?** | **Apache-2.0** para o código/documentação. Os pesos dos modelos têm licenças próprias. |
 
@@ -150,7 +150,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 
 - **Custo marginal zero.** Sites pessoais, ONGs, projetos sem monetização e pequenos negócios devem poder usar inteligência local sem faturas de nuvem.
 - **Operação 100% offline (local-first).** Uma vez que o site e o modelo são armazenados no navegador, a inteligência funciona no meio do oceano ou em modo avião, com privacidade absoluta. **Ressalva honesta:** isso vale quando `privacy: 'local-only'`; o fallback remoto é opt-in, emite evento e quebra a promessa — nunca é silencioso.
-- **Um catalisador para a web.** A decisão em passada única deve ser uma **API padrão embutida no navegador**, com acesso às NPUs e aos aceleradores do silício. Essa proposta já existe — a Decisions API, do time de Built-in AI do Chrome, com protótipo em Chromium e prévia no Edge — e o nosso papel é fazê-la dar certo em toda parte: polyfill aberto, evidência medida e testes de conformidade ([1.4](#valor)).
+- **Um catalisador para a web.** A decisão em passada única deve ser uma **API padrão embutida no navegador**, com acesso às NPUs e aos aceleradores do silício. Essa proposta já existe — a Decisions API, do time de Built-in AI do Chrome, com protótipo em Chromium e prévia no Edge — e o nosso papel é cobrir o que falta, com o celular em primeiro lugar: evidência medida, escolha automática do modelo por aparelho e testes de conformidade ([1.4](#valor)).
 - **Engenharia honesta.** Nada de “AGI no browser”. O escopo é deliberadamente estreito: decisões tipadas, modelos compactos, uma passada, latência previsível. O que não couber nesse contrato fica de fora.
 
 <a id="nao-e"></a>
@@ -163,7 +163,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 | Um **formato binário aberto** (`.sombin`) e um conjunto de kernels WGSL. | Um fork do llama.cpp, do ONNX Runtime ou do transformers.js. |
 | Um **documento de arquitetura** que registra evidências, riscos e números. | Uma promessa de que todos os números dos relatórios foram reproduzidos. |
 | Um projeto **Apache-2.0** que aceita contribuições. | Um projeto afiliado à TypeSafe AI, Liquid AI, LightOn, JHU ou Convai. |
-| Um **polyfill e implementação de referência** para a decisão local na web. | O primeiro nem o único runtime de decisão no navegador (ver [5.6](#comparativo)), nem um padrão concorrente da Decisions API. |
+| Uma biblioteca para a decisão local **onde o nativo não chega** — com o celular em primeiro lugar. | O primeiro nem o único: já existem um polyfill da Decisions API e o `crivo-web` (ver [5.6](#comparativo)); também não é um padrão concorrente. |
 
 <a id="valor"></a>
 ### 1.4 Nosso valor: decisão local como padrão da web
@@ -174,7 +174,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 |---|---|
 | **Padrão antes de produto** | A API pública acompanha a proposta da Decisions API e tem forma de polyfill; nada prende ninguém ao nosso motor ou ao nosso formato. |
 | **Para todo programador** | Um import, uma chamada, resposta tipada; dispositivo, modelo e backend ficam escondidos, mas inspecionáveis. |
-| **Para todo dispositivo** | Do celular de entrada ao desktop com GPU dedicada, com degradação explícita. |
+| **Celular primeiro** | O celular é a prioridade: é onde a API nativa não está prevista e onde menos se mediu. Do aparelho de entrada ao desktop, com degradação explícita. |
 | **Evidência antes de afirmação** | Todo número é rotulado como medido, reportado, alvo ou hipótese; erros viram [errata](research/ERRATA.md). |
 | **Privacidade por construção** | O estado do usuário não sai do dispositivo; sem telemetria. |
 | **Abertura real** | Apache-2.0, [governança](GOVERNANCE.md) pública, catálogo de modelos com licença declarada. |
@@ -186,7 +186,7 @@ O JEV é o contrato de decisão que dá forma a essa ideia. Em vez de “gerar u
 <a id="arquitetura"></a>
 ## 2. A arquitetura em uma página
 
-> **Arquitetura-alvo da v1.0.0.** Os diagramas e a especificação das seções 2, 3 e 6 descrevem o destino. A prova de conceito implementa um subconjunto simples — kernels em f32 sem fusão, cabeça e calibração no host, um único buffer de pesos, sem máscara por opção (ver [ROADMAP.md](ROADMAP.md#m1)). Cada otimização descrita aqui só entra depois de medida contra o baseline.
+> **Arquitetura-alvo de um motor próprio — condicionada ao marco T.** Os diagramas e a especificação das seções 2, 3 e 6 descrevem o motor próprio. Ele só será construído se o teste em celulares reais mostrar que um motor pronto não serve ([ROADMAP.md](ROADMAP.md#mt)). A prova de conceito implementa um subconjunto simples — kernels em f32 sem fusão, cabeça e calibração no host, um único buffer de pesos, sem máscara por opção (ver [ROADMAP.md](ROADMAP.md#m1)). Cada otimização descrita aqui só entra depois de medida contra o baseline.
 
 <a id="diagrama"></a>
 ### 2.1 Diagrama de camadas
@@ -1072,6 +1072,8 @@ Q8_0:  34 B /  32 pesos = 1,0625 B/param
 
 Duas leituras: os “~11 s de cold start” atribuídos ao ONNX Runtime vêm de um LLM e não valem para encoders de decisão; e os alvos da primeira linha do comparativo acima só passam a ser resultado quando o portão `G1` do [roadmap](ROADMAP.md#g1) os medir na mesma máquina que o baseline.
 
+**E no celular?** Não há medição nenhuma — a tabela acima é de um Apple M4. O motor pronto é genérico: só o runtime custa 3,2 MB (CPU) ou 4,8 MB (WebGPU) comprimidos, 14,8 MB e 29,5 MB para compilar **[MEDIDO nos arquivos publicados do `onnxruntime-web` 1.31.1]**, e em WebGPU exige pesos em precisão cheia. Como o celular é a prioridade do projeto, o primeiro passo é medir em celulares reais ([marco T](ROADMAP.md#mt)).
+
 <a id="blueprint"></a>
 ## 6. Blueprint de implementação
 
@@ -1889,7 +1891,8 @@ O planejamento completo — atividades em DAG, critérios de aceite, portões e 
 | Marco | Versão | O que prova |
 |---|---|---|
 | **M0 — Fundação e auditoria** | documentação | Plano e pesquisa conferidos em fontes primárias ([errata](research/ERRATA.md)). **Concluído em 2026-11-21.** |
-| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, medido contra o ONNX Runtime Web. Termina num portão de seguir, iterar ou pivotar. |
+| **Marco T — Teste em celular** | — | Em celulares reais, um motor pronto serve? A resposta decide se o motor será o pronto ou um próprio. **É o próximo passo.** |
+| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, sobre o motor que o teste escolher. Suspenso até o marco T. |
 | **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, fallback CPU em Wasm SIMD, recuperação de falhas, três motores de navegador, pacote npm alpha. |
 | **M3 — Beta** | `v0.5`–`v0.9` | Escada de modelos (32M, 68M, 150M), análise do dispositivo e escolha automática ([4.5](#analise-dispositivo)), API candidata. |
 | **M4 — v1.0.0** | `v1.0.0` | API estável, catálogo auditado, `model: 'auto'` nos três motores. |
@@ -2065,7 +2068,7 @@ O `typestrict/TS-Ettin-17M` (Apache-2.0): 16,9M de parâmetros, dos quais 76% s�
 Carrega a semente de 17M, lê os sinais padrão do dispositivo, roda um microbenchmark e escolhe o degrau mais forte que cabe no orçamento de latência e de download declarado pelo desenvolvedor — ver [4.5](#analise-dispositivo).
 
 **23. O navegador não vai ter isso nativamente?**
-É o objetivo. Existe a proposta da Decisions API, com protótipo em Chromium e prévia no Edge. Até ela chegar a todos os motores e dispositivos, este projeto é o polyfill aberto dessa capacidade — e continua útil depois, para quem precisa escolher ou trazer o próprio modelo.
+É o objetivo. Existe a proposta da Decisions API, com protótipo em Chromium e prévia no Edge. Mas nem a proposta nem a prévia falam de celular, e já existe um polyfill dela. Este projeto cobre o que falta — o celular em primeiro lugar, a escolha automática do modelo por aparelho — e continua útil depois, para quem precisa escolher ou trazer o próprio modelo.
 
 ---
 
