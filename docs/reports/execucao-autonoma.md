@@ -44,6 +44,14 @@ Feito: `T-05`, `T-06`, `T-07` (PR #9) e `S-01`. Nenhuma execução da página no
 4. `T-01` e `T-03`: `bash bench/spike-mobile/matrix-desktop.sh` (todas as variantes no Chrome 157 e a página sobre o nativo no Canary 160), uma execução com `debug=1` para versionar a identidade dos tokens, e a captura da superfície do polyfill (`surface.html?engine=ort-wasm&variant=8bit`) para `reference/compare_surface.py`.
 5. Fechar `DT-02` e `DT-01` (ADRs 0001 e 0002 passam a aceitas; `T-02` descartada), depois `T-10`, `T-04` e `GT`.
 
+## Retomada pelo Mac mini (pedido do dono, 2026-11-21)
+
+Depois do relatório acima, o dono pediu para continuar o projeto **testando pelo Mac mini**, com o Safari do simulador de iPhone. Isso segue também a regra da skill `macmini`: desenvolver aqui e rodar e testar lá, com tudo no HD externo. O servidor e o emulador encerrados por falta de memória **neste** computador continuam parados; a execução passa a ser no Mac.
+
+- **Verificado no Mac** (SSH sem interação): macOS 27.2, Xcode 27.1, runtime **iOS 27.0** (não há iOS 26 instalado; o Safari do simulador é da linha 27), Safari 27.2 e Chrome no macOS, Node 24 e Python 3.14; doctor da skill verde, menos o G4 (root por chave), que não é necessário; 61 GiB livres no disco interno.
+- **Plano e procedimento:** [`bench/spike-mobile/MACMINI.md`](../../bench/spike-mobile/MACMINI.md) — clonar no HD externo, modelos com hash conferido, servidor no Mac, um simulador dedicado ao projeto (sem tocar no `UltraWatch iPhone`, ligado por outro projeto), um executor que apaga e religa o aparelho antes de cada execução, a sonda e depois a matriz de motores.
+- **Onde entra no roadmap:** complementa a `T-08` com o motor WebKit no iOS; não substitui a `T-02` (iPhone real). Latência do simulador é indicativa (roda no Apple M1).
+
 ## Relatório final desta execução (2026-11-21)
 
 ### O que foi feito
