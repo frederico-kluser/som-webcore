@@ -68,3 +68,4 @@ python bench/spike-mobile/reference/check_shape.py bench/results/<execução>.js
 | [`probe.html`](probe.html) · [`env.js`](env.js) | sonda do ambiente: WebGPU, WebAssembly, isolamento de origem |
 | [`run-desktop.mjs`](run-desktop.mjs) | abre uma página no Chrome de desktop com perfil próprio (`%TEMP%\som-decisions-<navegador>`) e espera o resultado |
 | [`run-android.mjs`](run-android.mjs) · [`EMULADOR.md`](EMULADOR.md) | o mesmo no Chrome do emulador Android, com amostras de memória |
+| [`MACMINI.md`](MACMINI.md) | plano e procedimento no Mac mini: Safari do simulador de iPhone e do macOS |
