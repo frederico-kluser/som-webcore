@@ -63,11 +63,11 @@ som-webcore/
 ├── conformance/                     vetores e executor públicos, neutros de motor    B-09
 │
 ├── bench/
-│   ├── spike-mobile/                página de teste do marco T e tipos da API        T-01
+│   ├── spike-mobile/                ✅ página de teste do marco T e tipos da API     T-05
 │   ├── harness/                     página e scripts de medição                      P-11
 │   ├── baseline-ort/                o mesmo modelo no ONNX Runtime Web               P-12
 │   ├── schema/report.schema.json    formato dos relatórios                           P-11
-│   └── results/                     relatórios JSON por dispositivo e data           P-14
+│   └── results/                     ✅ relatórios JSON por dispositivo e data        T-07
 │
 ├── examples/
 │   ├── decision-demo/               demo estática publicada                          P-13
@@ -78,9 +78,9 @@ som-webcore/
 │   ├── STRUCTURE.md                 ✅ este arquivo
 │   ├── adr/                         registros de decisão de arquitetura              P-01
 │   ├── rfcs/                        propostas de superfície pública e de formato     P-02
-│   ├── spec/                        especificações normativas, em inglês             T-05
+│   ├── spec/                        ✅ especificações normativas, em inglês          T-05
 │   ├── standards/                   explainer, prior art e evidências, em inglês     S-01
-│   ├── reports/                     relatórios de marco e de portão                  P-14
+│   ├── reports/                     ✅ relatórios de marco e de portão               T-06
 │   ├── guides/                      guias de uso e de segurança                      A-09
 │   ├── assets/                      ✅ banner e imagens da documentação
 │   └── figures/                     ✅ figuras dos relatórios de pesquisa

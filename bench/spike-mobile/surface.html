@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DecisionModel surface capture</title>
+  <style>body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; } pre { white-space: pre-wrap; font-size: 12px; }</style>
+</head>
+<body>
+  <h1>DecisionModel surface capture</h1>
+  <p>Enumerates the native <code>DecisionModel</code> surface and its validation behaviour, then posts the JSON to the local server.
+     Query: <code>?name=&lt;result file&gt;</code>, <code>&amp;activate=1</code> to wait for a click before <code>create()</code>.</p>
+  <button id="go" type="button">create() with user activation</button>
+  <pre id="out">running…</pre>
+  <script type="module" src="surface.js"></script>
+</body>
+</html>

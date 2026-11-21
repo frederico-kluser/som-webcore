@@ -1,0 +1,105 @@
+{
+  "kind": "environment-probe",
+  "startedAt": "2026-11-21T20:37:26.274Z",
+  "page": "http://localhost:8377/probe.html?name=2026-11-21-emulador-probe-repeticao",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "language": "en-US",
+    "hardwareConcurrency": 4,
+    "deviceMemory": 4,
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "screen": {
+      "width": 412,
+      "height": 915,
+      "devicePixelRatio": 2.625
+    },
+    "connection": {
+      "effectiveType": "4g",
+      "saveData": false
+    },
+    "hasDecisionModel": false,
+    "wasm": {
+      "simd": true,
+      "threads": false,
+      "relaxedSimd": true,
+      "jspi": false,
+      "sharedArrayBuffer": false
+    },
+    "float16Array": false,
+    "performanceMemory": {
+      "jsHeapSizeLimit": 1070000000
+    },
+    "measureUserAgentSpecificMemory": false,
+    "userAgentData": {
+      "architecture": "",
+      "brands": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133"
+        }
+      ],
+      "fullVersionList": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99.0.0.0"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133.0.6943.137"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133.0.6943.137"
+        }
+      ],
+      "mobile": true,
+      "model": "sdk_gphone64_x86_64",
+      "platform": "Android",
+      "platformVersion": "16.0.0"
+    },
+    "webgpu": {
+      "hasNavigatorGpu": true,
+      "preferredCanvasFormat": "rgba8unorm",
+      "wgslLanguageFeatures": [],
+      "high-performance": {
+        "adapter": false
+      },
+      "low-power": {
+        "adapter": false
+      }
+    }
+  },
+  "finishedAt": "2026-11-21T20:37:26.302Z",
+  "device": {
+    "serial": "emulator-5554",
+    "fingerprint": "google/sdk_gphone64_x86_64/emu64xa:16/BE2A.250530.026.D1/13818094:user/release-keys",
+    "androidRelease": "16",
+    "sdk": "36",
+    "model": "sdk_gphone64_x86_64",
+    "emulatorGpuMode": null,
+    "vulkan": "ranchu",
+    "chrome": "133.0.6943.137",
+    "chromeFlags": ""
+  },
+  "androidMemory": {
+    "method": "dumpsys meminfo --package com.android.chrome (Total PSS by process), bytes",
+    "samples": [
+      {
+        "t": 0,
+        "pss": {
+          "com.android.chrome_zygote#3614": 4614144
+        }
+      }
+    ]
+  }
+}

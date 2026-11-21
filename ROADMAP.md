@@ -64,8 +64,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 80 (4 feitos) · **arestas:** 124.
-- **Esforço relativo:** 19/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 80 (7 feitos) · **arestas:** 124.
+- **Esforço relativo:** 22/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro (117 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-08` → `DT-01` → `T-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -228,7 +228,7 @@ if (status === "available" || status === "downloadable") {
 | Aspecto | Regra |
 |---|---|
 | Ponto de entrada | `DecisionModel`, com `availability()`, `create()`, `decide()` e `destroy()` — mesmos nomes, mesmos argumentos, mesmos valores de retorno |
-| Perguntas | `boolean`, `choice` e `score`, com `id`, `prompt` e `options` (`label`, `description`). Limites da implementação: até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções |
+| Perguntas | `boolean`, `choice` e `score`, com `id`, `prompt` e `options` (`label`, `description`). Limites da implementação: até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 9 níveis no Chrome 157 e 2 a 11 no 160; `boolean` sem opções (conferido no código-fonte e em execução, `T-05`) |
 | Resultado | objeto indexado pelo `id` da pergunta, com `label`, `probabilities`, `confidence` e, em `score`, `expectedScore` |
 | Nomes do JEV | `som.decide`, `som.eval` e `noul` saem da superfície pública; `noul` é `boolean` |
 | O que é só nosso | escolha do modelo, orçamento de download, política de licença e diagnóstico ficam **fora** da superfície padrão, num ponto de configuração separado, que a aplicação pode remover sem mudar nenhuma chamada |
@@ -249,11 +249,11 @@ O que foi conferido na máquina de desenvolvimento em 2026-11-21, antes de qualq
 | Chrome estável | 157.0.8103.79 | Com `chrome://flags/#decisions-api` (ou `--enable-features=AIDecisionModelAPI`) expõe `DecisionModel`; sem a flag, não |
 | Chrome Canary | 160.0.8174.2, instalado nesta revisão | Mesmo comportamento; o binário cita dois backends para a API: `embedding_gemma_v1` e `language_model` |
 | Superfície observada | estáticos `availability` e `create`; na instância `decide`, `destroy` e `preference` | `preference` não está no explainer: a referência é a implementação (`T-05`) |
-| Limites lidos no binário | até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções | Entram na especificação e nos testes de conformidade |
+| Limites lidos no binário | até 16 perguntas por esquema; `choice` com 2 a 26 opções; `score` com 2 a 11 níveis; `boolean` sem opções | Valem para o Canary 160; no estável 157 o `score` vai de 2 a 9 níveis (`T-05`, [especificação](docs/spec/decisions-api-surface.md)) |
 | Modelo embutido | `availability()` devolveu `unavailable` num perfil novo, em modo headless | Ainda não se sabe se fica disponível num perfil real; se não ficar, bifurcação `DT-02` |
 | Edge estável | 158.0.4370.33; o binário contém a mesma API | Não testado em execução; o Edge Canary não está instalado |
-| Emulador Android | aceleração WHPX utilizável; aparelhos virtuais `jev_playstore_36`, `jev_google_36` e `jev_atd_36` (Android 36, x86_64) | Usar o `jev_playstore_36`, que tem Play Store para atualizar o Chrome |
-| GPU do emulador | `hw.gpu.mode=swiftshader_indirect` — por software | WebGPU provavelmente indisponível no Chrome do emulador; testar também com `-gpu host` (`T-07`) |
+| Emulador Android | aceleração WHPX utilizável; aparelhos virtuais `jev_playstore_36`, `jev_google_36` e `jev_atd_36` (Android 36, x86_64) | Usar o `jev_playstore_36`. Na `T-07` a imagem de sistema do Android 36 estava ausente e foi reinstalada; o Chrome é o 133 da imagem, porque a Play Store pede uma conta Google que o emulador não tem ([EMULADOR.md](bench/spike-mobile/EMULADOR.md)) |
+| GPU do emulador | `hw.gpu.mode=swiftshader_indirect` — por software | **[MEDIDO na `T-07`]** sem WebGPU no Chrome do emulador: `requestAdapter()` devolve `null` com GPU por software e com `-gpu host`, com e sem `--enable-unsafe-webgpu` |
 | Node, npm e bun | 22.23.1, 10.9.8 e 1.4.4 | Suficiente para a página de teste; TypeScript via `npx` |
 | Python | 3.12.10, com `.venv` na raiz: torch 2.15.0 (CPU), transformers 5.24.0, onnxruntime 1.32.0 | Pronto para gerar as respostas de referência (`T-09`) |
 | Rust | 1.99.1 | Só será usado se o portão `GT` escolher um motor nosso |
@@ -307,11 +307,13 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 
 **Por que este marco vem primeiro.** O celular é a prioridade, e é onde não temos dados: os 12,6 ms do motor existente foram medidos num Apple M4 **[REPORTADO]**; muitos celulares não têm WebGPU; só o runtime do motor existente custa 3,2 MB (CPU) ou 4,8 MB (WebGPU) comprimidos **[MEDIDO nos arquivos publicados do `onnxruntime-web` 1.31.1, em 2026-11-21]**, e em WebGPU ele só atingiu paridade com pesos em precisão cheia **[REPORTADO pelo `crivo-web`]**; e nem o explainer nem a documentação do Edge mencionam Android ou iOS.
 
+**Modelos fixados do marco T.** `typestrict/TS-Ettin-17M` na revisão `026af312e41d24a1126f8d927bb6314fc2d5f592` (a da [seção 6.1](#m1)) e `typestrict/TS-Ettin-32M` na revisão `a0f7b67dc8618365792896f46d52ec4013b899de` (Apache-2.0, conferida em 2026-11-21). O tamanho e o SHA-256 de cada arquivo estão em [`bench/spike-mobile/models.json`](bench/spike-mobile/models.json); `bench/spike-mobile/fetch-models.py` baixa só dessas revisões e recusa arquivo com hash diferente.
+
 | ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
 |---|---|---|---|---|:---:|---|
-| `T-05` | **Padrão de chamada idêntico** — fixar a superfície da Decisions API em uma especificação e em declarações de tipos | `G0` | `docs/spec/decisions-api-surface.md`, `bench/spike-mobile/decision-model.d.ts` | cada membro da API do explainer está nas declarações, com o commit de origem; nenhum nome próprio do projeto na superfície pública | S | a fazer |
-| `T-06` | **Levantamento dos motores leves** — listar os motores que já rodam modelos de decisão no navegador e escolher os candidatos | `G0` | `docs/reports/motores-existentes.md` | por candidato: licença, tamanho do runtime, backends, modelos e precisões aceitos, estado de manutenção, com fonte primária e data; 1 ou 2 candidatos escolhidos, com o motivo | S | a fazer |
-| `T-07` | **Emulador Android pronto** — subir um aparelho virtual com Chrome pela skill `/android-agent-skill` e deixar reproduzível como servir a página e recolher os resultados | `G0` | `bench/spike-mobile/EMULADOR.md` | o Chrome do emulador abre uma página servida pelo computador e devolve um arquivo de resultado; versões registradas; presença ou ausência de WebGPU registrada | S | a fazer |
+| `T-05` | **Padrão de chamada idêntico** — fixar a superfície da Decisions API em uma especificação e em declarações de tipos | `G0` | `docs/spec/decisions-api-surface.md`, `bench/spike-mobile/decision-model.d.ts` | cada membro da API do explainer está nas declarações, com o commit de origem; nenhum nome próprio do projeto na superfície pública | S | feito |
+| `T-06` | **Levantamento dos motores leves** — listar os motores que já rodam modelos de decisão no navegador e escolher os candidatos | `G0` | `docs/reports/motores-existentes.md` | por candidato: licença, tamanho do runtime, backends, modelos e precisões aceitos, estado de manutenção, com fonte primária e data; 1 ou 2 candidatos escolhidos, com o motivo | S | feito |
+| `T-07` | **Emulador Android pronto** — subir um aparelho virtual com Chrome pela skill `/android-agent-skill` e deixar reproduzível como servir a página e recolher os resultados | `G0` | `bench/spike-mobile/EMULADOR.md` | o Chrome do emulador abre uma página servida pelo computador e devolve um arquivo de resultado; versões registradas; presença ou ausência de WebGPU registrada | S | feito |
 | `T-01` | **Página de teste** — página estática que usa só a API de `T-05` e faz as mesmas perguntas, em português e em inglês, a cada motor candidato | `T-05`, `T-06` | `bench/spike-mobile/` | registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados, memória e as respostas; exporta um JSON; o que não rodar fica registrado como resultado | S | a fazer |
 | `T-08` | **Medição no emulador** — rodar a página no Chrome do emulador Android, em Wasm e, se houver, em WebGPU | `T-01`, `T-07` | `bench/results/` (arquivos marcados como emulador) | modelos de 17M e de 32M; cada medição repetida duas vezes; nenhuma latência de emulador apresentada como latência de celular | S | a fazer |
 | `T-09` | **Teste do motor existente** — conferir se responde certo e aguenta: respostas contra a referência do modelo, forma da API e 200 decisões seguidas | `T-01` | seção do relatório, `bench/results/` | mesmas respostas da referência, dentro da tolerância da variante; forma do resultado idêntica à de `T-05`; nenhuma falha nem crescimento de memória nas 200 decisões | S | a fazer |
@@ -327,9 +329,9 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 ```mermaid
 flowchart LR
     G0(["G0"]):::ext
-    T05["T-05 · Padrão de chamada idêntico"]:::todo
-    T06["T-06 · Levantamento dos motores leves"]:::todo
-    T07["T-07 · Emulador Android pronto"]:::todo
+    T05["T-05 · Padrão de chamada idêntico"]:::done
+    T06["T-06 · Levantamento dos motores leves"]:::done
+    T07["T-07 · Emulador Android pronto"]:::done
     T01["T-01 · Página de teste"]:::todo
     T08["T-08 · Medição no emulador"]:::todo
     T09["T-09 · Teste do motor existente"]:::todo
