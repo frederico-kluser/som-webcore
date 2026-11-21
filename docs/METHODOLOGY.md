@@ -205,7 +205,7 @@ Dúvida sobre qual usar: se a mudança pode quebrar o código de quem usa o SDK 
 ## 10. Portões e gestão de risco
 
 - Cada marco termina num **portão** com critérios escritos antes de o trabalho começar. Critérios não se afrouxam para caber no resultado; se estiverem errados, mudam por ADR **antes** da medição.
-- Um portão conclui com **seguir**, **iterar** (uma rodada com prazo fixo) ou **pivotar**. O portão `G1` tem o pivô mais importante do projeto: se um motor próprio não se justificar contra o baseline, o projeto continua — com contrato, catálogo, análise do dispositivo e padronização — sobre um motor de terceiros.
+- Um portão conclui com **seguir**, **iterar** (uma rodada com prazo fixo) ou **pivotar**. A decisão mais importante vem primeiro: o portão `GT` escolhe, com medições em celulares reais, entre um motor pronto e um motor próprio. Se o motor próprio for construído, o portão `G1` ainda pode mandar pivotar: sem ganho contra o baseline, o projeto continua — com contrato, catálogo, análise do dispositivo e padronização — sobre um motor de terceiros.
 - **Investigação com prazo fixo (*spike*).** Pergunta técnica em aberto vira uma investigação de no máximo 3 dias, cujo entregável é uma resposta escrita, não código de produção.
 - Riscos técnicos vivem na seção 7 do README; riscos do plano, na seção 13 do roadmap. Um risco que se materializa vira issue com o rótulo `risco`.
 

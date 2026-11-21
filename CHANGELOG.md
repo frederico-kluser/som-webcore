@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Celular primeiro:** novo marco T no roadmap — um teste em celulares reais e o portão `GT` —
+  antes de qualquer código de produto; o marco do motor próprio fica suspenso até lá. Corrigida a
+  afirmação de que o projeto seria “o polyfill” da Decisions API: já existe um.
 - **Padronização realinhada:** já existe a proposta da Decisions API (`window.DecisionModel`); o
   projeto passa a posicionar-se como polyfill aberto, fonte de evidência e de testes de
   conformidade, em vez de propor um padrão concorrente.

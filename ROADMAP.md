@@ -1,10 +1,11 @@
 # Roadmap — SOM WebCore
 
 > **Revisão de 2026-11-21.** Este documento é a fonte da verdade do planejamento e substitui o roadmap por semanas que existia na seção 8 do README.
+> **Celular primeiro.** O plano começa por um teste em celulares reais ([marco T](#mt)); o motor próprio fica suspenso até esse teste dizer se ele é necessário.
 > As atividades formam um **grafo acíclico dirigido (DAG)**: cada uma declara de quais depende, o que entrega e como se prova que terminou.
 > As tabelas são a fonte; os grafos Mermaid, as ondas de execução e o caminho crítico são **gerados** por `python3 scripts/roadmap.py render` e validados na CI.
 
-**Atalhos:** [Valor](#valor) · [Como ler](#como-ler) · [Marcos](#marcos) · [O que mudou no plano](#correcoes) · [M0](#m0) · [M1 — PoC](#m1) · [M2 — Alpha](#m2) · [M3 — Beta](#m3) · [M4 — v1.0.0](#m4) · [Trilha S — Padronização](#trilha-s) · [M5](#m5) · [Critérios globais](#dod) · [Riscos](#riscos-do-plano) · [Fora do roadmap](#fora) · [Manutenção](#manutencao)
+**Atalhos:** [Valor](#valor) · [Como ler](#como-ler) · [Marcos](#marcos) · [O que mudou no plano](#correcoes) · [M0](#m0) · [T — Teste em celular](#mt) · [M1 — PoC](#m1) · [M2 — Alpha](#m2) · [M3 — Beta](#m3) · [M4 — v1.0.0](#m4) · [Trilha S — Padronização](#trilha-s) · [M5](#m5) · [Critérios globais](#dod) · [Riscos](#riscos-do-plano) · [Fora do roadmap](#fora) · [Manutenção](#manutencao)
 
 Documentos irmãos: [metodologia](docs/METHODOLOGY.md) · [estrutura do repositório](docs/STRUCTURE.md) · [como contribuir](CONTRIBUTING.md) · [governança](GOVERNANCE.md) · [errata da pesquisa](research/ERRATA.md).
 
@@ -23,19 +24,19 @@ O sucesso deste projeto é medido pela sua **dispensabilidade**: no dia em que `
 |---|---|
 | **Padrão antes de produto** | Toda superfície pública é desenhada como candidata a padrão: pequena, tipada, detectável e com forma de polyfill. Nada na API prende alguém ao nosso motor ou ao nosso formato. |
 | **Para todo programador** | Um import, uma chamada, resposta tipada, padrões sensatos. Dispositivo, modelo e backend ficam escondidos — mas inspecionáveis. |
-| **Para todo dispositivo** | Do celular de entrada ao desktop com GPU dedicada, com degradação explícita e honesta — nunca silenciosa. |
+| **Celular primeiro** | O celular é a prioridade: é onde a API nativa não está prevista e onde menos se mediu. Do aparelho de entrada ao desktop, com degradação explícita e honesta — nunca silenciosa. |
 | **Evidência antes de afirmação** | Todo número é rotulado como medido, reportado, alvo ou hipótese. Erros de pesquisa viram errata pública, não rodapé. |
 | **Privacidade por construção** | O estado do usuário não sai do dispositivo. Sem telemetria. Rede só para baixar pesos, e isso é visível. |
 | **Abertura real** | Apache-2.0, governança pública, catálogo de modelos com licença declarada, neutralidade em relação a fornecedores. |
 
 **Não estamos sozinhos — e isso muda o nosso papel.** Desde 30 de setembro de 2026 existe um explainer público da **Decisions API** (`window.DecisionModel`), escrito pelo time de Built-in AI do Chrome: perguntas tipadas `boolean`, `choice` e `score`, respondidas em passada única, com probabilidades por opção — a mesma tríade do JEV. Há um protótipo em Chromium e uma prévia no Edge Canary, atrás de flag. É um rascunho inicial: não está aprovado para lançamento, não tem posição de WebKit nem de Mozilla, e trata pesos fornecidos pelo desenvolvedor como não-objetivo (fontes e datas em [research/ERRATA.md](research/ERRATA.md#decisions-api)).
 
-Portanto não vamos propor um padrão concorrente. O nosso papel é fazer esse padrão **dar certo em toda parte**:
+Portanto não vamos propor um padrão concorrente — nem fingir que somos os únicos: já existem um polyfill dessa API no npm e uma biblioteca (`crivo-web`) que roda esses modelos no navegador. O nosso papel é cobrir **o que falta**, com o celular em primeiro lugar:
 
-- **Polyfill hoje.** A mesma superfície de API funcionando em Safari, Firefox e em qualquer dispositivo onde o modelo embutido não exista ou não caiba — e delegando para o nativo onde ele existir.
-- **Evidência.** Medições públicas de que encoders compactos (17M a 150M) entregam essas decisões em hardware modesto, o que o explainer ainda lista como pergunta em aberto.
-- **Conformidade.** Vetores de teste neutros, para que “decidir” signifique a mesma coisa em qualquer motor.
-- **Abertura.** Catálogo de modelos com licença declarada e a possibilidade de trazer o próprio modelo — o que a API nativa, por desenho, não oferece.
+- **Celular primeiro.** Nem a proposta nem a prévia do Edge falam de Android ou de iOS, muitos celulares não têm WebGPU, e o motor genérico que as bibliotecas usam não foi feito para eles. É onde a decisão local mais faz falta e onde menos se mediu.
+- **Evidência.** Medições públicas em celulares reais: o que funciona, quanto pesa, quanto demora.
+- **Escolha automática do modelo** para cada aparelho, com licença declarada e atenção ao português.
+- **Conformidade.** Vetores de teste neutros e a mesma forma de API da proposta, para que o código de quem usa não mude quando o nativo chegar.
 
 **Por que isso precisa virar padrão, e não só biblioteca.** Uma biblioteca resolve o problema de um site; só o navegador resolve o da web:
 
@@ -50,8 +51,8 @@ Portanto não vamos propor um padrão concorrente. O nosso papel é fazer esse p
 ## 2. Como ler este roadmap
 
 - **Atividade** = um nó do DAG. Tem um ID estável, dependências, um entregável e um critério de aceite verificável. Nenhuma atividade começa antes de todas as suas dependências estarem feitas.
-- **Portão** (`G0`…`G4`) = um nó de decisão no fim de cada marco. Fecha-se com evidência contra uma lista de critérios e fica registrado numa ADR. Um portão pode mandar **seguir**, **iterar** ou **pivotar**.
-- **Prefixos:** `F` fundação · `P` prova de conceito · `A` alpha · `B` beta · `V` v1.0.0 · `S` padronização · `X` pós-1.0.
+- **Portão** (`G0`, `GT`, `G1`…`G4`) = um nó de decisão no fim de cada marco. Fecha-se com evidência contra uma lista de critérios e fica registrado numa ADR. Um portão pode mandar **seguir**, **iterar** ou **pivotar**.
+- **Prefixos:** `F` fundação · `T` teste em celular · `P` prova de conceito · `A` alpha · `B` beta · `V` v1.0.0 · `S` padronização · `X` pós-1.0.
 - **Tamanho** (esforço ideal de uma pessoa): `S` até 2 dias · `M` até 1 semana · `L` até 3 semanas · `XL` mais que isso — tem de ser dividida antes de começar. Tamanho não é prazo: o projeto tem um mantenedor e não promete datas.
 - **Estado:** `feito` · `em curso` · `a fazer`.
 - **Rótulos de evidência** (definidos na [metodologia](docs/METHODOLOGY.md#rotulos)): **[MEDIDO]** por este projeto, com relatório · **[REPORTADO]** por terceiros, com fonte e data · **[ALVO]** que queremos atingir · **[HIPÓTESE]** ainda sem dados.
@@ -60,9 +61,9 @@ Portanto não vamos propor um padrão concorrente. O nosso papel é fazer esse p
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 62 (4 feitos) · **arestas:** 94.
-- **Esforço relativo:** 19/254 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
-- **Caminho crítico até o último portão** (111 pontos): `F-01` → `F-02` → `F-03` → `G0` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
+- **Nós:** 67 (4 feitos) · **arestas:** 100.
+- **Esforço relativo:** 19/258 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
+- **Caminho crítico até o último portão** (114 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-01` → `T-02` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
 ---
@@ -72,7 +73,9 @@ Portanto não vamos propor um padrão concorrente. O nosso papel é fazer esse p
 
 ```mermaid
 flowchart LR
-    G0{{"G0 · plano auditado"}} --> M1["M1 · PoC<br/>v0.1.0<br/>TS-Ettin-17M"]
+    G0{{"G0 · plano auditado"}} --> MT["T · Teste em celular<br/>um motor pronto serve?"]
+    MT --> GT{{"GT · motor pronto ou próprio"}}
+    GT --> M1["M1 · PoC<br/>v0.1.0<br/>TS-Ettin-17M"]
     M1 --> G1{{"G1 · seguir ou pivotar"}}
     G1 --> M2["M2 · Alpha<br/>offline, CPU, navegadores"]
     M2 --> G2{{"G2"}}
@@ -89,7 +92,8 @@ flowchart LR
 | Marco | Versão | Pergunta que responde | Resultado para quem usa | Portão |
 |---|---|---|---|---|
 | **M0 — Fundação e auditoria** | documentação | O plano e a pesquisa estão corretos? | Whitepaper, errata e este roadmap | `G0` |
-| **M1 — Prova de conceito** | `v0.1.0` | Um motor próprio decide certo, no navegador, com um modelo de 17M — e vale a pena frente ao que já existe? | Demo pública: uma decisão local, verificada contra a referência | `G1` |
+| **T — Teste em celular** | — | Em celulares reais, um motor pronto serve — ou é preciso um motor próprio? | Relatório com medições em celulares | `GT` |
+| **M1 — Prova de conceito** | `v0.1.0` | A primeira versão decide certo com um modelo de 17M, sobre o motor que o teste escolher? | Demo pública: uma decisão local, verificada contra a referência | `G1` |
 | **M2 — Alpha** | `v0.2`–`v0.4` | Funciona offline, sem WebGPU e nos três motores de navegador? | Pacote npm alpha, cache OPFS, fallback CPU | `G2` |
 | **M3 — Beta** | `v0.5`–`v0.9` | O SDK escolhe sozinho o melhor modelo para cada máquina? | Escada de modelos, análise do dispositivo, API candidata | `G3` |
 | **M4 — v1.0.0** | `v1.0.0` | É estável, auditado e pronto para produção? | API estável com SemVer, catálogo auditado | `G4` |
@@ -120,6 +124,8 @@ A auditoria de 2026-11-21 conferiu os dois relatórios de pesquisa e o README co
 | 13 | “Propor uma API de decisão ao W3C”, como se nada existisse | Já existe o explainer da Decisions API (time de Built-in AI do Chrome), com protótipo em Chromium e prévia no Edge Canary | A trilha S **alinha-se e contribui** com essa proposta; o SDK tem forma de polyfill dela (`S-02`, `S-05`) |
 | 14 | “Probabilidades calibradas” como propriedade do runtime | Calibração é propriedade do **modelo**; o TS-Ettin-17M é publicado sem calibração | O runtime aplica fielmente a calibração do checkpoint; o catálogo declara o estado de calibração de cada modelo (`B-06`) |
 | 15 | WebGPU “ativa por padrão no iOS 18.2” e disponível em “Chrome 121+ no Android” | No Safari, só a partir da versão 26, nos sistemas 26; no Chromium, depende do sistema e do fabricante da GPU | Detecção de recurso sempre; matriz de navegadores com hardware real (`A-05`) |
+| 16 | Primeiro “o motor próprio é necessário”, depois “o motor pronto resolve” — as duas vezes sem nenhuma medição em celular | O celular é a prioridade, e todas as medições disponíveis são de desktop | **Marco T**: medir em celulares reais antes de escolher o motor (`T-01` a `T-04`, `GT`) |
+| 17 | O projeto como “o polyfill aberto” da Decisions API | Já existe um polyfill no npm (`built-in-ai-task-apis-polyfills`) | O papel do projeto é cobrir o que falta, com o celular em primeiro lugar |
 
 ---
 
@@ -168,8 +174,82 @@ flowchart LR
 
 ---
 
+<a id="mt"></a>
+## Marco T — Teste em celular e decisão do motor
+
+**Objetivo.** Antes de escrever qualquer código de produto, descobrir em **celulares reais** se um motor pronto serve — ou se o celular precisa de um motor próprio. É uma investigação de prazo fixo (ver [metodologia](docs/METHODOLOGY.md#portoes)): o entregável é uma resposta escrita, com dados, e não um produto.
+
+**Por que este marco vem primeiro.** O celular é a prioridade do projeto, e é exatamente onde não temos dados:
+
+- **Toda medição que temos é de desktop.** Os 12,6 ms do motor pronto (ONNX Runtime Web) foram medidos num Apple M4 **[REPORTADO]**. Nada disso vale para um celular.
+- **Muitos celulares não têm WebGPU.** No iPhone, só a partir do iOS 26; no Android, só com GPU Adreno ou Mali e Android 12 ou superior; no Firefox para Android, não há. Para esses aparelhos só existe o caminho pela CPU.
+- **O motor pronto é genérico e pesado.** Só o runtime custa 3,2 MB (CPU) ou 4,8 MB (WebGPU) comprimidos — 14,8 MB e 29,5 MB para o navegador compilar **[MEDIDO nos arquivos publicados do `onnxruntime-web` 1.31.1, em 2026-11-21]**. E em WebGPU ele só atingiu paridade com pesos em precisão cheia **[REPORTADO pelo `crivo-web`]**: 64 MiB para o modelo de 17M, contra 17 MiB em 8 bits.
+- **A API nativa não fala de celular.** Nem o explainer da Decisions API nem a documentação do Edge mencionam Android ou iOS.
+
+Isso corta para os dois lados: pode ser que o motor pronto baste no celular, e pode ser que um motor próprio e enxuto seja justamente o que o celular precisa. Só a medição diz.
+
+| ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
+|---|---|---|---|---|:---:|---|
+| `T-01` | **Página de teste** — uma página estática que roda o mesmo conjunto de perguntas, em português e em inglês, sobre o motor pronto (Wasm e WebGPU), sobre o polyfill existente e, onde houver, sobre a API nativa | `G0` | `bench/spike-mobile/` | abre no Chrome para Android e no Safari do iPhone; registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados e as respostas; exporta um JSON; o que não rodar num aparelho fica registrado como resultado | S | a fazer |
+| `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone, com e sem WebGPU | `T-01` | `bench/results/*.json` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | a fazer |
+| `T-03` | **Prévia nativa** — rodar as mesmas perguntas na Decisions API do Edge Canary, para comparar a forma da API e as respostas | `T-01` | seção do relatório | diferenças de API e de resposta registradas; se a prévia não puder ser ligada, isso fica escrito | S | a fazer |
+| `T-04` | **Relatório do teste** — o que funciona no celular, quanto pesa e quanto demora | `T-02`, `T-03` | `docs/reports/teste-mobile.md` | dados brutos publicados; todo número rotulado; resposta explícita a cada critério de GT | S | a fazer |
+| `GT` | **Portão GT** — motor pronto ou motor próprio | `T-04` | ADR com a decisão | critérios de [GT](#gt) | — | a fazer |
+
+<!-- dag:begin:T -->
+```mermaid
+flowchart LR
+    G0(["G0"]):::ext
+    T01["T-01 · Página de teste"]:::todo
+    T02["T-02 · Medição em celulares reais"]:::todo
+    T03["T-03 · Prévia nativa"]:::todo
+    T04["T-04 · Relatório do teste"]:::todo
+    GT{{"GT · motor pronto ou motor próprio"}}:::gate
+    G0 -.-> T01
+    T01 --> T02
+    T01 --> T03
+    T02 --> T04
+    T03 --> T04
+    T04 --> GT
+    classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef doing fill:#fef9c3,stroke:#ca8a04,color:#713f12;
+    classDef todo fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+    classDef gate fill:#fae8ff,stroke:#a21caf,color:#701a75;
+    classDef ext fill:#f4f4f5,stroke:#a1a1aa,color:#3f3f46,stroke-dasharray: 4 3;
+```
+
+**Ondas de execução** (atividades da mesma onda não dependem entre si):
+
+1. `T-01`
+2. `T-02` · `T-03`
+3. `T-04`
+4. `GT`
+<!-- dag:end:T -->
+
+<a id="gt"></a>
+**Critérios do portão GT.** Limiares iniciais, **[ALVO]** — podem ser ajustados pelo mantenedor **antes** da medição, nunca depois. Medidos com o modelo de 17M, no melhor caminho que cada aparelho oferecer:
+
+| Pergunta | Limiar |
+|---|---|
+| A decisão é rápida? | p95 de até 150 ms no Android intermediário e no iPhone; até 300 ms no Android de entrada |
+| A primeira visita é leve? | runtime, pesos e tokenizador somam até 25 MB |
+| Aguenta? | 200 decisões seguidas sem a aba recarregar nem travar |
+| Acerta igual? | mesmas respostas da implementação de referência do modelo, dentro da tolerância da variante usada |
+
+A decisão sai da tabela, e não de preferência:
+
+| Resultado no celular | Decisão | O que acontece com os marcos seguintes |
+|---|---|---|
+| O motor pronto cumpre os quatro | **Biblioteca fina sobre motor pronto** | O marco M1 é reescrito: saem o tokenizador próprio, o contêiner de pesos, a referência CPU, os kernels, o motor e o alvo web (`P-05` a `P-10`) e entra a integração do motor pronto. Contrato, corpus, medições, demo, análise do dispositivo, catálogo e padronização permanecem |
+| O motor pronto falha por algo que um motor próprio resolve — peso do runtime, pesos em precisão cheia, memória | **Motor próprio enxuto, só para o que o celular precisa** | O marco M1 segue como está, começando pelo caminho de CPU e deixando a WebGPU para depois |
+| Nada serve, ou a API nativa já cobre o celular | **Só evidência e contribuições** | O roadmap encolhe para a trilha S |
+
+---
+
 <a id="m1"></a>
 ## 6. Marco M1 — Prova de conceito (`v0.1.0`)
+
+> **Suspenso até o portão `GT`.** Como está escrito, este marco descreve o caminho do **motor próprio**. Ele só começa — e só nesta forma — se o teste em celulares reais mostrar que um motor pronto não serve. Caso contrário é reescrito por PR, com ADR, como “biblioteca fina sobre motor pronto”.
 
 **Objetivo.** Uma página estática, no Chrome de desktop, carrega um modelo de 17M de parâmetros e responde `choice`, `noul` e `score` **com as mesmas probabilidades da implementação de referência**, sem rede no caminho da decisão — e com medições lado a lado contra o ONNX Runtime Web rodando o mesmo modelo.
 
@@ -215,9 +295,9 @@ Cada decisão abaixo vira uma ADR em `docs/adr/` quando a atividade corresponden
 
 | ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
 |---|---|---|---|---|:---:|---|
-| `P-01` | **Modelo fixado** — fixar o TS-Ettin-17M por revisão e hash; registrar licença e atribuição | `G0` | `models/catalog.json` (uma entrada), `tools/fetch_model.py` | download verificado por SHA-256; licença e atribuição no `NOTICE`; a entrada valida contra o esquema do catálogo | S | a fazer |
-| `P-02` | **Contrato de decisão v0** — RFC-0001: tipos de `choice`, `noul` e `score`, renderização do estado, erros e limites | `G0` | `docs/rfcs/0001-decision-contract.md`, crate `som-contract`, JSON Schema | o esquema valida as requisições e respostas do corpus; mapeamento documentado para a superfície `DecisionModel` do explainer da Decisions API, para o formato `decision-ai/option-reader@1` e para a API `/v1/systemone`; RFC aceita | M | a fazer |
-| `P-03` | **Workspace e CI de código** — Cargo workspace, pacote TypeScript, toolchains fixadas, finais de linha normalizados | `G0` | `Cargo.toml`, `crates/`, `packages/core`, jobs de CI | `cargo fmt`, `clippy -D warnings` e `cargo test` verdes em Linux, macOS e Windows; build `wasm32-unknown-unknown` verde; `naga` valida todo WGSL; versão do wgpu fixada; o job obrigatório continua a se chamar `build` | M | a fazer |
+| `P-01` | **Modelo fixado** — fixar o TS-Ettin-17M por revisão e hash; registrar licença e atribuição | `GT` | `models/catalog.json` (uma entrada), `tools/fetch_model.py` | download verificado por SHA-256; licença e atribuição no `NOTICE`; a entrada valida contra o esquema do catálogo | S | a fazer |
+| `P-02` | **Contrato de decisão v0** — RFC-0001: tipos de `choice`, `noul` e `score`, renderização do estado, erros e limites | `GT` | `docs/rfcs/0001-decision-contract.md`, crate `som-contract`, JSON Schema | o esquema valida as requisições e respostas do corpus; mapeamento documentado para a superfície `DecisionModel` do explainer da Decisions API, para o formato `decision-ai/option-reader@1` e para a API `/v1/systemone`; RFC aceita | M | a fazer |
+| `P-03` | **Workspace e CI de código** — Cargo workspace, pacote TypeScript, toolchains fixadas, finais de linha normalizados | `GT` | `Cargo.toml`, `crates/`, `packages/core`, jobs de CI | `cargo fmt`, `clippy -D warnings` e `cargo test` verdes em Linux, macOS e Windows; build `wasm32-unknown-unknown` verde; `naga` valida todo WGSL; versão do wgpu fixada; o job obrigatório continua a se chamar `build` | M | a fazer |
 | `P-04` | **Oráculo e corpus dourado** — rodar a referência upstream (PyTorch FP32, CPU) e exportar ativações por camada, logits e respostas | `P-01`, `P-02` | `tools/reference/`, `tests/fixtures/ts-ettin-17m/` | ≥ 300 requisições (choice com 2–16 opções, noul, score com 3–10 níveis, 8–1.024 tokens, texto em pt-BR e Unicode); duas execuções geram fixtures idênticas; comando único documentado | M | a fazer |
 | `P-05` | **Tokenizador e empacotamento** — BPE do Ettin, token `[OPT]` e montagem da sequência | `P-03`, `P-04` | crate `som-tokenizer` | IDs idênticos aos da referência em ≥ 10.000 textos (100%); posições `[OPT]` idênticas às das fixtures; erro tipado acima do limite de tokens — nada é truncado | M | a fazer |
 | `P-06` | **Contêiner de pesos v0** — conversor de `safetensors` para `.sombin` v0 (FP16) e leitor | `P-01`, `P-03` | `tools/convert/`, crate `som-format` (v0) | ida e volta de todos os tensores (FP32 exato; FP16 com erro de arredondamento ≤ 1 ULP); teste dourado com offsets explícitos em little-endian; arquivo truncado ou com assinatura errada é rejeitado | M | a fazer |
@@ -235,7 +315,7 @@ Cada decisão abaixo vira uma ADR em `docs/adr/` quando a atividade corresponden
 <!-- dag:begin:M1 -->
 ```mermaid
 flowchart LR
-    G0(["G0"]):::ext
+    GT(["GT"]):::ext
     P01["P-01 · Modelo fixado"]:::todo
     P02["P-02 · Contrato de decisão v0"]:::todo
     P03["P-03 · Workspace e CI de código"]:::todo
@@ -252,9 +332,9 @@ flowchart LR
     P14["P-14 · Medição e relatório da PoC"]:::todo
     G1{{"G1 · seguir, iterar ou pivotar"}}:::gate
     P15["P-15 · Release v0.1.0"]:::todo
-    G0 -.-> P01
-    G0 -.-> P02
-    G0 -.-> P03
+    GT -.-> P01
+    GT -.-> P02
+    GT -.-> P03
     P01 --> P04
     P02 --> P04
     P01 --> P06
@@ -716,6 +796,7 @@ Os riscos técnicos do motor estão na [seção 7 do README](README.md#riscos). 
 | 6 | Os degraus mais fortes só têm licença não comercial | 400M e 1B disponíveis apenas em CC BY-NC | Política de licenças no seletor; catálogo declara o uso permitido; `X-05` para pesos próprios |
 | 7 | Cada site baixa a sua cópia do modelo | reclamações de consumo de dados e de disco | Semente pequena por padrão; limites de download; é o principal argumento da trilha S |
 | 8 | Pesquisa assistida por IA com erros | afirmação sem fonte primária | Procedimento de verificação da [metodologia](docs/METHODOLOGY.md#pesquisa); errata pública |
+| 9 | O motor pronto não serve no celular | latência, download ou memória fora dos critérios de `GT` | Motor próprio enxuto, só para o que o celular precisa; caminho de CPU primeiro |
 
 **Gatilhos de replanejamento.** O roadmap é revisto — por PR, com ADR — quando um portão decide iterar ou pivotar, quando uma atividade `L` estoura em mais de 2× o seu tamanho, quando uma premissa da errata é derrubada por fonte primária nova, ou a cada três meses.
 
