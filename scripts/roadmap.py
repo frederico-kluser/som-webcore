@@ -34,16 +34,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ROADMAP = ROOT / "ROADMAP.md"
 
-ID_RE = r"(?:[A-Z]-\d{2}|G[0-9T])"
+ID_RE = r"(?:[A-Z]{1,2}-\d{2}|G[0-9T])"
 ROW_RE = re.compile(r"^\|\s*`(" + ID_RE + r")`\s*\|")
 REF_RE = re.compile(r"`(" + ID_RE + r")`")
 LABEL_RE = re.compile(r"\*\*(.+?)\*\*")
+# Dependência com condição: `DT-01` (se aparelho real) — só vale se a bifurcação escolher aquele ramo.
+COND_RE = re.compile(r"`(" + ID_RE + r")`(?:\s*\(se ([^)]*)\))?")
+PROMPT_RE = re.compile(r"<!-- prompt:(" + ID_RE + r") -->")
 
 # Grupo (bloco gerado) de cada prefixo de ID.
 GROUPS = OrderedDict(
     [
         ("M0", "Marco M0 — Fundação e auditoria"),
-        ("T", "Marco T — Teste em celular e decisão do motor"),
+        ("T", "Marco T — API igual à do Chrome e teste do motor existente"),
         ("M1", "Marco M1 — Prova de conceito (v0.1.0)"),
         ("M2", "Marco M2 — Alpha"),
         ("M3", "Marco M3 — Beta"),
@@ -52,21 +55,23 @@ GROUPS = OrderedDict(
         ("M5", "Marco M5 — Pós-1.0"),
     ]
 )
-PREFIX_GROUP = {"F": "M0", "T": "T", "P": "M1", "A": "M2", "B": "M3", "V": "M4", "S": "S", "X": "M5"}
+PREFIX_GROUP = {"F": "M0", "T": "T", "P": "M1", "L": "M1", "K": "M1", "A": "M2", "B": "M3", "V": "M4",
+                "S": "S", "X": "M5", "DT": "T", "DP": "M1"}  # DT e DP: bifurcações dos marcos T e M1
 GATE_GROUP = {"G0": "M0", "GT": "T", "G1": "M1", "G2": "M2", "G3": "M3", "G4": "M4"}
 # Ordem dos portões no tempo (GT vem entre G0 e G1; IDs nunca são renumerados).
 GATE_ORDER = ["G0", "GT", "G1", "G2", "G3", "G4"]
 
 SIZES = {"S": 1, "M": 3, "L": 8, "XL": 13, "—": 0}
-STATES = {"feito", "em curso", "a fazer"}
+STATES = {"feito", "em curso", "a fazer", "descartada"}
 EXPECTED_COLUMNS = 7
 
 
 class Node:
-    def __init__(self, nid, label, deps, size, state, line):
+    def __init__(self, nid, label, deps, size, state, line, conds=None):
         self.id = nid
         self.label = label
         self.deps = deps
+        self.conds = conds or {}
         self.size = size
         self.state = state
         self.line = line
@@ -80,6 +85,16 @@ class Node:
     @property
     def is_gate(self):
         return self.id in GATE_GROUP
+
+    @property
+    def is_fork(self):
+        """Bifurcação: prefixo de duas letras começado por D (DT-01, DP-01)."""
+        prefix = self.id.split("-")[0]
+        return len(prefix) == 2 and prefix.startswith("D")
+
+    @property
+    def is_decision(self):
+        return self.is_gate or self.is_fork
 
 
 def split_row(line):
@@ -104,14 +119,18 @@ def parse(text):
             continue
         label_match = LABEL_RE.search(cells[1])
         label = label_match.group(1) if label_match else cells[1][:40]
-        if nid in GATE_GROUP and "—" in cells[1]:
-            # Portões: o rótulo útil é a decisão, não a palavra "Portão".
+        prefix = nid.split("-")[0]
+        decision = nid in GATE_GROUP or (len(prefix) == 2 and prefix.startswith("D"))
+        if decision and "—" in cells[1]:
+            # Portões e bifurcações: o rótulo útil é a pergunta, não a palavra "Portão".
             label = cells[1].split("—", 1)[1].strip()
-        deps = REF_RE.findall(cells[2])
+        pairs = COND_RE.findall(cells[2])
+        deps = [dep for dep, _ in pairs]
+        conds = {dep: cond.strip() for dep, cond in pairs if cond.strip()}
         if nid in nodes:
             errors.append(f"linha {number}: ID duplicado `{nid}` (já definido na linha {nodes[nid].line})")
             continue
-        nodes[nid] = Node(nid, label, deps, cells[5], cells[6], number)
+        nodes[nid] = Node(nid, label, deps, cells[5], cells[6], number, conds)
     return nodes, errors
 
 
@@ -133,8 +152,13 @@ def validate(nodes):
                 errors.append(f"`{node.id}`: dependência inexistente `{dep}`")
         if node.state == "feito":
             for dep in node.deps:
-                if dep in nodes and nodes[dep].state != "feito":
+                if dep in nodes and nodes[dep].state not in ("feito", "descartada"):
                     errors.append(f"`{node.id}` está feito, mas a dependência `{dep}` não está")
+        if node.is_decision and node.size != "—":
+            errors.append(f"`{node.id}`: portão ou bifurcação não tem tamanho (use —)")
+        for dep, cond in node.conds.items():
+            if dep in nodes and not nodes[dep].is_decision:
+                errors.append(f"`{node.id}`: a condição “se {cond}” só pode vir de um portão ou de uma bifurcação")
     roots = [n.id for n in nodes.values() if not n.deps]
     if len(roots) != 1:
         errors.append(f"o grafo deve ter exatamente uma raiz; encontradas: {', '.join(roots) or 'nenhuma'}")
@@ -244,11 +268,19 @@ def render_group(nodes, order, group):
         label = node.label.replace('"', "'")
         if node.is_gate:
             lines.append(f'    {mermaid_id(nid)}{{{{"{nid} · {label}"}}}}:::gate')
+        elif node.is_fork:
+            lines.append(f'    {mermaid_id(nid)}{{"{nid} · {label}"}}:::fork')
         else:
-            css = {"feito": "done", "em curso": "doing"}.get(node.state, "todo")
+            css = {"feito": "done", "em curso": "doing", "descartada": "off"}.get(node.state, "todo")
+            if css == "todo" and node.conds:
+                css = "opt"  # ramo opcional: só acontece se a bifurcação o escolher
             lines.append(f'    {mermaid_id(nid)}["{nid} · {label}"]:::{css}')
     for nid in members:
         for dep in nodes[nid].deps:
+            cond = nodes[nid].conds.get(dep)
+            if cond:
+                lines.append(f'    {mermaid_id(dep)} -.->|"se {cond}"| {mermaid_id(nid)}')
+                continue
             arrow = "-.->" if nodes[dep].group != group else "-->"
             lines.append(f"    {mermaid_id(dep)} {arrow} {mermaid_id(nid)}")
     lines += [
@@ -256,6 +288,9 @@ def render_group(nodes, order, group):
         "    classDef doing fill:#fef9c3,stroke:#ca8a04,color:#713f12;",
         "    classDef todo fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;",
         "    classDef gate fill:#fae8ff,stroke:#a21caf,color:#701a75;",
+        "    classDef fork fill:#ffedd5,stroke:#ea580c,color:#7c2d12;",
+        "    classDef opt fill:#f8fafc,stroke:#64748b,color:#334155,stroke-dasharray: 5 4;",
+        "    classDef off fill:#f4f4f5,stroke:#d4d4d8,color:#a1a1aa;",
         "    classDef ext fill:#f4f4f5,stroke:#a1a1aa,color:#3f3f46,stroke-dasharray: 4 3;",
         "```",
         "",
@@ -279,7 +314,7 @@ def render_critical(nodes, order):
         [
             f"- **Nós:** {len(nodes)} ({count_done} feitos) · **arestas:** {sum(len(n.deps) for n in nodes.values())}.",
             f"- **Esforço relativo:** {done}/{total} pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).",
-            f"- **Caminho crítico até o último portão** ({points} pontos): {chain}.",
+            f"- **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro ({points} pontos): {chain}.",
         ]
     )
 
@@ -336,6 +371,12 @@ def cmd_check():
         rendered, unknown = regenerate(text, nodes, order)
         for key in unknown:
             errors.append(f"bloco gerado desconhecido: dag:begin:{key}")
+        # Atividades do marco em execução (T) e toda bifurcação precisam de prompt e validação.
+        prompts = set(PROMPT_RE.findall(text))
+        for node in nodes.values():
+            needs = (node.group == "T" or node.is_fork) and node.state not in ("feito", "descartada")
+            if needs and node.id not in prompts:
+                errors.append(f"`{node.id}` não tem prompt — acrescente `<!-- prompt:{node.id} -->` com o prompt e a validação")
         present = {match[1] for match in BLOCK_RE.findall(text)}
         for key in list(GROUPS) + ["critical"]:
             has_nodes = key == "critical" or any(n.group == key for n in nodes.values())
