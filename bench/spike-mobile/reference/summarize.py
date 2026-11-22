@@ -91,7 +91,8 @@ def row(path: Path) -> str:
         if long_:
             split += f" · {fmt(quantile(long_, 0.5))} / {fmt(quantile(long_, 0.95))}"
     return " | ".join([
-        f"`{path.stem}`", cfg.get("engine", "—"), str(variant), model, run.get("status", "—"),
+        # The native engine runs the browser's own model; the page's `model` parameter does not apply.
+        f"`{path.stem}`", cfg.get("engine", "—"), str(variant), "o do navegador" if cfg.get("engine") == "native" else model, run.get("status", "—"),
         fmt((run.get("timings") or {}).get("firstAnswerMs"), 0), fmt(first.get("p50")),
         f"{fmt(warm.get('p50'))} / {fmt(warm.get('p95'))} / {fmt(warm.get('p99'))}", split,
         first_visit, fmt(heap / MB if heap else None), fmt(pss / MB if pss else None, 0),

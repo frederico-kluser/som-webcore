@@ -270,3 +270,23 @@ O que essas tabelas mostram **[MEDIDO]**:
 - No `int8`, o Wasm se afasta do nativo (máx. |Δp| 1,7e-1 no 17M e 2,8e-1 no 32M): a quantização dinâmica das ativações não dá o mesmo resultado nos dois. O artefato já fica longe da referência (4,1e-1), então o veredito da variante não muda.
 - Só o FP32 cumpre a tolerância da sua variante: `fp32` no ONNX Runtime (1,6e-6) e o `@johnhenry` com os pesos publicados (1,1e-6 no 17M; 1,7e-6 no 32M) — mas com 72,89 e 68,23 MB na primeira visita. Com os mesmos pesos FP32, o p50 quente do `@johnhenry` em CPU é cerca de 6 vezes o do ONNX Runtime no mesmo simulador (310,5 e 302,0 ms contra 49,0 e 48,0 ms).
 - O runtime pesa diferente nos dois motores: 3.865.323 B em gzip no ONNX Runtime Web em Wasm (7.184.673 B no ponto de entrada WebGPU) contra 98.664 B no `@johnhenry`; o tokenizador, 637.107 B. Na variante `8bit` do 17M, o runtime do ONNX Runtime é 17% da primeira visita.
+
+## 6. API nativa (`T-03`)
+
+> Duas máquinas, ambas num perfil próprio, em janela real (não headless), com `--enable-features=AIDecisionModelAPI`: o Chrome Canary **160.0.8174.2** no Windows (Acer, `T-05`) e o Canary **160.0.8176.2** no macOS (Mac mini, instalado no HD externo, assinatura da Google conferida). A versão exata fica no JSON (`environment.userAgentData.fullVersionList`) e as flags em `browser.flags`.
+
+**`availability()` num perfil real** **[MEDIDO]**, igual nas duas máquinas:
+
+1. Perfil novo: `"unavailable"`, com o aviso “On-device AI is disabled in Chrome settings” — [`…-surface-macmini-chrome-canary-160-perfil-novo.json`](../../bench/results/2026-11-21-surface-macmini-chrome-canary-160-perfil-novo.json).
+2. Com o interruptor “On-device AI” ligado no `Local State` do perfil de teste: `"downloadable"`; `create()` sem gesto → `NotAllowedError`; com um clique dado pelo protocolo de depuração (ativação de usuário de verdade), o `create()` baixou o modelo do backend padrão — o monitor foi de 0 a 1 — e o `decide()` respondeu — [`…-surface-macmini-chrome-canary-160.json`](../../bench/results/2026-11-21-surface-macmini-chrome-canary-160.json). No Mac, o modelo ocupou cerca de 260 MB no perfil (fora do git).
+3. Depois do download: `"available"`, e `create()` funciona sem gesto — [`…-surface-macmini-chrome-canary-160-apos-download.json`](../../bench/results/2026-11-21-surface-macmini-chrome-canary-160-apos-download.json).
+
+**A página de teste sobre o `DecisionModel` nativo** rodou inteira — as 66 entradas, em inglês e em português, sem nenhuma falha, com a forma de todas as respostas conferida (`check_shape.py`) **[MEDIDO; latência de desktop]**:
+
+| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | Memória máx. (MB; PSS no Android, RSS no simulador iOS) | máx. \|Δp\| · top-1 | Falha |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `2026-11-21-desktop-macmini-chrome160-native` | native | — | o do navegador | ok | 1,208 | 32.1 | 32.1 / 213.1 / 215.4 | 32.1 / 34.9 · 214.4 / 216.0 | 0.02 | 1.8 | — | — | — |
+
+O modelo nativo é outro (EmbeddingGemma, backend `embedding-gemma-v1`), então não há paridade a medir, só concordância: a vencedora do nativo é a da referência do TS-Ettin em 67 das 156 perguntas (43/80 em inglês, 24/76 em português; `compare.py`). A primeira visita é só a página: o modelo já está no navegador.
+
+**Forma: a nossa superfície contra a nativa** (`compare_surface.py`). O polyfill ([`…-surface-macmini-polyfill-ort-wasm-8bit.json`](../../bench/results/2026-11-21-surface-macmini-polyfill-ort-wasm-8bit.json), no Chrome 157) contra o nativo depois do download: membros estáticos e do protótipo, `length` 0 e `toStringTag` iguais; 72 resultados de validação comparados, **2 diferenças**, as duas na opção `devTrialBackend` — `"language-model"` dá `"unavailable"` no nativo e o polyfill ignora a opção; um valor inválido dá `TypeError` no nativo. É a opção que só existe no Canary 160, marcada como *Dev Trial Only* e “not slated for the final API shape”, deixada **de fora** da especificação e das declarações de propósito na `T-05`: a diferença está justificada, e nada na especificação precisou mudar. Entre o Canary do Windows e o do macOS, 0 diferenças em 72, antes e depois do download.
