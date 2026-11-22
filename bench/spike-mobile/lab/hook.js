@@ -1,0 +1,163 @@
+// Device lab log hook. serve.mjs (lab mode) injects it as the first script of every HTML page of a
+// lab session — the lab itself, the probe and the test page in their iframes — so whatever a page
+// does on the device reaches the server: console output, errors (also failed resource loads),
+// rejected promises, failed requests, WebGPU adapter/device events and the page lifecycle. Entries
+// are batched to /api/lab/log every second and flushed with sendBeacon when the page goes away.
+// It never throws and never changes what the page sees, apart from wrapping these functions.
+(() => {
+  "use strict";
+  if (window.__somLab) return;
+  const params = new URLSearchParams(location.search);
+  const isTop = window.top === window;
+  const source = (params.get("name") || location.pathname.split("/").pop() || "page") + (isTop ? "" : " (iframe)");
+  const MAX_TEXT = 4000;
+  const queue = [];
+  let seq = 0;
+  const realFetch = typeof window.fetch === "function" ? window.fetch.bind(window) : null;
+
+  function text(value) {
+    try {
+      if (value instanceof Error) return `${value.name}: ${value.message}${value.stack ? `\n${value.stack}` : ""}`;
+      if (typeof value === "string") return value;
+      if (value === undefined) return "undefined";
+      if (typeof value === "function") return `[function ${value.name || "anonymous"}]`;
+      if (typeof Event !== "undefined" && value instanceof Event) return `[${value.type} event]`;
+      const json = JSON.stringify(value, (_, v) => (typeof v === "bigint" ? `${v}n` : v));
+      return json === undefined ? String(value) : json;
+    } catch {
+      try { return String(value); } catch { return "[unprintable]"; }
+    }
+  }
+
+  function push(kind, level, data = {}) {
+    try {
+      const entry = { seq: seq++, t: Math.round(performance.now()), at: new Date().toISOString(), source, kind, level, ...data };
+      if (typeof entry.text === "string" && entry.text.length > MAX_TEXT) entry.text = `${entry.text.slice(0, MAX_TEXT)}…`;
+      queue.push(entry);
+      if (queue.length >= 50) flush(false);
+    } catch { /* never break the page */ }
+  }
+
+  function flush(useBeacon) {
+    if (!queue.length) return;
+    const body = JSON.stringify(queue.splice(0, queue.length));
+    try {
+      if (useBeacon && navigator.sendBeacon && navigator.sendBeacon("/api/lab/log", new Blob([body], { type: "application/json" }))) return;
+      if (realFetch) realFetch("/api/lab/log", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000 }).catch(() => {});
+    } catch { /* ignore */ }
+  }
+  setInterval(() => flush(false), 1000);
+
+  // Console.
+  for (const level of ["log", "info", "warn", "error", "debug", "trace"]) {
+    const original = console[level];
+    if (typeof original !== "function") continue;
+    console[level] = function (...args) {
+      push("console", level, { text: args.map(text).join(" ") });
+      return original.apply(this, args);
+    };
+  }
+
+  // Errors, also failed loads of scripts, images and links (capture phase).
+  window.addEventListener("error", (event) => {
+    const target = event.target;
+    if (target && target !== window && (target.src || target.href)) push("resource-error", "error", { text: `${target.tagName} ${target.src || target.href}` });
+    else push("error", "error", { text: `${event.message} @ ${event.filename}:${event.lineno}:${event.colno}`, stack: event.error && event.error.stack });
+  }, true);
+  window.addEventListener("unhandledrejection", (event) => push("unhandledrejection", "error", { text: text(event.reason) }));
+  document.addEventListener("securitypolicyviolation", (event) => push("csp", "warn", { text: `${event.violatedDirective} ${event.blockedURI}` }));
+
+  // Page lifecycle: a hidden page is throttled, and a reload or a crash shows up here.
+  for (const type of ["pageshow", "pagehide", "freeze", "resume"]) {
+    window.addEventListener(type, (event) => {
+      push("lifecycle", "info", { text: type, persisted: event.persisted });
+      if (type === "pagehide") {
+        resourceSummary();
+        flush(true);
+      }
+    });
+  }
+  document.addEventListener("visibilitychange", () => {
+    push("lifecycle", "info", { text: `visibility ${document.visibilityState}` });
+    if (document.visibilityState === "hidden") flush(true);
+  });
+  window.addEventListener("orientationchange", () => push("lifecycle", "info", { text: `orientation ${(screen.orientation && screen.orientation.type) || window.orientation}` }));
+
+  // Requests that fail or answer with an error status (the lab's own log posts are left out).
+  if (realFetch) {
+    window.fetch = async function (input, init) {
+      const url = typeof input === "string" ? input : input && input.url;
+      const started = performance.now();
+      try {
+        const response = await realFetch(input, init);
+        if (!response.ok && !String(url).includes("/api/lab/")) push("fetch", "warn", { text: `${response.status} ${url}`, ms: Math.round(performance.now() - started) });
+        return response;
+      } catch (error) {
+        push("fetch", "error", { text: `${url}: ${text(error)}`, ms: Math.round(performance.now() - started) });
+        throw error;
+      }
+    };
+  }
+
+  // WebGPU: what the adapter and the device say, device loss and uncaptured errors.
+  try {
+    if (navigator.gpu && typeof navigator.gpu.requestAdapter === "function") {
+      const requestAdapter = navigator.gpu.requestAdapter.bind(navigator.gpu);
+      navigator.gpu.requestAdapter = async (options) => {
+        try {
+          const adapter = await requestAdapter(options);
+          const info = adapter && adapter.info ? { vendor: adapter.info.vendor, architecture: adapter.info.architecture, device: adapter.info.device, description: adapter.info.description } : null;
+          push("webgpu", adapter ? "info" : "warn", { text: `requestAdapter(${text(options || {})}) → ${adapter ? text(info || "adapter") : "null"}` });
+          if (adapter && typeof adapter.requestDevice === "function") {
+            const requestDevice = adapter.requestDevice.bind(adapter);
+            adapter.requestDevice = async (descriptor) => {
+              try {
+                const device = await requestDevice(descriptor);
+                push("webgpu", "info", { text: `requestDevice → ok; features: ${[...device.features].sort().join(", ")}` });
+                device.lost.then((lost) => push("webgpu", "error", { text: `device lost: ${lost.reason} ${lost.message}` }));
+                device.addEventListener("uncapturederror", (event) => push("webgpu", "error", { text: `uncaptured ${event.error && event.error.constructor && event.error.constructor.name}: ${event.error && event.error.message}` }));
+                return device;
+              } catch (error) {
+                push("webgpu", "error", { text: `requestDevice failed: ${text(error)}` });
+                throw error;
+              }
+            };
+          }
+          return adapter;
+        } catch (error) {
+          push("webgpu", "error", { text: `requestAdapter failed: ${text(error)}` });
+          throw error;
+        }
+      };
+    }
+  } catch (error) {
+    push("hook", "warn", { text: `WebGPU hook not installed: ${text(error)}` });
+  }
+
+  // What the page loaded, in short, when it goes away (the test page keeps the full list itself).
+  let summarized = false;
+  function resourceSummary() {
+    if (summarized) return;
+    summarized = true;
+    try {
+      const resources = performance.getEntriesByType("resource");
+      const byType = {};
+      for (const entry of resources) {
+        const key = entry.initiatorType || "other";
+        byType[key] ??= { count: 0, transferSize: 0, encodedBodySize: 0 };
+        byType[key].count += 1;
+        byType[key].transferSize += entry.transferSize || 0;
+        byType[key].encodedBodySize += entry.encodedBodySize || 0;
+      }
+      const navigation = performance.getEntriesByType("navigation")[0];
+      push("performance", "info", {
+        text: `resources: ${resources.length}`,
+        byType,
+        navigation: navigation ? { type: navigation.type, domContentLoaded: Math.round(navigation.domContentLoadedEventEnd), load: Math.round(navigation.loadEventEnd), transferSize: navigation.transferSize } : null,
+      });
+    } catch { /* ignore */ }
+  }
+
+  window.__somLab = { push, flush, source };
+  push("lifecycle", "info", { text: `start ${location.pathname}${location.search.replace(/([?&])t=[^&]*/g, "$1t=…")}`, userAgent: navigator.userAgent, top: isTop, secureContext: window.isSecureContext, crossOriginIsolated: window.crossOriginIsolated === true });
+})();
