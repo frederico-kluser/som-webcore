@@ -1,0 +1,216 @@
+{
+  "session": "2026-11-22-iphone-0240",
+  "label": "iphone",
+  "profile": "completo",
+  "mode": "local",
+  "createdAt": "2026-11-22T05:40:33.336255+00:00",
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:04.826Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-22T05:41:06.662Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "status": "ok",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:06.686Z",
+      "endedAt": "2026-11-22T05:41:06.797Z"
+    },
+    {
+      "id": "ort-wasm-int8-17m",
+      "url": "/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:06.809Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:41:21.991Z"
+    },
+    {
+      "id": "ort-wasm-8bit-17m",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:22.015Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:41:38.835Z"
+    },
+    {
+      "id": "ort-wasm-fp32-17m",
+      "url": "/index.html?engine=ort-wasm&variant=fp32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:38.858Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:41:57.500Z"
+    },
+    {
+      "id": "ort-wasm-q8emb-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:57.521Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:41:59.103Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:41:59.128Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:42:00.557Z"
+    },
+    {
+      "id": "ort-wasm-int8-32m",
+      "url": "/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:00.582Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:42:03.174Z"
+    },
+    {
+      "id": "ort-wasm-8bit-32m",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:03.199Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:42:05.625Z"
+    },
+    {
+      "id": "ort-webgpu-fp32-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=fp32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:05.649Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [webgpu] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:42:09.211Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:09.238Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [webgpu] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:42:10.830Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:10.859Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:42:17.390Z"
+    },
+    {
+      "id": "jh-webgpu-f16-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:17.413Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:42:22.445Z"
+    },
+    {
+      "id": "jh-cpu-f32-17m",
+      "url": "/index.html?engine=jh-cpu&variant=f32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:42:22.468Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:43:35.689Z"
+    },
+    {
+      "id": "ort-wasm-8bit-17m-debug",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-17m&debug=1&warm=0",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:35.727Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:43:37.159Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m-resistencia-200",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m&warm=0&endurance=200",
+      "timeout": 600,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:37.183Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:43:38.617Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m-resistencia-200",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m&warm=0&endurance=200",
+      "timeout": 600,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:38.644Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:43:47.628Z"
+    },
+    {
+      "id": "ort-webgpu-8bit-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=8bit&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:47.655Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [webgpu] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:43:49.092Z"
+    },
+    {
+      "id": "ort-webgpu-int8-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=int8&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:49.116Z",
+      "outcome": "failed",
+      "note": "no available backend found. ERR: [webgpu] RangeError: Out of memory",
+      "endedAt": "2026-11-22T05:43:50.604Z"
+    },
+    {
+      "id": "sonda-coi",
+      "url": "/probe.html?coi=1",
+      "timeout": 90,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:43:50.636Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-22T05:43:52.313Z"
+    }
+  ],
+  "startedAt": "2026-11-22T05:41:04.826Z",
+  "done": true,
+  "finishedAt": "2026-11-22T05:43:52.339Z"
+}

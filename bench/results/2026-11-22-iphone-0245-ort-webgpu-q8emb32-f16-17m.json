@@ -1,0 +1,28 @@
+{
+  "kind": "spike-mobile-run",
+  "schemaVersion": 1,
+  "status": "failed",
+  "writtenBy": "operador (a partir dos registros da sess\u00e3o e do relato do dono)",
+  "page": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+  "config": {
+    "engine": "ort-webgpu",
+    "variant": "q8emb32-f16",
+    "model": "ts-ettin-17m"
+  },
+  "fatal": {
+    "name": "Crash",
+    "message": "Safari recarregou a p\u00e1gina durante a sess\u00e3o do ONNX Runtime WebGPU (05:46:55 e 05:47:01 UTC, requests.jsonl) e mostrou que ocorreu um problema repetidamente: o processo da aba caiu duas vezes"
+  },
+  "failures": [
+    {
+      "stage": "engine",
+      "item": null,
+      "error": {
+        "name": "Crash",
+        "message": "Safari recarregou a p\u00e1gina durante a sess\u00e3o do ONNX Runtime WebGPU (05:46:55 e 05:47:01 UTC, requests.jsonl) e mostrou que ocorreu um problema repetidamente: o processo da aba caiu duas vezes"
+      }
+    }
+  ],
+  "answers": [],
+  "finishedAt": "2026-11-22T05:48:29.256306Z"
+}
