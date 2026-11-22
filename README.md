@@ -1861,8 +1861,8 @@ O planejamento completo — atividades em DAG, critérios de aceite, portões e 
 | Marco | Versão | O que prova |
 |---|---|---|
 | **M0 — Fundação e auditoria** | documentação | Plano e pesquisa conferidos em fontes primárias ([errata](research/ERRATA.md)). **Concluído em 2026-11-21.** |
-| **Marco T — API igual à do Chrome e teste do motor existente** | — | Fixa a API idêntica à Decisions API, testa no emulador Android o motor leve que já existe e analisa se há uma janela para um motor nosso em WebGPU, do zero ou como fork. Cada bifurcação passa por consulta ao usuário. **É o próximo passo.** |
-| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, sobre o motor que o teste escolher. Suspenso até o marco T. |
+| **Marco T — API igual à do Chrome e teste do motor existente** | — | Fixa a API idêntica à Decisions API, testa os motores que já existem (emulador Android, simulador de iOS, desktop e, depois, um iPhone real) e analisa se há uma janela para um motor nosso em WebGPU. **Concluído em 2026-11-22.** O motor existente (ONNX Runtime Web) não cumpre ao mesmo tempo a paridade e os 25 MB da primeira visita; o portão GT escolheu um motor nosso em WebGPU, e a bifurcação DP-01, um fork do motor leve `@johnhenry` ([ADRs 0001 a 0004](docs/adr/), [relatório](docs/reports/teste-mobile.md)). |
+| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, sobre o motor nosso que nasce do fork. **É o próximo passo:** a base do fork (`K-01`) e o tronco comum da PoC (`P-01` a `P-04`). |
 | **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, fallback CPU em Wasm SIMD, recuperação de falhas, três motores de navegador, pacote npm alpha. |
 | **M3 — Beta** | `v0.5`–`v0.9` | Escada de modelos (32M, 68M, 150M), análise do dispositivo e escolha automática ([4.5](#analise-dispositivo)), API candidata. |
 | **M4 — v1.0.0** | `v1.0.0` | API estável, catálogo auditado, `model: 'auto'` nos três motores. |
