@@ -229,6 +229,7 @@ async function run() {
   for (const step of state.steps) {
     if (step.status !== "pending") continue;
     current = { step };
+    delete step.note; // a previous attempt's note (kept in step.previous) does not describe this one
     step.status = "running";
     step.startedAt = new Date().toISOString();
     step.attempts = (step.attempts ?? 0) + 1;

@@ -250,8 +250,9 @@ def main(argv: list[str]) -> int:
         say(f"**Ciclo de vida:** a página ficou oculta {len(hidden)} vez(es)" + (" — as medições dessas etapas podem ter sido estranguladas pelo navegador" if hidden else "") + ".")
         for e in hidden[:10]:
             say(f"- {e.get('at')} em `{e.get('source')}`")
-        warns = Counter(re.sub(r"\x1b?\[[0-9;]*m|^\d{4}-\d\d-\d\d [\d:.]+ ", "", str(e.get("text", "")).split("\n")[0])[:200]
-                        for e in logs if e.get("level") == "warn" or ort_warning(e))
+        def plain(text: str) -> str:  # without terminal colours and ONNX Runtime's leading timestamp
+            return re.sub(r"^\d{4}-\d\d-\d\d [\d:.]+ ", "", re.sub(r"\x1b?\[[0-9;]*m", "", text))
+        warns = Counter(plain(str(e.get("text", "")).split("\n")[0])[:200] for e in logs if e.get("level") == "warn" or ort_warning(e))
         if warns:
             say("\n**Avisos** (os mais frequentes): " + "; ".join(f"“{t}” ×{n}" for t, n in warns.most_common(8)))
         say("")
