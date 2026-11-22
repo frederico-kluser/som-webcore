@@ -9,9 +9,9 @@ metadata:
 
 # Laboratório de aparelho — som-webcore
 
-Uma sessão = um aparelho real abrindo, pelo QR, a página-laboratório servida pelo **Mac mini**. Ela roda a sonda do ambiente, uma verificação estendida (armazenamento, APIs, WebGL, um passe real de computação em WebGPU) e a página de teste para cada motor e variante, cada uma num iframe, e manda tudo para o servidor. No fim, `analyze.py` escreve o relatório.
+Uma sessão = um aparelho real abrindo a página-laboratório servida pelo **Mac mini** (pelo QR na primeira vez; depois, pelo endereço fixo). Ela roda a sonda do ambiente, uma verificação estendida (armazenamento, APIs, WebGL, um passe real de computação em WebGPU) e a página de teste para cada motor e variante, cada uma como uma navegação da aba, e manda tudo para o servidor. No fim, `analyze.py` escreve o relatório.
 
-**Regras:** tudo roda no Mac (regra da skill `macmini`: o Acer só desenvolve). O token da sessão nunca entra no git: fica em `/Volumes/Ext2TB/tmp/som-webcore/lab/<sessão>/`; a chave da CA local fica em `/Volumes/Ext2TB/State/som-webcore/lab-ca/` e também nunca entra no git. Pare a sessão ao terminar. Latência do aparelho é **[MEDIDO]**; os limites do portão GT são **[ALVO]**. Nunca mude um limite depois de medir.
+**Regras:** tudo roda no Mac (regra da skill `macmini`: o Acer só desenvolve). O token do laboratório nunca entra no git: fica em `/Volumes/Ext2TB/State/som-webcore/lab-token` (e na `session.json` de cada sessão, em `/Volumes/Ext2TB/tmp/som-webcore/lab/<sessão>/`); a chave da CA local fica em `/Volumes/Ext2TB/State/som-webcore/lab-ca/` e também nunca entra no git. Pare a sessão ao terminar. Latência do aparelho é **[MEDIDO]**; os limites do portão GT são **[ALVO]**. Nunca mude um limite depois de medir.
 
 ## Por que HTTPS local (e a CA)
 
@@ -21,7 +21,7 @@ O dono quer o site **local** (sem Cloudflare). O Safari do iPhone só expõe Web
 2. **Ajustes → Perfil Transferido → Instalar** (ou **Ajustes → Geral → VPN e Gerenciamento de Dispositivos**);
 3. **Ajustes → Geral → Sobre → Ajustes de Confiança de Certificados** → ligar “som-webcore device lab CA (Mac mini)”.
 
-Depois disso, todo QR do laboratório abre direto. Toda requisição precisa do cookie da sessão, que só o link do QR (com o token aleatório) cria; sem ele, 404. Alternativas: `--modo local-http` (HTTP na rede local, nada a instalar, **sem WebGPU**) e `--modo tunel` (HTTPS por um túnel temporário do Cloudflare; público enquanto a sessão roda).
+Depois disso, o QR do laboratório abre direto. Toda requisição precisa do cookie do laboratório, que só o link do QR (com o token aleatório) cria; sem ele, 404. O token é o mesmo em todas as sessões (`lab-token`; `--novo-token` troca) e o cookie dura 180 dias: **um aparelho que entrou uma vez abre `https://192.168.100.84:8390/lab/lab.html` (o `FIXED_URL=`) direto, em qualquer sessão** — o dono pediu esse endereço fixo. Alternativas: `--modo local-http` (HTTP na rede local, nada a instalar, **sem WebGPU**) e `--modo tunel` (HTTPS por um túnel temporário do Cloudflare; público enquanto a sessão roda).
 
 ## Procedimento (o agente executa)
 
@@ -33,7 +33,7 @@ Depois disso, todo QR do laboratório abre direto. Toda requisição precisa do 
    ```bash
    ssh macmini 'cd /Volumes/Ext2TB/Projects/som-webcore && bash bench/spike-mobile/lab/start-lab.sh --label iphone --perfil completo'
    ```
-   A saída traz `SESSION=`, `URL=`, `QR_PNG=`, `CA_URL=`, `CA_QR_PNG=` e os QR codes em texto (primeiro o da CA, depois o do laboratório). Copie os PNG para o scratchpad do Acer e abra-os na tela para o dono escanear (`scp macmini:<QR_PNG> <scratchpad>/qr.png` e, no Windows, `Start-Process <scratchpad>\qr.png`); na resposta, dê também as URLs e os passos da CA (seção acima) se for a primeira vez desse aparelho.
+   A saída traz `SESSION=`, `URL=`, `FIXED_URL=`, `QR_PNG=`, `CA_URL=`, `CA_QR_PNG=` e os QR codes em texto (primeiro o da CA, depois o do laboratório). **Aparelho que já entrou:** diga ao dono para abrir o `FIXED_URL` e tocar em Começar — sem QR. **Aparelho novo:** copie os PNG para o scratchpad do Acer e abra-os na tela para o dono escanear (`scp macmini:<QR_PNG> <scratchpad>/qr.png` e, no Windows, `Start-Process <scratchpad>\qr.png`); na resposta, dê também as URLs e os passos da CA (seção acima).
 3. **Acompanhar sem esperar o dono** — um Monitor no log do servidor (eventos: aparelho entrou, cada etapa, erros, fim):
    ```bash
    ssh -o ServerAliveInterval=30 macmini 'tail -n +1 -F /Volumes/Ext2TB/tmp/som-webcore/lab/<SESSION>/serve.log' | grep --line-buffered "\[lab\]"
@@ -79,9 +79,13 @@ xcrun simctl openurl $U "<base>/lab/lab.html?auto=1"   # roda sem o toque em “
 - **O iPhone não abre o endereço:** ele precisa estar no mesmo Wi-Fi do Mac; confira o IP na linha `URL=`.
 - **“Esta conexão não é privada”:** a CA não foi instalada ou a confiança não foi ligada (passo 3 da seção da CA).
 - **O túnel não sobe ou demora** (`--modo tunel`): veja `tunnel.log` na pasta da sessão; use `--modo local`.
-- **A página recarregou** (o Safari mata abas pesadas): o laboratório repete a etapa uma vez e, se recarregar de novo, marca `interrupted` e segue.
+- **A página de etapa recarregou** (o Safari recarrega a página cujo processo caiu): o `hook.js` vê a recarga, não deixa a etapa rodar de novo (cairia de novo, como o ONNX Runtime WebGPU no iPhone, que derrubou o processo duas vezes seguidas e terminou na tela “ocorreu um problema repetidamente”) e volta ao laboratório, que marca a etapa `crashed` com um resultado de falha. Uma etapa que volta sem resultado por outro motivo é repetida uma vez e depois fica `interrupted`.
 - **A tela apagou ou o dono trocou de app:** o laboratório pede o Wake Lock no toque em “Começar”; os períodos ocultos aparecem nos logs e no relatório, e as medições dessas etapas ficam sob suspeita.
 - **Etapas que travam** (ONNX Runtime WebGPU com `8bit`/`int8` travou no desktop): têm tempo limite curto e ficam no fim do perfil; se a página ficar parada, o dono toca em voltar.
-- **Teto de memória do Wasm por aba (iPhone, Safari 26.6.3):** a 4ª sessão do ONNX Runtime na mesma aba falha com `RangeError: Out of memory` — em iframes e em páginas próprias, Wasm e WebGPU (os dois usam o runtime em Wasm); o `@johnhenry`, JavaScript puro, segue. Por isso cada etapa é uma navegação da aba e, a cada 3 sessões do ONNX Runtime, o laboratório pede um toque em **“Continuar numa aba nova”** (`window.open` com `noopener`, que o Safari pode pôr num processo novo). O perfil `onnx` repete só as etapas do ONNX Runtime.
+- **Teto de memória do Wasm por processo (iPhone, Safari 26.6.3, 2026-11-22):** a memória do Wasm das sessões do ONNX Runtime não volta enquanto o processo web do Safari vive. Depois de 2 ou 3 sessões, toda sessão nova falha logo ao iniciar com `RangeError: Out of memory`, em Wasm e em WebGPU (os dois usam o runtime em Wasm); o `@johnhenry`, JavaScript puro, segue rodando.
+  - Não resolveram: iframes, páginas próprias, aba aberta por `window.open` com `noopener` (continua no mesmo processo) e uma aba antiga reaberta à mão.
+  - Resolveu: **fechar o Safari no seletor de apps**. As 3 etapas que tinham falhado rodaram em seguida.
+  - Por isso a etapa que falha com `Out of memory` volta a pendente, até 3 vezes. O laboratório pede para fechar o Safari, reabri-lo no endereço fixo e tocar em **“Já reabri o Safari: continuar”**. O relatório lista essas tentativas e diz que a repetição é a medição.
+  - O perfil `onnx` repete só as etapas do ONNX Runtime.
 - **Tela ligada:** o Safari só concede o Wake Lock com um toque; as páginas de etapa registram `NotAllowedError`, e o dono precisa manter a tela acesa.
 - **Os pesos ficam em cache entre as etapas** (`cache=1`): cada arquivo cruza a rede uma vez; por isso o tempo até a primeira resposta da sessão não é de primeira visita.

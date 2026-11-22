@@ -151,11 +151,13 @@ Para medir num aparelho de verdade, o Mac serve a página de teste na rede de ca
 
 ```bash
 cd /Volumes/Ext2TB/Projects/som-webcore
-bash bench/spike-mobile/lab/start-lab.sh --label iphone --perfil completo     # imprime SESSION=, URL= e os QR codes
+bash bench/spike-mobile/lab/start-lab.sh --label iphone --perfil completo     # imprime SESSION=, URL=, FIXED_URL= e os QR codes
 python3 bench/spike-mobile/lab/analyze.py <SESSION>                           # depois do [lab] <SESSION> done
 bash bench/spike-mobile/lab/stop-lab.sh <SESSION>
 ```
 
 - **HTTPS local** (`--modo local`, o padrão): o Safari só expõe WebGPU, threads do Wasm e o Wake Lock em contexto seguro. O certificado vem de uma CA criada no Mac (`/Volumes/Ext2TB/State/som-webcore/lab-ca/`, fora do repositório); o aparelho confia nela uma vez, pelo primeiro QR. `--modo local-http` dispensa a CA, mas fica sem WebGPU; `--modo tunel` usa um túnel temporário do Cloudflare.
-- **Coleta:** [`lab/hook.js`](lab/hook.js) entra em toda página da sessão e manda console, erros, falhas de rede, eventos do WebGPU e o ciclo de vida da página; o servidor grava cada requisição; [`lab/lab.js`](lab/lab.js) roda as etapas em iframes e retoma se o Safari recarregar.
+- **Endereço fixo:** o token do laboratório fica no Mac (`/Volumes/Ext2TB/State/som-webcore/lab-token`, fora do repositório) e o cookie dura 180 dias; depois do primeiro QR, o aparelho abre `https://192.168.100.84:8390/lab/lab.html` direto em qualquer sessão.
+- **Coleta:** [`lab/hook.js`](lab/hook.js) entra em toda página da sessão e manda console, erros, falhas de rede, eventos do WebGPU e o ciclo de vida da página; o servidor grava cada requisição; [`lab/lab.js`](lab/lab.js) roda cada etapa como uma navegação da aba e retoma de onde parou.
+- **iPhone:** a memória do Wasm do ONNX Runtime fica presa no processo do Safari. Depois de 2 ou 3 sessões vem `Out of memory`, e só fechar o Safari a devolve: o laboratório repete a etapa e pede isso. Uma página que o Safari recarrega depois de uma queda do processo volta ao laboratório sem rodar de novo.
 - **Armadilhas:** pelo túnel, o `cloudflared` pede gzip ao servidor e o Cloudflare descomprimia o brotli para quem só aceitava brotli (as respostas levam `no-transform`); o serviço do simulador não lê o HD externo (`simctl keychain … add-root-cert` travou com o certificado em `/Volumes/Ext2TB`; copiar para `/tmp`).

@@ -1,5 +1,5 @@
 // Device lab log hook. serve.mjs (lab mode) injects it as the first script of every HTML page of a
-// lab session — the lab itself, the probe and the test page in their iframes — so whatever a page
+// lab session — the lab itself, the probe and the test pages, each a navigation of the tab — so whatever a page
 // does on the device reaches the server: console output, errors (also failed resource loads),
 // rejected promises, failed requests, WebGPU adapter/device events and the page lifecycle. Entries
 // are batched to /api/lab/log every second and flushed with sendBeacon when the page goes away.
@@ -172,7 +172,17 @@
   // A lab step is a page of its own (lab.js navigates to it with ?labstep=): keep the screen on, and
   // go back to the lab once the page has posted its result, or when the step's time is up.
   const labStep = params.get("labstep");
-  if (labStep && isTop) {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType("navigation")[0]?.type === "reload"; } catch { /* no Navigation Timing */ }
+  if (labStep && isTop && reloaded) {
+    // A step page is never reloaded on purpose; Safari reloads a page whose web process crashed (ONNX
+    // Runtime WebGPU on the iPhone did that twice in a row). Stop before the page's own scripts run the
+    // step again and tell the lab.
+    push("lab", "warn", { text: `step ${labStep}: the page came back as a reload (the web process crashed); back to the lab without running it again` });
+    try { window.stop(); } catch { /* keep going */ }
+    flush();
+    location.replace(`/lab/lab.html?continue=1&labcrashed=${encodeURIComponent(labStep)}`);
+  } else if (labStep && isTop) {
     const limit = Number(params.get("labtimeout") || 420) * 1000;
     let leaving = false;
     const backToLab = (extra) => {
