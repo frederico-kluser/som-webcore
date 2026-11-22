@@ -3,6 +3,8 @@
 Como subir o aparelho virtual, servir a página do computador para o Chrome dele e recolher o resultado — com os comandos exatos usados em 2026-11-21 (atividade `T-07` do [roadmap](../../ROADMAP.md#mt)). Todo o resto do marco T usa este procedimento.
 
 > **O que o emulador mede.** Se funciona no Chrome para Android, quanto baixa, quanta memória usa, e a comparação entre motores no mesmo ambiente. **Não** mede latência de celular: o processador é o do computador (x86_64) e a GPU é emulada. Toda latência medida aqui é indicativa.
+>
+> **No Mac mini** (arm64), o mesmo procedimento com as ferramentas do SDK, um aparelho virtual dedicado e os resultados da `T-08`: [MACMINI.md, seção 7](MACMINI.md#7-emulador-android-no-mac-t-08).
 
 ## 1. Ambiente registrado
 

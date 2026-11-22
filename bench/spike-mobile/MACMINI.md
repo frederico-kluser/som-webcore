@@ -88,3 +88,40 @@ As duas sondas acima foram refeitas com o executor final (as primeiras gravavam 
 A matriz (`bash bench/spike-mobile/matrix-ios.sh "1 2"`) rodou as dez configurações duas vezes; o primeiro resultado foi gravado às 21:13 e o último às 22:06 de 2026-11-21 no horário do Mac (00:13 e 01:06 UTC de 2026-11-22). Resultados, tabelas e conclusões: [relatório do marco T, seção 5](../../docs/reports/teste-mobile.md#5-safari-do-ios-no-simulador-complemento-da-t-08). Em resumo: o ONNX Runtime Web em Wasm e o `@johnhenry` em CPU rodam no Safari do iOS; os caminhos WebGPU falham por falta de adaptador; com o mesmo arquivo, o motor do navegador reproduz o ONNX Runtime nativo (menos no `int8`).
 
 **A primeira navegação depois de religar não carregou em nenhuma das 22 execuções** (20 da matriz e as 2 sondas): a página de prontidão precisou de 2 aberturas em 17, de 3 em 4 e de 4 em 1 (`device.attempts`); nenhuma execução precisou recomeçar do zero.
+
+## 7. Emulador Android no Mac (`T-08`)
+
+O Mac já tinha o SDK Android no HD externo (variáveis `ANDROID_HOME` e `ANDROID_AVD_HOME` apontam para `/Volumes/Ext2TB/Android`). A skill `android-agent-skill` é para Windows (PowerShell); aqui os mesmos passos rodam direto nas ferramentas do SDK.
+
+| Item | Valor **[MEDIDO em 2026-11-21]** |
+|---|---|
+| Emulador | Android Emulator 37.2.12.0, aceleração do macOS (Hypervisor.framework) |
+| Aparelho virtual | `som-webcore-android36` (Pixel 6, `google_apis`, **arm64-v8a**, 4 GB de RAM), criado para o projeto; o `jev_pixel` é de outro projeto |
+| Imagem | `google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys` (Android 16, API 36) |
+| Chrome | **133.0.6943.137** — a mesma versão do emulador do Acer |
+| Núcleos e memória vistos pela página | `hardwareConcurrency` 4; `deviceMemory` 4 |
+
+```bash
+export JAVA_HOME=/Volumes/Ext2TB/dev-tools/jdk-17/Contents/Home
+echo no | avdmanager create avd -n som-webcore-android36 -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_6
+# config.ini: hw.ramSize=4096, hw.gpu.mode=swiftshader_indirect
+TMPDIR=/Volumes/Ext2TB/tmp/som-webcore nohup emulator -avd som-webcore-android36 -port 5580 -no-boot-anim -no-snapshot \
+  -accel on -netfast -no-metrics -no-audio -no-window -gpu swiftshader_indirect > /Volumes/Ext2TB/tmp/som-webcore/emulator.log 2>&1 &
+adb -s emulator-5580 wait-for-device   # e esperar sys.boot_completed=1
+node bench/spike-mobile/run-android.mjs --serial emulator-5580 --result <nome> --path "/probe.html?name=<nome>"
+SERIAL=emulator-5580 PREFIX=emulador-macmini bash bench/spike-mobile/matrix-emulador.sh "1 2" [configurações...]
+```
+
+A porta 5580 fica fora da padrão (5554), que um emulador de outro projeto usaria; o `run-android.mjs` e a matriz recebem o aparelho por `--serial`/`SERIAL`, e `PREFIX` marca os arquivos como `emulador-macmini`.
+
+**Sondas** — as mesmas cinco configurações da `T-07` **[MEDIDO]**:
+
+| GPU do emulador | Flags do Chrome | `requestAdapter()` | `requestDevice()` | Arquivo |
+|---|---|---|---|---|
+| `swiftshader_indirect` | nenhuma | `null` | — | [`…-swiftshader-sem-flags.json`](../results/2026-11-21-emulador-macmini-probe-swiftshader-sem-flags.json) |
+| `swiftshader_indirect` | `--enable-unsafe-webgpu --enable-features=Vulkan` | adaptador de **fallback** (SwiftShader) | falha: “A valid external Instance reference no longer exists.” | [`…-swiftshader-flags-webgpu.json`](../results/2026-11-21-emulador-macmini-probe-swiftshader-flags-webgpu.json) |
+| `swiftshader_indirect` | nenhuma, com `?coi=1` | `null` | — | [`…-swiftshader-coi.json`](../results/2026-11-21-emulador-macmini-probe-swiftshader-coi.json) |
+| `host` (Apple M1) | nenhuma | `null` | — | [`…-gpuhost-sem-flags.json`](../results/2026-11-21-emulador-macmini-probe-gpuhost-sem-flags.json) |
+| `host` (Apple M1) | `--enable-unsafe-webgpu --enable-features=Vulkan` | adaptador `apple` (não é fallback) | falha: a mesma mensagem | [`…-gpuhost-flags-webgpu.json`](../results/2026-11-21-emulador-macmini-probe-gpuhost-flags-webgpu.json) |
+
+Diferença em relação ao emulador x86_64 do Acer: com as flags inseguras, o Chrome do emulador arm64 **entrega um adaptador**, que o do Acer não entregava — mas nenhum dispositivo. Com `-gpu host` e as flags, os dois motores WebGPU também falharam, duas vezes cada (`…-gpuhost-flags-webgpu-r*.json`): depois de o `requestDevice()` da sonda da página falhar, eles já não recebem adaptador. **Não há WebGPU utilizável no Chrome 133 do emulador**, em nenhuma configuração. WebAssembly como no Acer: SIMD e SIMD relaxado **sim**, JSPI e `Float16Array` **não**, threads só com `?coi=1`.

@@ -1,0 +1,268 @@
+{
+  "kind": "environment-probe",
+  "startedAt": "2026-11-22T01:17:28.005Z",
+  "page": "http://localhost:8377/probe.html?name=2026-11-21-emulador-macmini-probe-gpuhost-flags-webgpu",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "language": "en-US",
+    "hardwareConcurrency": 4,
+    "deviceMemory": 4,
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "screen": {
+      "width": 412,
+      "height": 915,
+      "devicePixelRatio": 2.625
+    },
+    "connection": {
+      "effectiveType": "4g",
+      "saveData": false
+    },
+    "hasDecisionModel": false,
+    "wasm": {
+      "simd": true,
+      "threads": false,
+      "relaxedSimd": true,
+      "jspi": false,
+      "sharedArrayBuffer": false
+    },
+    "float16Array": false,
+    "performanceMemory": {
+      "jsHeapSizeLimit": 1070000000
+    },
+    "measureUserAgentSpecificMemory": false,
+    "userAgentData": {
+      "architecture": "",
+      "brands": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133"
+        }
+      ],
+      "fullVersionList": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99.0.0.0"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133.0.6943.137"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133.0.6943.137"
+        }
+      ],
+      "mobile": true,
+      "model": "sdk_gphone64_arm64",
+      "platform": "Android",
+      "platformVersion": "16.0.0"
+    },
+    "webgl": {
+      "vendor": "Google (Apple)",
+      "renderer": "Android Emulator OpenGL ES Translator (Apple M1)"
+    },
+    "webgpu": {
+      "hasNavigatorGpu": true,
+      "preferredCanvasFormat": "rgba8unorm",
+      "wgslLanguageFeatures": [
+        "packed_4x8_integer_dot_product",
+        "pointer_composite_access",
+        "readonly_and_readwrite_storage_textures",
+        "unrestricted_pointer_parameters"
+      ],
+      "high-performance": {
+        "adapter": true,
+        "info": {
+          "vendor": "apple",
+          "architecture": "",
+          "device": "",
+          "description": ""
+        },
+        "isFallbackAdapter": false,
+        "features": [
+          "bgra8unorm-storage",
+          "chromium-experimental-snorm16-texture-formats",
+          "chromium-experimental-timestamp-query-inside-passes",
+          "chromium-experimental-unorm16-texture-formats",
+          "clip-distances",
+          "depth-clip-control",
+          "depth32float-stencil8",
+          "dual-source-blending",
+          "float32-blendable",
+          "float32-filterable",
+          "indirect-first-instance",
+          "rg11b10ufloat-renderable",
+          "shader-f16",
+          "subgroups",
+          "subgroups-f16",
+          "texture-compression-astc",
+          "texture-compression-bc",
+          "texture-compression-etc2",
+          "timestamp-query"
+        ],
+        "limits": {
+          "maxTextureDimension1D": 16384,
+          "maxTextureDimension2D": 16384,
+          "maxTextureDimension3D": 2048,
+          "maxTextureArrayLayers": 2048,
+          "maxBindGroups": 4,
+          "maxBindGroupsPlusVertexBuffers": 24,
+          "maxBindingsPerBindGroup": 1000,
+          "maxDynamicUniformBuffersPerPipelineLayout": 10,
+          "maxDynamicStorageBuffersPerPipelineLayout": 8,
+          "maxSampledTexturesPerShaderStage": 16,
+          "maxSamplersPerShaderStage": 16,
+          "maxStorageBuffersPerShaderStage": 10,
+          "maxStorageTexturesPerShaderStage": 8,
+          "maxUniformBuffersPerShaderStage": 12,
+          "maxUniformBufferBindingSize": 65536,
+          "maxStorageBufferBindingSize": 4294967292,
+          "minUniformBufferOffsetAlignment": 256,
+          "minStorageBufferOffsetAlignment": 256,
+          "maxVertexBuffers": 8,
+          "maxBufferSize": 4294967296,
+          "maxVertexAttributes": 30,
+          "maxVertexBufferArrayStride": 2048,
+          "maxInterStageShaderComponents": 112,
+          "maxInterStageShaderVariables": 28,
+          "maxColorAttachments": 8,
+          "maxColorAttachmentBytesPerSample": 32,
+          "maxComputeWorkgroupStorageSize": 32768,
+          "maxComputeInvocationsPerWorkgroup": 1024,
+          "maxComputeWorkgroupSizeX": 1024,
+          "maxComputeWorkgroupSizeY": 1024,
+          "maxComputeWorkgroupSizeZ": 64,
+          "maxComputeWorkgroupsPerDimension": 65535,
+          "maxStorageBuffersInFragmentStage": 10,
+          "maxStorageTexturesInFragmentStage": 8,
+          "maxStorageBuffersInVertexStage": 10,
+          "maxStorageTexturesInVertexStage": 8,
+          "minSubgroupSize": 4,
+          "maxSubgroupSize": 32
+        },
+        "deviceError": "OperationError: Failed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists."
+      },
+      "low-power": {
+        "adapter": true,
+        "info": {
+          "vendor": "apple",
+          "architecture": "",
+          "device": "",
+          "description": ""
+        },
+        "isFallbackAdapter": false,
+        "features": [
+          "bgra8unorm-storage",
+          "chromium-experimental-snorm16-texture-formats",
+          "chromium-experimental-timestamp-query-inside-passes",
+          "chromium-experimental-unorm16-texture-formats",
+          "clip-distances",
+          "depth-clip-control",
+          "depth32float-stencil8",
+          "dual-source-blending",
+          "float32-blendable",
+          "float32-filterable",
+          "indirect-first-instance",
+          "rg11b10ufloat-renderable",
+          "shader-f16",
+          "subgroups",
+          "subgroups-f16",
+          "texture-compression-astc",
+          "texture-compression-bc",
+          "texture-compression-etc2",
+          "timestamp-query"
+        ],
+        "limits": {
+          "maxTextureDimension1D": 16384,
+          "maxTextureDimension2D": 16384,
+          "maxTextureDimension3D": 2048,
+          "maxTextureArrayLayers": 2048,
+          "maxBindGroups": 4,
+          "maxBindGroupsPlusVertexBuffers": 24,
+          "maxBindingsPerBindGroup": 1000,
+          "maxDynamicUniformBuffersPerPipelineLayout": 10,
+          "maxDynamicStorageBuffersPerPipelineLayout": 8,
+          "maxSampledTexturesPerShaderStage": 16,
+          "maxSamplersPerShaderStage": 16,
+          "maxStorageBuffersPerShaderStage": 10,
+          "maxStorageTexturesPerShaderStage": 8,
+          "maxUniformBuffersPerShaderStage": 12,
+          "maxUniformBufferBindingSize": 65536,
+          "maxStorageBufferBindingSize": 4294967292,
+          "minUniformBufferOffsetAlignment": 256,
+          "minStorageBufferOffsetAlignment": 256,
+          "maxVertexBuffers": 8,
+          "maxBufferSize": 4294967296,
+          "maxVertexAttributes": 30,
+          "maxVertexBufferArrayStride": 2048,
+          "maxInterStageShaderComponents": 112,
+          "maxInterStageShaderVariables": 28,
+          "maxColorAttachments": 8,
+          "maxColorAttachmentBytesPerSample": 32,
+          "maxComputeWorkgroupStorageSize": 32768,
+          "maxComputeInvocationsPerWorkgroup": 1024,
+          "maxComputeWorkgroupSizeX": 1024,
+          "maxComputeWorkgroupSizeY": 1024,
+          "maxComputeWorkgroupSizeZ": 64,
+          "maxComputeWorkgroupsPerDimension": 65535,
+          "maxStorageBuffersInFragmentStage": 10,
+          "maxStorageTexturesInFragmentStage": 8,
+          "maxStorageBuffersInVertexStage": 10,
+          "maxStorageTexturesInVertexStage": 8,
+          "minSubgroupSize": 4,
+          "maxSubgroupSize": 32
+        },
+        "deviceError": "OperationError: Failed to execute 'requestDevice' on 'GPUAdapter': A valid external Instance reference no longer exists."
+      }
+    }
+  },
+  "finishedAt": "2026-11-22T01:17:37.291Z",
+  "device": {
+    "serial": "emulator-5580",
+    "emulatorCommandLine": "/Volumes/Ext2TB/Android/sdk/emulator/qemu/darwin-aarch64/qemu-system-aarch64-headless -avd som-webcore-android36 -port 5580 -no-boot-anim -no-snapshot -accel on -netfast -no-metrics -no-audio -no-window -gpu host",
+    "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+    "androidRelease": "16",
+    "sdk": "36",
+    "model": "sdk_gphone64_arm64",
+    "emulatorGpuMode": null,
+    "vulkan": "ranchu",
+    "chrome": "133.0.6943.137",
+    "chromeFlags": "--enable-unsafe-webgpu --enable-features=Vulkan",
+    "chromeDataCleared": true
+  },
+  "androidMemory": {
+    "method": "dumpsys meminfo --package com.android.chrome (Total PSS by process), bytes",
+    "samples": [
+      {
+        "t": 0,
+        "pss": {}
+      },
+      {
+        "t": 5414,
+        "pss": {
+          "com.android.chrome:privileged_process0#3203": 48484352,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#3140": 74936320,
+          "com.android.chrome#3075": 121290752
+        }
+      },
+      {
+        "t": 10371,
+        "pss": {
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#3140": 75360256,
+          "com.android.chrome:privileged_process1#3535": 47990784,
+          "com.android.chrome#3075": 120550400
+        }
+      }
+    ]
+  }
+}
