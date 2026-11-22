@@ -1,7 +1,7 @@
 # ADR 0002 — DT-01: seguir só com o emulador; a medição em celulares reais fica descartada
 
 - **Data:** 2026-11-21
-- **Estado:** proposta — passa a aceita no PR que concluir `T-08` e `T-09` (dependências da bifurcação no roadmap)
+- **Estado:** aceita — 2026-11-21, depois de concluídas a `T-08` e a `T-09`
 - **Bifurcação:** `DT-01` do [roadmap](../../ROADMAP.md#bifurcacoes) — “os resultados do emulador bastam para decidir?”
 - **Decidido por delegação do dono.**
 
@@ -11,13 +11,13 @@ A `DT-01` decide se o portão `GT` pode ser fechado só com o emulador Android (
 
 ## Evidência
 
-Resumo da `T-08` e da `T-09` no [relatório do marco T](../reports/teste-mobile.md), com os dados brutos em `bench/results/2026-11-21-emulador-*.json`. O que o emulador **não** permite concluir:
+Resumo da `T-08` e da `T-09` no [relatório do marco T](../reports/teste-mobile.md) (seções 3 e 4), com os dados brutos em `bench/results/2026-11-21-emulador-macmini-*.json`: a medição foi feita no emulador Android **arm64 do Mac mini**, com o mesmo Chrome 133 do emulador do Acer, e complementada pelo Safari do simulador de iOS (seção 5). O que o emulador e o simulador **não** permitem concluir:
 
-- **Latência de celular.** O emulador roda no processador do computador (x86_64, WHPX) e a GPU é emulada; toda latência medida nele é indicativa.
-- **WebGPU no Android.** O Chrome do emulador não oferece adaptador WebGPU em nenhuma configuração ([EMULADOR.md](../../bench/spike-mobile/EMULADOR.md)); o caminho WebGPU dos motores só foi medido no desktop.
+- **Latência de celular.** O emulador e o simulador rodam no processador de um computador (o Apple M1 do Mac mini) e a GPU é emulada; toda latência medida neles é indicativa.
+- **WebGPU no celular.** O Chrome do emulador não oferece WebGPU utilizável em nenhuma configuração — sem flags não há adaptador; com as flags inseguras há adaptador, mas nenhum dispositivo ([MACMINI.md, seção 7](../../bench/spike-mobile/MACMINI.md#7-emulador-android-no-mac-t-08)) — e o Safari do simulador também não entrega adaptador. O caminho WebGPU dos motores só foi medido no desktop.
 - **Chrome atual.** O Chrome do emulador é o 133 da imagem: atualizá-lo pela Play Store exige uma conta Google.
 
-Recursos disponíveis nesta execução: nenhum celular ligado ao computador (`adb devices` só lista o `emulator-5554`) e nenhum iPhone.
+Recursos disponíveis nesta execução: nenhum celular ligado ao computador nem ao Mac mini (`adb devices` só lista os emuladores) e nenhum iPhone; no Mac, só o simulador de iOS.
 
 ## Ramos
 

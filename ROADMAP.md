@@ -64,8 +64,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 80 (11 feitos) · **arestas:** 124.
-- **Esforço relativo:** 28/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 80 (14 feitos) · **arestas:** 124.
+- **Esforço relativo:** 29/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro (117 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-08` → `DT-01` → `T-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -318,10 +318,10 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 | `T-01` | **Página de teste** — página estática que usa só a API de `T-05` e faz as mesmas perguntas, em português e em inglês, a cada motor candidato | `T-05`, `T-06` | `bench/spike-mobile/` | registra latência (p50 e p95), tempo até a primeira resposta, bytes baixados, memória e as respostas; exporta um JSON; o que não rodar fica registrado como resultado | S | feito |
 | `T-08` | **Medição no emulador** — rodar a página no Chrome do emulador Android, em Wasm e, se houver, em WebGPU | `T-01`, `T-07` | `bench/results/` (arquivos marcados como emulador) | modelos de 17M e de 32M; cada medição repetida duas vezes; nenhuma latência de emulador apresentada como latência de celular | S | feito |
 | `T-09` | **Teste do motor existente** — conferir se responde certo e aguenta: respostas contra a referência do modelo, forma da API e 200 decisões seguidas | `T-01` | seção do relatório, `bench/results/` | mesmas respostas da referência, dentro da tolerância da variante; forma do resultado idêntica à de `T-05`; nenhuma falha nem crescimento de memória nas 200 decisões | S | feito |
-| `T-03` | **API nativa** — rodar a página de conformidade na Decisions API do Chrome (flag `decisions-api`) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; valor de `availability()` num perfil real registrado | S | em curso |
-| `DT-02` | **Bifurcação DT-02** — o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | `T-03` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; se o modelo ficar disponível, fecha como “não se aplica” | — | a fazer |
-| `DT-01` | **Bifurcação DT-01** — o emulador basta, ou medimos em aparelho real? | `T-08`, `T-09` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | a fazer |
-| `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone | `DT-01` (se aparelho real) | `bench/results/` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | a fazer |
+| `T-03` | **API nativa** — rodar a página de conformidade na Decisions API do Chrome (flag `decisions-api`) e comparar forma e respostas | `T-01` | seção do relatório | diferenças de forma listadas e corrigidas em `T-05`; valor de `availability()` num perfil real registrado | S | feito |
+| `DT-02` | **Bifurcação DT-02** — o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | `T-03` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; se o modelo ficar disponível, fecha como “não se aplica” | — | feito |
+| `DT-01` | **Bifurcação DT-01** — o emulador basta, ou medimos em aparelho real? | `T-08`, `T-09` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | feito |
+| `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone | `DT-01` (se aparelho real) | `bench/results/` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | descartada |
 | `T-10` | **Análise da janela** — listar as limitações do motor existente com modelos de decisão, e as dos próprios modelos, e dizer quais um motor nosso resolveria | `DT-02`, `DT-01`, `T-02` | seção do relatório | cada limitação com evidência medida, causa provável e se um fork ou um motor próprio a resolve; limitações de modelo separadas das de motor | S | a fazer |
 | `T-04` | **Relatório e veredito** — o motor existente é satisfatório? Anotar o veredito, os limites e a janela | `T-10` | `docs/reports/teste-mobile.md` | veredito explícito contra cada critério de GT; dados brutos publicados; todo número rotulado; o que não se sabe, listado | S | a fazer |
 | `GT` | **Portão GT** — motor existente ou motor nosso? | `T-04` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; critérios de [GT](#gt) | — | a fazer |
@@ -336,10 +336,10 @@ flowchart LR
     T01["T-01 · Página de teste"]:::done
     T08["T-08 · Medição no emulador"]:::done
     T09["T-09 · Teste do motor existente"]:::done
-    T03["T-03 · API nativa"]:::doing
+    T03["T-03 · API nativa"]:::done
     DT01{"DT-01 · o emulador basta, ou medimos em aparelho real?"}:::fork
     DT02{"DT-02 · o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo?"}:::fork
-    T02["T-02 · Medição em celulares reais"]:::opt
+    T02["T-02 · Medição em celulares reais"]:::off
     T10["T-10 · Análise da janela"]:::todo
     T04["T-04 · Relatório e veredito"]:::todo
     GT{{"GT · motor existente ou motor nosso?"}}:::gate
