@@ -77,7 +77,7 @@ function emulatorCommandLine() {
     // macOS and Linux: the qemu process of this serial's virtual device (`adb emu avd name`).
     const avd = adb("emu", "avd", "name").split(/\r?\n/)[0].trim();
     const lines = execFileSync("ps", ["-axww", "-o", "command="], { encoding: "utf8", timeout: 30000 }).split("\n")
-      .filter((line) => line.includes("qemu-system") && line.includes(avd));
+      .filter((line) => /^\S*qemu-system/.test(line) && line.includes(avd));
     return lines.join("\n") || null;
   } catch { return null; }
 }
