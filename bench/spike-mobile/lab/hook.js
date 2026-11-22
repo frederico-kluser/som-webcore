@@ -34,19 +34,30 @@
       const entry = { seq: seq++, t: Math.round(performance.now()), at: new Date().toISOString(), source, kind, level, ...data };
       if (typeof entry.text === "string" && entry.text.length > MAX_TEXT) entry.text = `${entry.text.slice(0, MAX_TEXT)}…`;
       queue.push(entry);
-      if (queue.length >= 50) flush(false);
+      if (queue.length >= 50) flush();
     } catch { /* never break the page */ }
   }
 
-  function flush(useBeacon) {
-    if (!queue.length) return;
-    const body = JSON.stringify(queue.splice(0, queue.length));
-    try {
-      if (useBeacon && navigator.sendBeacon && navigator.sendBeacon("/api/lab/log", new Blob([body], { type: "application/json" }))) return;
-      if (realFetch) realFetch("/api/lab/log", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000 }).catch(() => {});
-    } catch { /* ignore */ }
+  // Beacons first: the browser delivers them even after the page is gone — a lab step removes its
+  // iframe right after the page posts, and a fetch still in flight was being cancelled with it.
+  // Each beacon stays under the 64 KiB limit; a batch the beacon refuses goes by fetch.
+  function flush() {
+    while (queue.length) {
+      const batch = [];
+      let size = 2;
+      while (queue.length && (batch.length === 0 || size + JSON.stringify(queue[0]).length < 60000)) {
+        const entry = queue.shift();
+        size += JSON.stringify(entry).length + 1;
+        batch.push(entry);
+      }
+      const body = JSON.stringify(batch);
+      try {
+        if (navigator.sendBeacon && navigator.sendBeacon("/api/lab/log", new Blob([body], { type: "application/json" }))) continue;
+        if (realFetch) realFetch("/api/lab/log", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000 }).catch(() => {});
+      } catch { /* ignore */ }
+    }
   }
-  setInterval(() => flush(false), 1000);
+  setInterval(flush, 1000);
 
   // Console.
   for (const level of ["log", "info", "warn", "error", "debug", "trace"]) {
@@ -73,13 +84,13 @@
       push("lifecycle", "info", { text: type, persisted: event.persisted });
       if (type === "pagehide") {
         resourceSummary();
-        flush(true);
+        flush();
       }
     });
   }
   document.addEventListener("visibilitychange", () => {
     push("lifecycle", "info", { text: `visibility ${document.visibilityState}` });
-    if (document.visibilityState === "hidden") flush(true);
+    if (document.visibilityState === "hidden") flush();
   });
   window.addEventListener("orientationchange", () => push("lifecycle", "info", { text: `orientation ${(screen.orientation && screen.orientation.type) || window.orientation}` }));
 

@@ -144,3 +144,18 @@ PREFIX=desktop-macmini TMPDIR=/Volumes/Ext2TB/tmp/som-webcore bash bench/spike-m
 - O shell remoto do Mac é o zsh, que **não divide palavras** de uma variável sem aspas (`set -- $c` vira um argumento só). Laços com configurações em `ssh macmini '…'` devem rodar em `bash -s` ou usar `${=c}`; uma rodada de resistência foi perdida e apagada por isso.
 
 A [sonda](../results/2026-11-21-desktop-macmini-chrome157-probe.json) confirma WebGPU sobre Metal (adaptador `apple`, arquitetura `metal-3`, dispositivo criado, `shader-f16`) e WebAssembly com SIMD, SIMD relaxado e JSPI. Resultados da página: [relatório do marco T, seção 2](../../docs/reports/teste-mobile.md#2-a-página-de-teste-t-01).
+
+## 9. Laboratório de aparelho real (iPhone, Android)
+
+Para medir num aparelho de verdade, o Mac serve a página de teste na rede de casa e o aparelho a abre por um QR code — a skill [`som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md) tem o procedimento completo. Em resumo:
+
+```bash
+cd /Volumes/Ext2TB/Projects/som-webcore
+bash bench/spike-mobile/lab/start-lab.sh --label iphone --perfil completo     # imprime SESSION=, URL= e os QR codes
+python3 bench/spike-mobile/lab/analyze.py <SESSION>                           # depois do [lab] <SESSION> done
+bash bench/spike-mobile/lab/stop-lab.sh <SESSION>
+```
+
+- **HTTPS local** (`--modo local`, o padrão): o Safari só expõe WebGPU, threads do Wasm e o Wake Lock em contexto seguro. O certificado vem de uma CA criada no Mac (`/Volumes/Ext2TB/State/som-webcore/lab-ca/`, fora do repositório); o aparelho confia nela uma vez, pelo primeiro QR. `--modo local-http` dispensa a CA, mas fica sem WebGPU; `--modo tunel` usa um túnel temporário do Cloudflare.
+- **Coleta:** [`lab/hook.js`](lab/hook.js) entra em toda página da sessão e manda console, erros, falhas de rede, eventos do WebGPU e o ciclo de vida da página; o servidor grava cada requisição; [`lab/lab.js`](lab/lab.js) roda as etapas em iframes e retoma se o Safari recarregar.
+- **Armadilhas:** pelo túnel, o `cloudflared` pede gzip ao servidor e o Cloudflare descomprimia o brotli para quem só aceitava brotli (as respostas levam `no-transform`); o serviço do simulador não lê o HD externo (`simctl keychain … add-root-cert` travou com o certificado em `/Volumes/Ext2TB`; copiar para `/tmp`).

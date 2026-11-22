@@ -181,6 +181,9 @@ async function run() {
       outcome = { status: "failed", note: `${error.name}: ${error.message}` };
     }
     if (current.frame) {
+      // Last logs of the page out before it goes (hook.js sends them as beacons).
+      try { current.frame.contentWindow?.__somLab?.flush(); } catch { /* cross-origin or gone */ }
+      await sleep(500);
       current.frame.src = "about:blank";
       current.frame.remove();
     }

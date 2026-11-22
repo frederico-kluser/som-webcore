@@ -72,4 +72,5 @@ python bench/spike-mobile/reference/check_shape.py bench/results/<execução>.js
 | [`run-desktop.mjs`](run-desktop.mjs) · [`matrix-desktop.sh`](matrix-desktop.sh) | abre uma página no Chrome de desktop (Windows ou macOS) com perfil próprio (`<tmpdir>/som-decisions-<navegador>`) e espera o resultado |
 | [`run-android.mjs`](run-android.mjs) · [`matrix-emulador.sh`](matrix-emulador.sh) · [`EMULADOR.md`](EMULADOR.md) | o mesmo no Chrome do emulador Android, com amostras de memória |
 | [`run-ios.mjs`](run-ios.mjs) · [`matrix-ios.sh`](matrix-ios.sh) · [`ready.html`](ready.html) | o mesmo no Safari do simulador de iOS (macOS), com o aparelho apagado antes de cada execução |
-| [`MACMINI.md`](MACMINI.md) | plano e procedimento no Mac mini: Safari do simulador de iPhone, emulador Android e Chrome do macOS |
+| [`lab/`](lab/) | laboratório de aparelho real: a página-laboratório (`lab.html`, `lab.js`), o coletor de logs (`hook.js`), o lançador com QR code (`start-lab.sh`, `stop-lab.sh`) e o relatório automático (`analyze.py`); procedimento na skill [`som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md) |
+| [`MACMINI.md`](MACMINI.md) | plano e procedimento no Mac mini: Safari do simulador de iPhone, emulador Android Chrome do macOS e o laboratório de aparelho real |

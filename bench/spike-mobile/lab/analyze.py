@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import sys
 from collections import Counter, defaultdict
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -53,6 +54,14 @@ def load_jsonl(path: Path) -> list[dict]:
         except ValueError:
             pass
     return out
+
+
+def when(entry: dict):
+    """The entry's timestamp (ISO 8601, as hook.js writes it), or None."""
+    try:
+        return datetime.fromisoformat(str(entry.get("at")).replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def tolerance(variant: str, comparison: dict) -> str:
@@ -219,6 +228,9 @@ def main(argv: list[str]) -> int:
         start, end = state.get("startedAt") or "", state.get("finishedAt") or "9999"
         hidden = [e for e in logs if e.get("kind") == "lifecycle" and "visibility hidden" in str(e.get("text"))
                   and "(iframe)" not in str(e.get("source")) and start <= str(e.get("at")) <= end]
+        # The lab reopening itself cross-origin isolated also hides the page for a moment: not the user.
+        reopen = [when(e) for e in logs if e.get("kind") == "console" and "isolamento de origem" in str(e.get("text"))]
+        hidden = [e for e in hidden if not any(r and when(e) and 0 <= (when(e) - r).total_seconds() <= 10 for r in reopen)]
         say(f"**Ciclo de vida:** a página ficou oculta {len(hidden)} vez(es)" + (" — as medições dessas etapas podem ter sido estranguladas pelo navegador" if hidden else "") + ".")
         for e in hidden[:10]:
             say(f"- {e.get('at')} em `{e.get('source')}`")
