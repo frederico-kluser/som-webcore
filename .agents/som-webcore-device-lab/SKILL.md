@@ -29,7 +29,7 @@ Depois disso, todo QR do laboratório abre direto. Toda requisição precisa do 
    ```bash
    ssh macmini 'cd /Volumes/Ext2TB/Projects/som-webcore && git pull --ff-only'
    ```
-2. **Subir a sessão** (perfil `rapido` ≈ 110 MB e 5 min; `completo` ≈ 290 MB e 20–30 min; `extra` acrescenta o JSEP e o `@johnhenry` CPU 32M):
+2. **Subir a sessão** (perfil `rapido` ≈ 110 MB e 5 min; `completo` ≈ 290 MB e 20–30 min; `onnx` só as etapas do ONNX Runtime; `extra` acrescenta o JSEP e o `@johnhenry` CPU 32M):
    ```bash
    ssh macmini 'cd /Volumes/Ext2TB/Projects/som-webcore && bash bench/spike-mobile/lab/start-lab.sh --label iphone --perfil completo'
    ```
@@ -81,5 +81,7 @@ xcrun simctl openurl $U "<base>/lab/lab.html?auto=1"   # roda sem o toque em “
 - **O túnel não sobe ou demora** (`--modo tunel`): veja `tunnel.log` na pasta da sessão; use `--modo local`.
 - **A página recarregou** (o Safari mata abas pesadas): o laboratório repete a etapa uma vez e, se recarregar de novo, marca `interrupted` e segue.
 - **A tela apagou ou o dono trocou de app:** o laboratório pede o Wake Lock no toque em “Começar”; os períodos ocultos aparecem nos logs e no relatório, e as medições dessas etapas ficam sob suspeita.
-- **Etapas que travam** (ONNX Runtime WebGPU com `8bit`/`int8` travou no desktop): têm tempo limite curto e ficam no fim do perfil; o botão “Pular a etapa atual” também serve.
+- **Etapas que travam** (ONNX Runtime WebGPU com `8bit`/`int8` travou no desktop): têm tempo limite curto e ficam no fim do perfil; se a página ficar parada, o dono toca em voltar.
+- **Teto de memória do Wasm por aba (iPhone, Safari 26.6.3):** a 4ª sessão do ONNX Runtime na mesma aba falha com `RangeError: Out of memory` — em iframes e em páginas próprias, Wasm e WebGPU (os dois usam o runtime em Wasm); o `@johnhenry`, JavaScript puro, segue. Por isso cada etapa é uma navegação da aba e, a cada 3 sessões do ONNX Runtime, o laboratório pede um toque em **“Continuar numa aba nova”** (`window.open` com `noopener`, que o Safari pode pôr num processo novo). O perfil `onnx` repete só as etapas do ONNX Runtime.
+- **Tela ligada:** o Safari só concede o Wake Lock com um toque; as páginas de etapa registram `NotAllowedError`, e o dono precisa manter a tela acesa.
 - **Os pesos ficam em cache entre as etapas** (`cache=1`): cada arquivo cruza a rede uma vez; por isso o tempo até a primeira resposta da sessão não é de primeira visita.
