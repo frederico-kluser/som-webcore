@@ -23,8 +23,15 @@ else
 fi
 RUNTIME_ROOT="$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if "iOS" in x["identifier"]]; print(sorted(r, key=lambda x: [int(p) for p in x["version"].split(".")])[-1]["runtimeRoot"])')"
 SAFARI="$(plutil -extract CFBundleShortVersionString raw "$RUNTIME_ROOT/Applications/MobileSafari.app/Info.plist" | cut -d. -f1)"
+# The Mac's internal disk must keep at least 50 GiB free (macmini skill): simulator data and swap
+# live there. Stop before a run would start below MIN_FREE_GIB (default 51).
+internal_free_gib() { df -g / | awk 'NR==2 {print $4}'; }
 for k in $REPS; do
   for config in "${CONFIGS[@]}"; do
+    if [ "$(internal_free_gib)" -lt "${MIN_FREE_GIB:-51}" ]; then
+      echo "Erro: o disco interno do Mac tem $(internal_free_gib) GiB livres (mínimo ${MIN_FREE_GIB:-51}) — Solução: libere espaço (swap, simuladores) antes de continuar a matriz" >&2
+      exit 1
+    fi
     set -- $config
     name="$DATE-ios-simulador-safari$SAFARI-$1-$2-$3${SUFFIX:-}-r$k"
     node "$HERE/run-ios.mjs" --result "$name" --timeout 1200 \

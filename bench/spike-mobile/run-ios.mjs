@@ -15,7 +15,7 @@
 // --keep-booted  leave the device booted at the end (default: shut down, to free the Mac's memory)
 //
 // After the page posts, the runner adds `device` (simulator, runtime, Safari build, Xcode, macOS,
-// host model) and `iosMemory` (RSS of the device's WebContent processes, as seen by the Mac) to the JSON.
+// host model) and `iosMemory` (RSS of the device's WebKit processes, as seen by the Mac) to the JSON.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -133,7 +133,7 @@ if (!ok) {
 
 const data = JSON.parse(readFileSync(resultFile, "utf8"));
 data.device = deviceInfo;
-data.iosMemory = { method: "RSS on the Mac of the simulator's WebContent, GPU and Networking processes (launchctl list inside the device), bytes", samples };
+data.iosMemory = { method: "RSS on the Mac of the device's com.apple.WebKit WebContent, GPU and Networking processes (ps; matched by SIMULATOR_UDID in their environment), bytes", samples };
 writeFileSync(resultFile, JSON.stringify(data, null, 2));
 if (!flag("keep-booted")) { try { simctl("shutdown", udid); } catch { /* already down */ } }
 console.log(`result: ${resultFile} (${samples.length} memory samples)`);
