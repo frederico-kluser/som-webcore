@@ -8,16 +8,24 @@
 // --device-type  default com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro
 // --runtime      default: the newest iOS runtime installed
 // --path         page path on the local server (Safari opens http://localhost:<port><path>)
-// --timeout      seconds to wait for the result (default 900)
+// --timeout      seconds to wait for the result once the page has started (default 900)
 // --sample       seconds between memory samples (default 5; 0 = off)
 // --keep-data    do not erase the device first (by default it is erased: Safari restores the tabs of
 //                the previous session, and a restored test page would run next to the measured one)
 // --keep-booted  leave the device booted at the end (default: shut down, to free the Mac's memory)
 //
-// After the page posts, the runner adds `device` (simulator, runtime, Safari build, Xcode, macOS,
-// host model) and `iosMemory` (RSS of the device's WebKit processes, as seen by the Mac) to the JSON.
+// Right after an erase and boot, Safari's first navigations can stall: the tab shows the start page
+// and never connects to the server (seen on 2026-11-21). So the runner
+//   1. opens ready.html until it reports back to serve.mjs (up to 8 times, 15 s each);
+//   2. opens the measured page and waits up to 60 s for its first report (progress or result);
+//   3. if the page never starts, shuts the device down, erases it and starts over (3 attempts in all),
+//      so a stalled tab can never wake up next to the measured run.
+// After the page posts, the runner adds `device` (simulator, runtime, Safari build, Xcode, macOS, host
+// model, the attempts it took) and `iosMemory` (RSS of the device's WebKit processes, as seen by the
+// Mac) to the JSON.
 
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +44,8 @@ const resultName = opt("result");
 const port = Number(opt("port", "8377"));
 const timeout = Number(opt("timeout", "900")) * 1000;
 const sampleEvery = Number(opt("sample", "5")) * 1000;
+const ATTEMPTS = 3;
+const START_WAIT = 60000;
 
 function fail(what, how) { console.error(`Erro: ${what} — Solução: ${how}`); process.exit(1); }
 if (process.platform !== "darwin") fail("o simulador de iOS só existe no macOS", "rode no Mac mini (MACMINI.md)");
@@ -65,12 +75,15 @@ if (!device) {
 if (!device) fail(`não foi possível criar o simulador ${deviceName}`, "confira o tipo de aparelho e o runtime");
 const udid = device.udid;
 
-if (!flag("keep-data")) {
-  if (findDevice().state !== "Shutdown") simctl("shutdown", udid);
-  simctl("erase", udid);
+function prepare(erase) {
+  if (erase) {
+    if (findDevice().state !== "Shutdown") simctl("shutdown", udid);
+    simctl("erase", udid);
+  }
+  if (findDevice().state !== "Booted") simctl("boot", udid);
+  simctl("bootstatus", udid, "-b");
 }
-if (findDevice().state !== "Booted") simctl("boot", udid);
-simctl("bootstatus", udid, "-b");
+const shutdown = () => { try { simctl("shutdown", udid); } catch { /* already down */ } };
 
 const safariPlist = join(runtime.runtimeRoot, "Applications", "MobileSafari.app", "Info.plist");
 const plist = (key) => { try { return run("plutil", ["-extract", key, "raw", safariPlist]); } catch { return null; } };
@@ -97,9 +110,7 @@ function webContentMemory() {
   return processes;
 }
 
-// Right after an erase and boot, the device is still setting itself up: `openurl` can time out
-// (NSPOSIXErrorDomain 60) and Safari's first navigation stalls on the start page (both seen on
-// 2026-11-21). Open a tiny page first, then the measured one.
+// `openurl` itself can time out right after a boot (NSPOSIXErrorDomain 60): try again a few times.
 async function openUrl(target) {
   for (let attempt = 1; ; attempt++) {
     try { simctl("openurl", udid, target); return; } catch (error) {
@@ -109,32 +120,73 @@ async function openUrl(target) {
   }
 }
 
+const server = `http://127.0.0.1:${port}/api/progress?name=`;
+async function getProgress(name) {
+  try { const r = await fetch(server + encodeURIComponent(name)); return r.ok ? await r.json() : null; } catch { return null; }
+}
+async function setProgress(name, body) {
+  await fetch(server + encodeURIComponent(name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+async function waitUntil(test, ms) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) { if (await test()) return true; await sleep(500); }
+  return false;
+}
+
+// Opens ready.html until the page reports back; returns how many opens it took (0 = never).
+async function safariReady() {
+  const name = `ready-${randomUUID()}`;
+  for (let opens = 1; opens <= 8; opens++) {
+    await openUrl(`http://localhost:${port}/ready.html?name=${name}`);
+    if (await waitUntil(async () => (await getProgress(name))?.stage === "ready", 15000)) return opens;
+  }
+  return 0;
+}
+
 const url = `http://localhost:${port}${path}`;
-await openUrl(`http://localhost:${port}/ready.html`);
-await sleep(10000);
-const before = mtime();
-console.log(`open ${url} on ${deviceName} (${runtime.identifier}, Safari ${deviceInfo.mobileSafari.version})`);
-await openUrl(url);
+const OPENED = "runner-opened-page";
+const attempts = [];
+let started = false;
+let before = 0;
+for (let attempt = 1; attempt <= ATTEMPTS && !started; attempt++) {
+  prepare(attempt > 1 || !flag("keep-data"));
+  const record = { attempt, readyPageOpens: await safariReady(), pageStarted: false };
+  attempts.push(record);
+  if (!record.readyPageOpens) { shutdown(); continue; }
+  await sleep(2000);
+  await setProgress(resultName, { stage: OPENED });
+  before = mtime();
+  console.log(`open ${url} on ${deviceName} (${runtime.identifier}, Safari ${deviceInfo.mobileSafari.version}), attempt ${attempt}`);
+  await openUrl(url);
+  started = await waitUntil(async () => mtime() > before || ((await getProgress(resultName))?.stage ?? OPENED) !== OPENED, START_WAIT);
+  record.pageStarted = started;
+  if (!started) shutdown();
+}
+deviceInfo.attempts = attempts;
 
 const samples = [];
-const start = Date.now();
 let ok = false;
-while (Date.now() - start < timeout) {
-  if (sampleEvery > 0 && (samples.length === 0 || Date.now() - start >= samples.length * sampleEvery)) {
-    try { samples.push({ t: Date.now() - start, rss: webContentMemory() }); } catch { /* device busy */ }
+if (started) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (sampleEvery > 0 && (samples.length === 0 || Date.now() - start >= samples.length * sampleEvery)) {
+      try { samples.push({ t: Date.now() - start, rss: webContentMemory() }); } catch { /* device busy */ }
+    }
+    if (mtime() > before) { ok = true; break; }
+    await sleep(500);
   }
-  if (mtime() > before) { ok = true; break; }
-  await sleep(500);
 }
 if (!ok) {
-  await writeTimeoutResult({ resultFile, resultName, pageUrl: url, seconds: timeout / 1000, port, runner: "run-ios.mjs" });
-  console.error(`Erro: a página não postou o resultado em ${timeout / 1000} s — Solução: veja o simulador; a falha foi gravada em ${resultFile}`);
+  const reason = started ? null : `Safari never started the page: ${ATTEMPTS} attempts (erase, boot, open the page), none reported back within ${START_WAIT / 1000} s`;
+  await writeTimeoutResult({ resultFile, resultName, pageUrl: url, seconds: timeout / 1000, port, runner: "run-ios.mjs", reason });
+  const what = started ? `a página não postou o resultado em ${timeout / 1000} s` : `o Safari não iniciou a página em ${ATTEMPTS} tentativas`;
+  console.error(`Erro: ${what} — Solução: veja o simulador (simctl io … screenshot em /tmp); a falha foi gravada em ${resultFile}`);
 }
 
 const data = JSON.parse(readFileSync(resultFile, "utf8"));
 data.device = deviceInfo;
 data.iosMemory = { method: "RSS on the Mac of the device's com.apple.WebKit WebContent, GPU and Networking processes (ps; matched by SIMULATOR_UDID in their environment), bytes", samples };
 writeFileSync(resultFile, JSON.stringify(data, null, 2));
-if (!flag("keep-booted")) { try { simctl("shutdown", udid); } catch { /* already down */ } }
-console.log(`result: ${resultFile} (${samples.length} memory samples)`);
+if (!flag("keep-booted")) shutdown();
+console.log(`result: ${resultFile} (attempts: ${attempts.map((a) => `${a.readyPageOpens} ready open(s), page ${a.pageStarted ? "started" : "stalled"}`).join("; ")}; ${samples.length} memory samples)`);
 if (!ok) process.exit(1);

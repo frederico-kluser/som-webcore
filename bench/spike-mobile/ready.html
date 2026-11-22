@@ -1,5 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ready</title><link rel="icon" href="data:,"></head>
-<body><p>Browser ready. (Opened by run-ios.mjs before the measured page: right after a simulator is erased, Safari's first navigation stalls.)</p></body>
+<body>
+<p>Browser ready. Opened by run-ios.mjs before the measured page: right after a simulator is erased, Safari's first navigations can stall, so the runner opens this page until it reports back.</p>
+<script>
+  const name = new URLSearchParams(location.search).get("name");
+  if (name) fetch(`/api/progress?name=${encodeURIComponent(name)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stage: "ready" }) });
+</script>
+</body>
 </html>
