@@ -54,8 +54,8 @@ const PLANS = {
     { id: "sonda-coi", url: "/probe.html?coi=1", timeout: 90 },
   ],
 };
-// Only the ONNX Runtime steps after the third of `completo` (on the iPhone they hit the tab's Wasm
-// memory ceiling before the new-tab pause existed), the q8emb32-f16 ones first.
+// Only the ONNX Runtime steps after the third of `completo` (on the iPhone they hit Safari's Wasm
+// memory ceiling before the lab asked for a Safari restart), the q8emb32-f16 ones first.
 PLANS.onnx = [
   { id: "sonda", url: "/probe.html", timeout: 90 },
   { id: "ort-wasm-q8emb32-f16-17m", url: PAGE("ort-wasm", "q8emb32-f16") },
@@ -123,15 +123,15 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // The failure record of a page that never posted, in the format of bench/spike-mobile/timeout-result.mjs.
-async function postFailure(step, name, message) {
+async function postFailure(step, name, message, kind = "Timeout") {
   let lastProgress = null;
   try { lastProgress = await api(`/api/progress?name=${encodeURIComponent(name)}`); } catch { /* none */ }
   const url = new URL(step.url, location.origin);
   const report = {
     kind: step.url.startsWith("/probe.html") ? "environment-probe" : "spike-mobile-run",
     schemaVersion: 1, status: "failed", writtenBy: "lab.js", page: `${url.pathname}${url.search}`,
-    config: Object.fromEntries(url.searchParams), fatal: { name: "Timeout", message },
-    failures: [{ stage: lastProgress?.stage ?? "load", item: lastProgress?.detail ?? null, error: { name: "Timeout", message } }],
+    config: Object.fromEntries(url.searchParams), fatal: { name: kind, message },
+    failures: [{ stage: lastProgress?.stage ?? "load", item: lastProgress?.detail ?? null, error: { name: kind, message } }],
     lastProgress, answers: [], finishedAt: new Date().toISOString(),
   };
   await api(`/api/results?name=${encodeURIComponent(name)}`, report);
@@ -148,39 +148,31 @@ function goToStep(step) {
   location.href = `${step.url}${step.url.includes("?") ? "&" : "?"}${query}`;
 }
 
-// On the iPhone (Safari 26.6.3, 2026-11-22) the 4th ONNX Runtime session in the same tab failed with
-// "RangeError: Out of memory" — in iframes and in pages of their own alike, Wasm and WebGPU alike
-// (both run the Wasm runtime); the @johnhenry engine, plain JavaScript, kept working. The tab's
-// process does not give the Wasm memory of earlier pages back. So after ORT_PER_TAB such sessions the
-// lab asks for a tap and continues in a new tab (noopener: a new browsing context group, which Safari
-// can put in a new process); the tap also renews the screen wake lock. `?ortPorAba=N` overrides it.
-const ORT_PER_TAB = Number(params.get("ortPorAba") || 3);
-const usesWasmRuntime = (step) => /engine=ort-/.test(step.url || "");
-function ortSessionsInTab() {
-  try { return Number(sessionStorage.getItem("somLabOrtInTab") || 0); } catch { return 0; }
-}
-function countOrtSessionInTab() {
-  try { sessionStorage.setItem("somLabOrtInTab", String(ortSessionsInTab() + 1)); } catch { /* private mode: no limit */ }
-}
-function askForNewTab(step) {
+// On the iPhone (Safari 26.6.3, 2026-11-22) the Wasm memory of ONNX Runtime sessions is not given back
+// while Safari's web process lives: after 2 or 3 sessions every new one failed at start with
+// "RangeError: Out of memory" — Wasm and WebGPU alike (both run the Wasm runtime) — in iframes, in
+// pages of their own, in a tab opened with window.open (noopener: still the same process) and in an
+// old tab reopened by hand. The @johnhenry engine, plain JavaScript, kept working. Closing Safari in
+// the app switcher gave a fresh process and the steps ran. So a step that fails with "Out of memory"
+// goes back to pending and the lab asks for a Safari restart, up to MAX_OOM failures per step.
+const MAX_OOM = 3;
+const outOfMemory = (text) => /out of memory/i.test(text || "");
+const FIXED_URL = `${location.origin}/lab/lab.html`;
+function askForRestart() {
   running = false;
-  log(`pausa antes de ${step.id}: ${ortSessionsInTab()} sessões do ONNX Runtime nesta aba`);
-  console.warn(`[lab] new tab needed before ${step.id} (${ortSessionsInTab()} ONNX Runtime sessions in this tab)`);
-  $("status").textContent = "Toque para continuar numa aba nova (o Safari precisa de memória nova)";
+  const next = state.steps.find((s) => s.status === "pending");
+  log(`sem memória no processo do Safari antes de ${next?.id ?? "?"}: feche o Safari e abra ${FIXED_URL}`);
+  console.warn(`[lab] Safari restart needed (Wasm out of memory) before ${next?.id ?? "?"}`);
+  $("status").textContent = `O Safari ficou sem memória para o Wasm. Feche o Safari (deslize-o para cima no seletor de apps), abra-o de novo em ${FIXED_URL} e toque em Continuar.`;
   const button = $("start");
-  button.textContent = "Continuar numa aba nova";
+  button.textContent = "Já reabri o Safari: continuar";
   button.hidden = false;
-  const next = `/lab/lab.html?continue=1${auto ? "&auto=1" : ""}${params.has("ortPorAba") ? `&ortPorAba=${ORT_PER_TAB}` : ""}`;
-  button.onclick = () => {
-    window.open(next, "_blank", "noopener");
+  button.onclick = async () => {
     button.hidden = true;
-    $("status").textContent = "Continua na aba nova: esta aba pode ser fechada.";
+    delete state.needsRestart;
+    await save();
+    run();
   };
-  // Automatic runs (simulator tests) have no tap for a pop-up: they go on in this tab, with a fresh count.
-  if (auto) {
-    try { sessionStorage.removeItem("somLabOrtInTab"); } catch { /* ignore */ }
-    location.href = next;
-  }
 }
 
 // Back from a step page: what did it leave on the server?
@@ -193,10 +185,22 @@ async function settleRunningStep() {
   try { posted = (await api("/api/lab/results"))[name] ?? null; } catch { /* server without the list */ }
   if (posted) {
     Object.assign(step, { status: "posted", outcome: posted.status ?? posted.kind ?? null, note: posted.fatal ?? "", endedAt: now });
+    if (posted.status === "failed" && outOfMemory(posted.fatal) && (step.oom ?? 0) + 1 < MAX_OOM) {
+      step.oom = (step.oom ?? 0) + 1;
+      (step.previous ??= []).push({ outcome: step.outcome, note: step.note, startedAt: step.startedAt, endedAt: now });
+      Object.assign(step, { status: "pending", outcome: null, note: "sem memória no processo do Safari: repete depois de reabrir o Safari" });
+      state.needsRestart = { at: now, step: step.id };
+    }
   } else if (params.get("labtimedout") === step.id) {
     const message = `the page did not post a result within ${step.timeout ?? 420} s (device lab)`;
     try { await postFailure(step, name, message); } catch (error) { log(`falha ao gravar o tempo esgotado: ${error.message}`); }
     Object.assign(step, { status: "timeout", note: `sem resultado em ${step.timeout ?? 420} s`, endedAt: now });
+  } else if (params.get("labcrashed") === step.id) {
+    // lab/hook.js saw the step page come back as a reload: Safari reloads a page whose web process
+    // crashed. Running it again would crash again (ONNX Runtime WebGPU on the iPhone, 2026-11-22).
+    const message = "Safari reloaded the page during this step: its web process crashed (device lab)";
+    try { await postFailure(step, name, message, "Crash"); } catch (error) { log(`falha ao gravar a queda: ${error.message}`); }
+    Object.assign(step, { status: "crashed", note: "o processo do Safari caiu; não repetida", endedAt: now });
   } else {
     // Neither a result nor the time limit: the page crashed, reloaded or was left by hand.
     const retry = (step.attempts ?? 1) < 2;
@@ -224,12 +228,8 @@ async function run() {
   state.startedAt ??= new Date().toISOString();
   for (const step of state.steps) {
     if (step.status !== "pending") continue;
-    if (usesWasmRuntime(step) && ortSessionsInTab() >= ORT_PER_TAB) {
-      askForNewTab(step);
-      return;
-    }
-    if (usesWasmRuntime(step)) countOrtSessionInTab();
     current = { step };
+    delete step.note; // a previous attempt's note (kept in step.previous) does not describe this one
     step.status = "running";
     step.startedAt = new Date().toISOString();
     step.attempts = (step.attempts ?? 0) + 1;
@@ -268,6 +268,12 @@ async function main() {
   await settleRunningStep();
   render();
   if (state.done) return;
+  if (state.needsRestart) {
+    // Automatic runs (simulator tests) cannot restart Safari; there is no such ceiling there anyway.
+    if (!auto) { askForRestart(); return; }
+    delete state.needsRestart;
+    await save();
+  }
   const resume = state.steps.some((s) => s.status !== "pending");
   $("status").textContent = resume ? "Toque para continuar" : "Toque para começar";
   $("start").textContent = resume ? "Continuar" : "Começar";

@@ -14,6 +14,7 @@ by hand. Standard library only.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -137,10 +138,12 @@ def main(argv: list[str]) -> int:
 
     # Steps.
     say("## Etapas\n")
-    say("| Etapa | Estado | Tentativas | Início | Fim | Nota |\n|---|---|---:|---|---|---|")
+    say("| Etapa | Estado | Tentativas | Início | Fim | Nota | Tentativas anteriores |\n|---|---|---:|---|---|---|---|")
     for s in steps:
         status = s.get("status") + (f" ({s['outcome']})" if s.get("outcome") else "")
-        say(f"| `{s['id']}` | {status} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {s.get('note') or '—'} |")
+        before = "; ".join(f"{p.get('outcome') or '—'}: {str(p.get('note') or '')[:90]}" + (f" ({p['where']})" if p.get("where") else "")
+                           for p in s.get("previous") or []) or "—"
+        say(f"| `{s['id']}` | {status} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {s.get('note') or '—'} | {before.replace('|', '/')} |")
     say("")
 
     # Page runs.
@@ -208,8 +211,11 @@ def main(argv: list[str]) -> int:
         by_kind = Counter((e.get("kind"), e.get("level")) for e in logs)
         say(f"{len(logs)} entradas. Por tipo e nível: " + "; ".join(f"`{k}`/{lvl} {n}" for (k, lvl), n in sorted(by_kind.items(), key=lambda x: -x[1])) + ".\n")
         # "device lost: destroyed" is a device the page destroyed itself (the probe does): not an error.
+        # ONNX Runtime prints its warnings ([W:onnxruntime ...], in terminal colours) through console.error.
+        def ort_warning(e: dict) -> bool:
+            return "[W:onnxruntime" in str(e.get("text", ""))
         errors = Counter((e.get("source"), str(e.get("text", "")).split("\n")[0][:220]) for e in logs
-                         if e.get("level") == "error" and not str(e.get("text", "")).startswith("device lost: destroyed"))
+                         if e.get("level") == "error" and not str(e.get("text", "")).startswith("device lost: destroyed") and not ort_warning(e))
         if errors:
             say("**Erros** (os mais frequentes):\n")
             say("| Origem | Mensagem | Vezes |\n|---|---|---:|")
@@ -244,7 +250,9 @@ def main(argv: list[str]) -> int:
         say(f"**Ciclo de vida:** a página ficou oculta {len(hidden)} vez(es)" + (" — as medições dessas etapas podem ter sido estranguladas pelo navegador" if hidden else "") + ".")
         for e in hidden[:10]:
             say(f"- {e.get('at')} em `{e.get('source')}`")
-        warns = Counter(str(e.get("text", "")).split("\n")[0][:200] for e in logs if e.get("level") == "warn")
+        def plain(text: str) -> str:  # without terminal colours and ONNX Runtime's leading timestamp
+            return re.sub(r"^\d{4}-\d\d-\d\d [\d:.]+ ", "", re.sub(r"\x1b?\[[0-9;]*m", "", text))
+        warns = Counter(plain(str(e.get("text", "")).split("\n")[0])[:200] for e in logs if e.get("level") == "warn" or ort_warning(e))
         if warns:
             say("\n**Avisos** (os mais frequentes): " + "; ".join(f"“{t}” ×{n}" for t, n in warns.most_common(8)))
         say("")
@@ -276,6 +284,10 @@ def main(argv: list[str]) -> int:
     missing = [s["id"] for s in page_steps if not (RESULTS / f"{session}-{s['id']}.json").exists()]
     if missing:
         say(f"- Sem resultado (etapa não executada): {', '.join(f'`{m}`' for m in missing)}.")
+    oom = [(s["id"], p) for s in steps for p in s.get("previous") or [] if "out of memory" in str(p.get("note")).lower()]
+    if oom:
+        say(f"- Tentativas que pararam em `Out of memory` e foram repetidas: {len(oom)}, em "
+            + ", ".join(sorted({f'`{i}`' for i, _ in oom})) + ". É memória do Wasm presa no processo do Safari, não o motor: a repetição depois de reabrir o Safari é a medição.")
     say("")
 
     text = "\n".join(lines) + "\n"

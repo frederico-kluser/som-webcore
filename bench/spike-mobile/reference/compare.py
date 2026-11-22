@@ -55,9 +55,11 @@ def compare(reference: dict, run: dict) -> dict:
                 bucket["maxDScore"] = max(bucket["maxDScore"], abs(got["expectedScore"] - expected["expectedScore"]))
             bucket["maxDConfidence"] = max(bucket["maxDConfidence"], abs(got["confidence"] - expected["confidence"]))
             worst.append({"item": answer["item"], "question": qid, "dp": dp, "sameTop1": same, "referenceMargin": m})
-            if "tokens" in answer and answer["tokens"].get(qid):
+            # A native run used as the reference (web_vs_native.as_reference) carries no tokens.
+            raw = (ref.get("raw") or {}).get(qid)
+            if raw and "tokens" in answer and answer["tokens"].get(qid):
                 tokens_checked += 1
-                tokens_equal += answer["tokens"][qid]["ids"] == ref["raw"][qid]["ids"] and answer["tokens"][qid]["positions"] == ref["raw"][qid]["positions"]
+                tokens_equal += answer["tokens"][qid]["ids"] == raw["ids"] and answer["tokens"][qid]["positions"] == raw["positions"]
     total = {"questions": 0, "maxDp": 0.0, "top1": 0, "marginQuestions": 0, "marginTop1": 0, "maxDScore": 0.0, "maxDConfidence": 0.0}
     for b in per_lang.values():
         for key in ("questions", "top1", "marginQuestions", "marginTop1"):

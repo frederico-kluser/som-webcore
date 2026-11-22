@@ -16,7 +16,9 @@
 // page is http://localhost:8377 — a secure context, which the Decisions API requires.
 //
 // Device lab mode (lab/start-lab.sh sets SOM_LAB_TOKEN and SOM_LAB_SESSION): every request needs the
-// session cookie, which GET /lab/enter?t=<token> sets (anything else answers 404); every HTML page gets
+// lab cookie, which GET /lab/enter?t=<token> sets (anything else answers 404). The token is the lab's,
+// kept on the Mac across sessions, and the cookie lasts 180 days: after the first QR, a device opens
+// https://<mac>:<port>/lab/lab.html directly, in any session. Every HTML page gets
 // lab/hook.js as its first script; GET/POST /api/lab/state keeps the session state in
 // bench/results/<session>-lab.json; POST /api/lab/log appends the pages' logs to <session>-logs.jsonl;
 // each request is recorded in <session>-requests.jsonl; files other than HTML may be cached.
@@ -81,7 +83,11 @@ async function labState(req, res) {
   renameSync(file + ".tmp", file);
   const before = Object.fromEntries((previous.steps || []).map((s) => [s.id, s.status]));
   for (const step of next.steps || []) {
-    if (before[step.id] !== step.status) console.log(`[lab] ${LAB.session} step ${step.id} ${step.status}${step.note ? ` (${step.note})` : ""}`);
+    if (before[step.id] === step.status) continue;
+    console.log(`[lab] ${LAB.session} step ${step.id} ${step.status}${step.note ? ` (${step.note})` : ""}`);
+    // A step that starts again (after "Out of memory" and a Safari restart) must not be settled with
+    // what its previous attempt posted.
+    if (step.status === "running") delete LAB.results[`${LAB.session}-${step.id}`];
   }
   if (next.done && !previous.done) console.log(`[lab] ${LAB.session} done`);
   return send(res, 200, { ok: true });
@@ -150,7 +156,7 @@ async function handler(req, res) {
         const token = Buffer.from(LAB.token);
         if (given.length !== token.length || !timingSafeEqual(given, token)) return send(res, 404, { ok: false, error: "not found" });
         const secure = req.headers["x-forwarded-proto"] === "https" || req.socket.encrypted;
-        res.writeHead(302, { Location: "/lab/lab.html", "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
+        res.writeHead(302, { Location: "/lab/lab.html", "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; Max-Age=${180 * 24 * 3600}; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
         console.log(`[lab] ${LAB.session} device entered: ${String(req.headers["user-agent"] || "").slice(0, 160)}`);
         return res.end();
       }

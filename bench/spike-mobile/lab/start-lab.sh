@@ -11,23 +11,27 @@
 #   Wake Lock in a secure context, and http://<LAN address> is not one.
 # --modo local-http: plain HTTP on the LAN, nothing to install, but no WebGPU on the device.
 # --modo tunel: HTTPS through a temporary Cloudflare quick tunnel; public while the session runs.
-# In every mode, each request needs the session cookie, which only the lab QR link (with its
-# random token) sets; anything else answers 404.
+# In every mode, each request needs the lab cookie, which only the lab QR link (with the lab's random
+# token) sets; anything else answers 404. The token is kept on the Mac across sessions (lab-token, next
+# to the CA; --novo-token replaces it) and the cookie lasts 180 days, so a device that entered once
+# opens FIXED_URL (https://<LAN address>:<port>/lab/lab.html) directly in any later session.
 #
-# Prints SESSION=, URL=, QR_PNG= (and CA_URL=, CA_QR_PNG= in local mode) and the QR codes. Stop with
-# stop-lab.sh <session>. The token, the process ids and the logs of the processes stay outside the repository.
+# Prints SESSION=, URL=, FIXED_URL=, QR_PNG= (and CA_URL=, CA_QR_PNG= in local mode) and the QR codes.
+# Stop with stop-lab.sh <session>. The token, the process ids and the logs of the processes stay
+# outside the repository.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SPIKE="$(cd "$HERE/.." && pwd)"
 ROOT="$(cd "$SPIKE/../.." && pwd)"
-LABEL=iphone; PROFILE=completo; MODE=local; PORT=8390
+LABEL=iphone; PROFILE=completo; MODE=local; PORT=8390; NEW_TOKEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --label) LABEL="$2"; shift 2 ;;
     --perfil) PROFILE="$2"; shift 2 ;;
     --modo) MODE="$2"; shift 2 ;;
     --porta) PORT="$2"; shift 2 ;;
-    *) echo "Erro: opção desconhecida $1 — Solução: use --label, --perfil, --modo ou --porta" >&2; exit 2 ;;
+    --novo-token) NEW_TOKEN=1; shift ;;
+    *) echo "Erro: opção desconhecida $1 — Solução: use --label, --perfil, --modo, --porta ou --novo-token" >&2; exit 2 ;;
   esac
 done
 case "$PROFILE" in rapido|completo|onnx|extra) ;; *) echo "Erro: perfil $PROFILE — Solução: rapido, completo, onnx ou extra" >&2; exit 2 ;; esac
@@ -53,7 +57,14 @@ for p in "$PORT" "$CA_PORT"; do
     echo "Erro: a porta $p está ocupada — Solução: pare a sessão anterior (stop-lab.sh) ou use --porta" >&2; exit 1
   fi
 done
-TOKEN="$(openssl rand -hex 16)"
+# The lab's token, kept across sessions next to the CA (never in the repository).
+TOKEN_FILE="$(dirname "$CA_DIR")/lab-token"
+mkdir -p "$(dirname "$TOKEN_FILE")"
+if [ "$NEW_TOKEN" = 1 ] || [ ! -s "$TOKEN_FILE" ]; then
+  (umask 077; openssl rand -hex 16 > "$TOKEN_FILE")
+fi
+chmod 600 "$TOKEN_FILE"
+TOKEN="$(cat "$TOKEN_FILE")"
 LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | cut -d' ' -f1)"
 LAN_NAME="$(scutil --get LocalHostName 2>/dev/null || hostname -s).local"
 
@@ -125,6 +136,8 @@ PY
 
 echo "SESSION=$SESSION"
 echo "URL=$URL"
+echo "FIXED_URL=$BASE/lab/lab.html"
+echo "Aparelho que já entrou uma vez (o cookie dura 180 dias): abra $BASE/lab/lab.html; o QR é só para a primeira vez."
 if command -v qrencode >/dev/null; then
   qrencode -o "$RUN/qr.png" -s 10 -m 3 "$URL"
   echo "QR_PNG=$RUN/qr.png"
