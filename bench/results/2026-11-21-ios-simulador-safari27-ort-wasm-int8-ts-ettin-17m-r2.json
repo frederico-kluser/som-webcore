@@ -1,0 +1,3003 @@
+{
+  "kind": "spike-mobile-run",
+  "schemaVersion": 1,
+  "startedAt": "2026-11-22T00:41:58.592Z",
+  "page": "http://localhost:8377/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-17m&name=2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m-r2",
+  "config": {
+    "engine": "ort-wasm",
+    "model": "ts-ettin-17m",
+    "variant": "int8",
+    "threads": 1,
+    "optimization": null,
+    "warmup": 3,
+    "warm": 120,
+    "endurance": 0,
+    "lang": "all",
+    "debug": false,
+    "uaMemory": false
+  },
+  "status": "ok",
+  "failures": [],
+  "timings": {
+    "navigationToScriptMs": 1041,
+    "create": [
+      {
+        "schema": "en-support",
+        "ms": 884,
+        "monitorEvents": 4
+      },
+      {
+        "schema": "en-hotel",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-command",
+        "ms": 18,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-draft",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-field",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-review",
+        "ms": 0,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-moderation",
+        "ms": 3,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-atendimento",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-imoveis",
+        "ms": 0,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-encaminhamento",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-moderacao",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-avaliacao",
+        "ms": 0,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-formulario",
+        "ms": 0,
+        "monitorEvents": 2
+      }
+    ],
+    "firstAnswerMs": 2125
+  },
+  "latency": {
+    "firstPass": {
+      "n": 66,
+      "p50": 53.5,
+      "p95": 286.5,
+      "p99": 511.0999999999996,
+      "mean": 89.13636363636364,
+      "min": 35,
+      "max": 554
+    },
+    "warm": {
+      "n": 120,
+      "p50": 52,
+      "p95": 342.15,
+      "p99": 479.43,
+      "mean": 84.05,
+      "min": 35,
+      "max": 553,
+      "samplesMs": [
+        53,
+        52,
+        52,
+        52,
+        52,
+        345,
+        52,
+        53,
+        52,
+        52,
+        52,
+        36,
+        36,
+        37,
+        36,
+        36,
+        52,
+        105,
+        105,
+        105,
+        52,
+        36,
+        36,
+        36,
+        37,
+        105,
+        106,
+        105,
+        106,
+        342,
+        35,
+        35,
+        36,
+        35,
+        51,
+        106,
+        105,
+        104,
+        105,
+        477,
+        105,
+        105,
+        104,
+        105,
+        105,
+        36,
+        35,
+        36,
+        35,
+        36,
+        51,
+        53,
+        52,
+        52,
+        52,
+        105,
+        105,
+        105,
+        105,
+        105,
+        553,
+        36,
+        36,
+        36,
+        37,
+        35,
+        52,
+        53,
+        52,
+        52,
+        53,
+        347,
+        52,
+        52,
+        52,
+        52,
+        52,
+        36,
+        36,
+        35,
+        36,
+        36,
+        52,
+        105,
+        105,
+        106,
+        54,
+        36,
+        36,
+        36,
+        36,
+        106,
+        106,
+        106,
+        106,
+        348,
+        35,
+        35,
+        35,
+        36,
+        52,
+        105,
+        105,
+        105,
+        105,
+        480,
+        104,
+        106,
+        107,
+        108,
+        107,
+        36,
+        36,
+        36,
+        36,
+        36,
+        53,
+        52,
+        53,
+        52
+      ]
+    }
+  },
+  "memory": [
+    {
+      "label": "start",
+      "t": 1118
+    },
+    {
+      "label": "after-first-pass",
+      "t": 7968
+    },
+    {
+      "label": "after-warm",
+      "t": 18216
+    }
+  ],
+  "answers": [
+    {
+      "item": "en-01",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 92,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5015117526054382,
+          "id": "wants_refund",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5015117526054382,
+            "false": 0.49848827719688416
+          }
+        },
+        "topic": {
+          "confidence": 0.39797312021255493,
+          "id": "topic",
+          "label": "billing",
+          "probabilities": {
+            "billing": 0.39797312021255493,
+            "delivery": 0.28126972913742065,
+            "account": 0.2386668175458908,
+            "other": 0.082090362906456
+          }
+        },
+        "urgency": {
+          "confidence": 0.2619214951992035,
+          "expectedScore": 2.981001377105713,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.23507046699523926,
+            "2": 0.11387414485216141,
+            "3": 0.2619214951992035,
+            "4": 0.2132512331008911,
+            "5": 0.17588265240192413
+          }
+        }
+      }
+    },
+    {
+      "item": "en-02",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 57,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5329124927520752,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4670875072479248,
+            "false": 0.5329124927520752
+          }
+        },
+        "topic": {
+          "confidence": 0.3151336908340454,
+          "id": "topic",
+          "label": "delivery",
+          "probabilities": {
+            "billing": 0.2065051645040512,
+            "delivery": 0.3151336908340454,
+            "account": 0.3122820258140564,
+            "other": 0.16607911884784698
+          }
+        },
+        "urgency": {
+          "confidence": 0.29761919379234314,
+          "expectedScore": 3.186302900314331,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.11197824031114578,
+            "2": 0.17529623210430145,
+            "3": 0.29761919379234314,
+            "4": 0.24465709924697876,
+            "5": 0.17044922709465027
+          }
+        }
+      }
+    },
+    {
+      "item": "en-03",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 55,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5156880021095276,
+          "id": "wants_refund",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5156880021095276,
+            "false": 0.48431196808815
+          }
+        },
+        "topic": {
+          "confidence": 0.6195475459098816,
+          "id": "topic",
+          "label": "account",
+          "probabilities": {
+            "billing": 0.15134617686271667,
+            "delivery": 0.11158639192581177,
+            "account": 0.6195475459098816,
+            "other": 0.11751987040042877
+          }
+        },
+        "urgency": {
+          "confidence": 0.2386736422777176,
+          "expectedScore": 2.993422269821167,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.1906084567308426,
+            "2": 0.1939539760351181,
+            "3": 0.2386736422777176,
+            "4": 0.18493469059467316,
+            "5": 0.19182921946048737
+          }
+        }
+      }
+    },
+    {
+      "item": "en-04",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 60,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5674672722816467,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.43253275752067566,
+            "false": 0.5674672722816467
+          }
+        },
+        "topic": {
+          "confidence": 0.356770396232605,
+          "id": "topic",
+          "label": "account",
+          "probabilities": {
+            "billing": 0.20599612593650818,
+            "delivery": 0.28525611758232117,
+            "account": 0.356770396232605,
+            "other": 0.15197737514972687
+          }
+        },
+        "urgency": {
+          "confidence": 0.24809083342552185,
+          "expectedScore": 3.0936837196350098,
+          "id": "urgency",
+          "label": "4",
+          "probabilities": {
+            "1": 0.16458049416542053,
+            "2": 0.18474739789962769,
+            "3": 0.2228306233882904,
+            "4": 0.24809083342552185,
+            "5": 0.17975065112113953
+          }
+        }
+      }
+    },
+    {
+      "item": "en-05",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 55,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.523420512676239,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.476579487323761,
+            "false": 0.523420512676239
+          }
+        },
+        "topic": {
+          "confidence": 0.3754669427871704,
+          "id": "topic",
+          "label": "delivery",
+          "probabilities": {
+            "billing": 0.285594642162323,
+            "delivery": 0.3754669427871704,
+            "account": 0.22380468249320984,
+            "other": 0.11513372510671616
+          }
+        },
+        "urgency": {
+          "confidence": 0.2499452382326126,
+          "expectedScore": 3.317049741744995,
+          "id": "urgency",
+          "label": "5",
+          "probabilities": {
+            "1": 0.11280650645494461,
+            "2": 0.17701610922813416,
+            "3": 0.24044372141361237,
+            "4": 0.21978841722011566,
+            "5": 0.2499452382326126
+          }
+        }
+      }
+    },
+    {
+      "item": "en-06",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 366,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5178205966949463,
+          "id": "wants_refund",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5178205966949463,
+            "false": 0.4821793735027313
+          }
+        },
+        "topic": {
+          "confidence": 0.7225317358970642,
+          "id": "topic",
+          "label": "delivery",
+          "probabilities": {
+            "billing": 0.09912972897291183,
+            "delivery": 0.7225317358970642,
+            "account": 0.08330196142196655,
+            "other": 0.09503655135631561
+          }
+        },
+        "urgency": {
+          "confidence": 0.48034605383872986,
+          "expectedScore": 2.406996726989746,
+          "id": "urgency",
+          "label": "1",
+          "probabilities": {
+            "1": 0.48034605383872986,
+            "2": 0.09087231010198593,
+            "3": 0.15187034010887146,
+            "4": 0.09526143968105316,
+            "5": 0.181649848818779
+          }
+        }
+      }
+    },
+    {
+      "item": "en-07",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.5344228148460388,
+          "id": "pet_friendly",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5344228148460388,
+            "false": 0.4655771851539612
+          }
+        },
+        "property_type": {
+          "confidence": 0.3543408215045929,
+          "id": "property_type",
+          "label": "hotel",
+          "probabilities": {
+            "hotel": 0.3543408215045929,
+            "rental": 0.15369661152362823,
+            "hostel": 0.30744460225105286,
+            "any": 0.1845179796218872
+          }
+        },
+        "price_tier": {
+          "confidence": 0.3174879550933838,
+          "expectedScore": 2.379195213317871,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.3174879550933838,
+            "2": 0.21491898596286774,
+            "3": 0.23850291967391968,
+            "4": 0.2290901392698288
+          }
+        }
+      }
+    },
+    {
+      "item": "en-08",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.6305745244026184,
+          "id": "pet_friendly",
+          "label": "true",
+          "probabilities": {
+            "true": 0.6305745244026184,
+            "false": 0.3694254755973816
+          }
+        },
+        "property_type": {
+          "confidence": 0.48866695165634155,
+          "id": "property_type",
+          "label": "hotel",
+          "probabilities": {
+            "hotel": 0.48866695165634155,
+            "rental": 0.08417282998561859,
+            "hostel": 0.26431429386138916,
+            "any": 0.1628459244966507
+          }
+        },
+        "price_tier": {
+          "confidence": 0.3207791745662689,
+          "expectedScore": 2.3498735427856445,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.3207791745662689,
+            "2": 0.2402699738740921,
+            "3": 0.20724903047084808,
+            "4": 0.2317018210887909
+          }
+        }
+      }
+    },
+    {
+      "item": "en-09",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 54,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.554410457611084,
+          "id": "pet_friendly",
+          "label": "true",
+          "probabilities": {
+            "true": 0.554410457611084,
+            "false": 0.445589542388916
+          }
+        },
+        "property_type": {
+          "confidence": 0.47560036182403564,
+          "id": "property_type",
+          "label": "hostel",
+          "probabilities": {
+            "hotel": 0.13821935653686523,
+            "rental": 0.19971099495887756,
+            "hostel": 0.47560036182403564,
+            "any": 0.18646927177906036
+          }
+        },
+        "price_tier": {
+          "confidence": 0.29132986068725586,
+          "expectedScore": 2.4074699878692627,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.29132986068725586,
+            "2": 0.23436780273914337,
+            "3": 0.24980486929416656,
+            "4": 0.224497452378273
+          }
+        }
+      }
+    },
+    {
+      "item": "en-10",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 55,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.6615223288536072,
+          "id": "pet_friendly",
+          "label": "true",
+          "probabilities": {
+            "true": 0.6615223288536072,
+            "false": 0.3384776711463928
+          }
+        },
+        "property_type": {
+          "confidence": 0.35194632411003113,
+          "id": "property_type",
+          "label": "hostel",
+          "probabilities": {
+            "hotel": 0.2222221940755844,
+            "rental": 0.2420898824930191,
+            "hostel": 0.35194632411003113,
+            "any": 0.18374159932136536
+          }
+        },
+        "price_tier": {
+          "confidence": 0.3204277753829956,
+          "expectedScore": 2.329035758972168,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.3204277753829956,
+            "2": 0.24253691732883453,
+            "3": 0.2246071696281433,
+            "4": 0.21242813766002655
+          }
+        }
+      }
+    },
+    {
+      "item": "en-11",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.6383673548698425,
+          "id": "pet_friendly",
+          "label": "true",
+          "probabilities": {
+            "true": 0.6383673548698425,
+            "false": 0.36163264513015747
+          }
+        },
+        "property_type": {
+          "confidence": 0.4003258943557739,
+          "id": "property_type",
+          "label": "hotel",
+          "probabilities": {
+            "hotel": 0.4003258943557739,
+            "rental": 0.1856164038181305,
+            "hostel": 0.2595684230327606,
+            "any": 0.15448929369449615
+          }
+        },
+        "price_tier": {
+          "confidence": 0.2868800759315491,
+          "expectedScore": 2.4429690837860107,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.2868800759315491,
+            "2": 0.22604966163635254,
+            "3": 0.2442914992570877,
+            "4": 0.24277877807617188
+          }
+        }
+      }
+    },
+    {
+      "item": "en-12",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 38,
+      "result": {
+        "command": {
+          "confidence": 0.39172959327697754,
+          "id": "command",
+          "label": "export_pdf",
+          "probabilities": {
+            "export_pdf": 0.39172959327697754,
+            "share_link": 0.21296241879463196,
+            "archive_doc": 0.0836726650595665,
+            "rename_doc": 0.09115471690893173,
+            "print_doc": 0.07781223207712173,
+            "undo_change": 0.14266838133335114
+          }
+        }
+      }
+    },
+    {
+      "item": "en-13",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "command": {
+          "confidence": 0.7272242307662964,
+          "id": "command",
+          "label": "export_pdf",
+          "probabilities": {
+            "export_pdf": 0.7272242307662964,
+            "share_link": 0.18791593611240387,
+            "archive_doc": 0.022754736244678497,
+            "rename_doc": 0.022662300616502762,
+            "print_doc": 0.005430892109870911,
+            "undo_change": 0.034011878073215485
+          }
+        }
+      }
+    },
+    {
+      "item": "en-14",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "command": {
+          "confidence": 0.33308035135269165,
+          "id": "command",
+          "label": "undo_change",
+          "probabilities": {
+            "export_pdf": 0.15022800862789154,
+            "share_link": 0.10119880735874176,
+            "archive_doc": 0.31243637204170227,
+            "rename_doc": 0.06070480868220329,
+            "print_doc": 0.042351674288511276,
+            "undo_change": 0.33308035135269165
+          }
+        }
+      }
+    },
+    {
+      "item": "en-15",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "command": {
+          "confidence": 0.27105581760406494,
+          "id": "command",
+          "label": "export_pdf",
+          "probabilities": {
+            "export_pdf": 0.27105581760406494,
+            "share_link": 0.2143932431936264,
+            "archive_doc": 0.11200617253780365,
+            "rename_doc": 0.16770383715629578,
+            "print_doc": 0.07273058593273163,
+            "undo_change": 0.1621103584766388
+          }
+        }
+      }
+    },
+    {
+      "item": "en-16",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "command": {
+          "confidence": 0.3208453059196472,
+          "id": "command",
+          "label": "export_pdf",
+          "probabilities": {
+            "export_pdf": 0.3208453059196472,
+            "share_link": 0.12475097179412842,
+            "archive_doc": 0.2573466897010803,
+            "rename_doc": 0.06596560776233673,
+            "print_doc": 0.022151781246066093,
+            "undo_change": 0.20893964171409607
+          }
+        }
+      }
+    },
+    {
+      "item": "en-17",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 52,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5178703665733337,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.48212963342666626,
+            "false": 0.5178703665733337
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5095729231834412,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.49042707681655884,
+            "false": 0.5095729231834412
+          }
+        },
+        "clarity": {
+          "confidence": 0.2871840000152588,
+          "expectedScore": 2.3773481845855713,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.2871840000152588,
+            "fair": 0.26355570554733276,
+            "good": 0.233988419175148,
+            "excellent": 0.21527186036109924
+          }
+        }
+      }
+    },
+    {
+      "item": "en-18",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5814009308815002,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.41859906911849976,
+            "false": 0.5814009308815002
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5175886750221252,
+          "id": "contains_pii",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5175886750221252,
+            "false": 0.48241135478019714
+          }
+        },
+        "clarity": {
+          "confidence": 0.27647677063941956,
+          "expectedScore": 2.4525325298309326,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.27647677063941956,
+            "fair": 0.2525199055671692,
+            "good": 0.2129974216222763,
+            "excellent": 0.25800588726997375
+          }
+        }
+      }
+    },
+    {
+      "item": "en-19",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5320913195610046,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.46790868043899536,
+            "false": 0.5320913195610046
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.513207733631134,
+          "id": "contains_pii",
+          "label": "true",
+          "probabilities": {
+            "true": 0.513207733631134,
+            "false": 0.4867922365665436
+          }
+        },
+        "clarity": {
+          "confidence": 0.3116016983985901,
+          "expectedScore": 2.3059890270233154,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.3116016983985901,
+            "fair": 0.27036038041114807,
+            "good": 0.21848507225513458,
+            "excellent": 0.19955283403396606
+          }
+        }
+      }
+    },
+    {
+      "item": "en-20",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5018328428268433,
+          "id": "has_repro_steps",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5018328428268433,
+            "false": 0.4981671869754791
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5032665729522705,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4967334270477295,
+            "false": 0.5032665729522705
+          }
+        },
+        "clarity": {
+          "confidence": 0.3000704050064087,
+          "expectedScore": 2.3440582752227783,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.3000704050064087,
+            "fair": 0.26475098729133606,
+            "good": 0.2262284904718399,
+            "excellent": 0.20895011723041534
+          }
+        }
+      }
+    },
+    {
+      "item": "en-21",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.528664231300354,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4713357985019684,
+            "false": 0.528664231300354
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5061986446380615,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4938013255596161,
+            "false": 0.5061986446380615
+          }
+        },
+        "clarity": {
+          "confidence": 0.26966360211372375,
+          "expectedScore": 2.409550666809082,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.26966360211372375,
+            "fair": 0.2657313346862793,
+            "good": 0.24999578297138214,
+            "excellent": 0.2146092653274536
+          }
+        }
+      }
+    },
+    {
+      "item": "en-22",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.46075379848480225,
+          "id": "field_purpose",
+          "label": "other",
+          "probabilities": {
+            "account": 0.25689929723739624,
+            "sign_in": 0.07424477487802505,
+            "sign_up": 0.09558792412281036,
+            "one_time_code": 0.1125141829252243,
+            "other": 0.46075379848480225
+          }
+        }
+      }
+    },
+    {
+      "item": "en-23",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 39,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.41783642768859863,
+          "id": "field_purpose",
+          "label": "other",
+          "probabilities": {
+            "account": 0.4174080789089203,
+            "sign_in": 0.041164081543684006,
+            "sign_up": 0.06291716545820236,
+            "one_time_code": 0.060674261301755905,
+            "other": 0.41783642768859863
+          }
+        }
+      }
+    },
+    {
+      "item": "en-24",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.40211403369903564,
+          "id": "field_purpose",
+          "label": "other",
+          "probabilities": {
+            "account": 0.11779546737670898,
+            "sign_in": 0.11724335700273514,
+            "sign_up": 0.2908725440502167,
+            "one_time_code": 0.07197459042072296,
+            "other": 0.40211403369903564
+          }
+        }
+      }
+    },
+    {
+      "item": "en-25",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.4504380226135254,
+          "id": "field_purpose",
+          "label": "other",
+          "probabilities": {
+            "account": 0.3300548195838928,
+            "sign_in": 0.023928754031658173,
+            "sign_up": 0.05739142373204231,
+            "one_time_code": 0.1381869614124298,
+            "other": 0.4504380226135254
+          }
+        }
+      }
+    },
+    {
+      "item": "en-26",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentiment": {
+          "confidence": 0.4156613051891327,
+          "id": "sentiment",
+          "label": "positive",
+          "probabilities": {
+            "negative": 0.3122909963130951,
+            "neutral": 0.2720476984977722,
+            "positive": 0.4156613051891327
+          }
+        },
+        "aspect": {
+          "confidence": 0.6369044780731201,
+          "id": "aspect",
+          "label": "price",
+          "probabilities": {
+            "price": 0.6369044780731201,
+            "quality": 0.21799765527248383,
+            "delivery": 0.006734359543770552,
+            "support": 0.030354954302310944,
+            "design": 0.03350859880447388,
+            "durability": 0.0363001674413681,
+            "ease_of_use": 0.014481855556368828,
+            "other": 0.02371794730424881
+          }
+        },
+        "rating": {
+          "confidence": 0.44028499722480774,
+          "expectedScore": 2.4696414470672607,
+          "id": "rating",
+          "label": "1",
+          "probabilities": {
+            "1": 0.44028499722480774,
+            "2": 0.109794981777668,
+            "3": 0.16394105553627014,
+            "4": 0.11195158958435059,
+            "5": 0.17402736842632294
+          }
+        }
+      }
+    },
+    {
+      "item": "en-27",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentiment": {
+          "confidence": 0.44754764437675476,
+          "id": "sentiment",
+          "label": "positive",
+          "probabilities": {
+            "negative": 0.22589850425720215,
+            "neutral": 0.3265538513660431,
+            "positive": 0.44754764437675476
+          }
+        },
+        "aspect": {
+          "confidence": 0.2194196879863739,
+          "id": "aspect",
+          "label": "durability",
+          "probabilities": {
+            "price": 0.06329244375228882,
+            "quality": 0.1922491490840912,
+            "delivery": 0.06315367668867111,
+            "support": 0.19913287460803986,
+            "design": 0.11723684519529343,
+            "durability": 0.2194196879863739,
+            "ease_of_use": 0.08371139317750931,
+            "other": 0.06180393323302269
+          }
+        },
+        "rating": {
+          "confidence": 0.6201391220092773,
+          "expectedScore": 1.9801926612854004,
+          "id": "rating",
+          "label": "1",
+          "probabilities": {
+            "1": 0.6201391220092773,
+            "2": 0.07466834038496017,
+            "3": 0.11157076060771942,
+            "4": 0.09210421144962311,
+            "5": 0.10151753574609756
+          }
+        }
+      }
+    },
+    {
+      "item": "en-28",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 108,
+      "result": {
+        "sentiment": {
+          "confidence": 0.3934042751789093,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.21586927771568298,
+            "neutral": 0.3934042751789093,
+            "positive": 0.3907264471054077
+          }
+        },
+        "aspect": {
+          "confidence": 0.42440786957740784,
+          "id": "aspect",
+          "label": "quality",
+          "probabilities": {
+            "price": 0.2860494554042816,
+            "quality": 0.42440786957740784,
+            "delivery": 0.06669753044843674,
+            "support": 0.08815385401248932,
+            "design": 0.06405884027481079,
+            "durability": 0.028464091941714287,
+            "ease_of_use": 0.021022435277700424,
+            "other": 0.021145910024642944
+          }
+        },
+        "rating": {
+          "confidence": 0.41171881556510925,
+          "expectedScore": 2.6547765731811523,
+          "id": "rating",
+          "label": "1",
+          "probabilities": {
+            "1": 0.41171881556510925,
+            "2": 0.0996662974357605,
+            "3": 0.1358174830675125,
+            "4": 0.12771426141262054,
+            "5": 0.2250831574201584
+          }
+        }
+      }
+    },
+    {
+      "item": "en-29",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentiment": {
+          "confidence": 0.4986265301704407,
+          "id": "sentiment",
+          "label": "positive",
+          "probabilities": {
+            "negative": 0.24262845516204834,
+            "neutral": 0.258745014667511,
+            "positive": 0.4986265301704407
+          }
+        },
+        "aspect": {
+          "confidence": 0.2809910178184509,
+          "id": "aspect",
+          "label": "durability",
+          "probabilities": {
+            "price": 0.07661933451890945,
+            "quality": 0.2550644874572754,
+            "delivery": 0.04294903576374054,
+            "support": 0.06958108395338058,
+            "design": 0.09731404483318329,
+            "durability": 0.2809910178184509,
+            "ease_of_use": 0.14706026017665863,
+            "other": 0.030420737341046333
+          }
+        },
+        "rating": {
+          "confidence": 0.2958097457885742,
+          "expectedScore": 2.9993836879730225,
+          "id": "rating",
+          "label": "1",
+          "probabilities": {
+            "1": 0.2958097457885742,
+            "2": 0.09845179319381714,
+            "3": 0.18528752028942108,
+            "4": 0.15144698321819305,
+            "5": 0.2690039873123169
+          }
+        }
+      }
+    },
+    {
+      "item": "en-30",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 346,
+      "result": {
+        "sentiment": {
+          "confidence": 0.4794809818267822,
+          "id": "sentiment",
+          "label": "positive",
+          "probabilities": {
+            "negative": 0.3629860281944275,
+            "neutral": 0.15753300487995148,
+            "positive": 0.4794809818267822
+          }
+        },
+        "aspect": {
+          "confidence": 0.2749568819999695,
+          "id": "aspect",
+          "label": "price",
+          "probabilities": {
+            "price": 0.2749568819999695,
+            "quality": 0.21561293303966522,
+            "delivery": 0.10868502408266068,
+            "support": 0.06694325059652328,
+            "design": 0.15474365651607513,
+            "durability": 0.1027657687664032,
+            "ease_of_use": 0.050936173647642136,
+            "other": 0.025356296449899673
+          }
+        },
+        "rating": {
+          "confidence": 0.5552678108215332,
+          "expectedScore": 2.3076443672180176,
+          "id": "rating",
+          "label": "1",
+          "probabilities": {
+            "1": 0.5552678108215332,
+            "2": 0.08562345802783966,
+            "3": 0.07367802411317825,
+            "4": 0.06705790758132935,
+            "5": 0.21837280690670013
+          }
+        }
+      }
+    },
+    {
+      "item": "en-31",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 35,
+      "result": {
+        "action": {
+          "confidence": 0.5415501594543457,
+          "id": "action",
+          "label": "review",
+          "probabilities": {
+            "allow": 0.4584498405456543,
+            "review": 0.5415501594543457
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5686331987380981,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.43136683106422424,
+            "false": 0.5686331987380981
+          }
+        }
+      }
+    },
+    {
+      "item": "en-32",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "action": {
+          "confidence": 0.5640028715133667,
+          "id": "action",
+          "label": "allow",
+          "probabilities": {
+            "allow": 0.5640028715133667,
+            "review": 0.4359971582889557
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5267018675804138,
+          "id": "is_spam",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5267018675804138,
+            "false": 0.4732981324195862
+          }
+        }
+      }
+    },
+    {
+      "item": "en-33",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 35,
+      "result": {
+        "action": {
+          "confidence": 0.5421636700630188,
+          "id": "action",
+          "label": "allow",
+          "probabilities": {
+            "allow": 0.5421636700630188,
+            "review": 0.4578363299369812
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5338833332061768,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.46611666679382324,
+            "false": 0.5338833332061768
+          }
+        }
+      }
+    },
+    {
+      "item": "en-34",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "action": {
+          "confidence": 0.5355351567268372,
+          "id": "action",
+          "label": "allow",
+          "probabilities": {
+            "allow": 0.5355351567268372,
+            "review": 0.46446487307548523
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5846514105796814,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4153485894203186,
+            "false": 0.5846514105796814
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-01",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 52,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6530886888504028,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.34691131114959717,
+            "false": 0.6530886888504028
+          }
+        },
+        "assunto": {
+          "confidence": 0.37130212783813477,
+          "id": "assunto",
+          "label": "outro",
+          "probabilities": {
+            "pagamento": 0.36648428440093994,
+            "entrega": 0.2622135579586029,
+            "outro": 0.37130212783813477
+          }
+        },
+        "urgencia": {
+          "confidence": 0.21530818939208984,
+          "expectedScore": 3.0765414237976074,
+          "id": "urgencia",
+          "label": "5",
+          "probabilities": {
+            "1": 0.17712445557117462,
+            "2": 0.20012933015823364,
+            "3": 0.20713473856449127,
+            "4": 0.20030327141284943,
+            "5": 0.21530818939208984
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-02",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 105,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6271519064903259,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.3728480637073517,
+            "false": 0.6271519064903259
+          }
+        },
+        "assunto": {
+          "confidence": 0.38592976331710815,
+          "id": "assunto",
+          "label": "entrega",
+          "probabilities": {
+            "pagamento": 0.23646502196788788,
+            "entrega": 0.38592976331710815,
+            "outro": 0.37760522961616516
+          }
+        },
+        "urgencia": {
+          "confidence": 0.21770572662353516,
+          "expectedScore": 3.0582664012908936,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.19618681073188782,
+            "2": 0.17470291256904602,
+            "3": 0.21770572662353516,
+            "4": 0.19746610522270203,
+            "5": 0.21393842995166779
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-03",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6421248912811279,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.35787513852119446,
+            "false": 0.6421248912811279
+          }
+        },
+        "assunto": {
+          "confidence": 0.4991190731525421,
+          "id": "assunto",
+          "label": "outro",
+          "probabilities": {
+            "pagamento": 0.23219354450702667,
+            "entrega": 0.2686873972415924,
+            "outro": 0.4991190731525421
+          }
+        },
+        "urgencia": {
+          "confidence": 0.22203829884529114,
+          "expectedScore": 2.8934473991394043,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.21805180609226227,
+            "2": 0.20682300627231598,
+            "3": 0.22203829884529114,
+            "4": 0.16979968547821045,
+            "5": 0.18328718841075897
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-04",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.5683186054229736,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.43168142437934875,
+            "false": 0.5683186054229736
+          }
+        },
+        "assunto": {
+          "confidence": 0.46285220980644226,
+          "id": "assunto",
+          "label": "outro",
+          "probabilities": {
+            "pagamento": 0.28424733877182007,
+            "entrega": 0.25290045142173767,
+            "outro": 0.46285220980644226
+          }
+        },
+        "urgencia": {
+          "confidence": 0.2745789885520935,
+          "expectedScore": 3.1917004585266113,
+          "id": "urgencia",
+          "label": "5",
+          "probabilities": {
+            "1": 0.17829559743404388,
+            "2": 0.17911531031131744,
+            "3": 0.18976110219955444,
+            "4": 0.17824900150299072,
+            "5": 0.2745789885520935
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-05",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 105,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6379066705703735,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.36209332942962646,
+            "false": 0.6379066705703735
+          }
+        },
+        "assunto": {
+          "confidence": 0.6976834535598755,
+          "id": "assunto",
+          "label": "outro",
+          "probabilities": {
+            "pagamento": 0.1420561522245407,
+            "entrega": 0.160260409116745,
+            "outro": 0.6976834535598755
+          }
+        },
+        "urgencia": {
+          "confidence": 0.333494633436203,
+          "expectedScore": 3.3536593914031982,
+          "id": "urgencia",
+          "label": "5",
+          "probabilities": {
+            "1": 0.17817829549312592,
+            "2": 0.13599184155464172,
+            "3": 0.1733168065547943,
+            "4": 0.17901843786239624,
+            "5": 0.333494633436203
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-06",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 488,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.5773991346359253,
+          "id": "quer_reembolso",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5773991346359253,
+            "false": 0.4226008653640747
+          }
+        },
+        "assunto": {
+          "confidence": 0.45753350853919983,
+          "id": "assunto",
+          "label": "outro",
+          "probabilities": {
+            "pagamento": 0.2511073350906372,
+            "entrega": 0.29135915637016296,
+            "outro": 0.45753350853919983
+          }
+        },
+        "urgencia": {
+          "confidence": 0.3842599391937256,
+          "expectedScore": 2.7040371894836426,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.25602564215660095,
+            "2": 0.13393445312976837,
+            "3": 0.3842599391937256,
+            "4": 0.10153692215681076,
+            "5": 0.12424305081367493
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-07",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 107,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.7754201292991638,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.22457988560199738,
+            "false": 0.7754201292991638
+          }
+        },
+        "tipo": {
+          "confidence": 0.26104676723480225,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.13883095979690552,
+            "casa": 0.16767854988574982,
+            "kitnet": 0.25580620765686035,
+            "cobertura": 0.26104676723480225,
+            "qualquer": 0.17663750052452087
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.3123007118701935,
+          "expectedScore": 2.4750022888183594,
+          "id": "faixa_preco",
+          "label": "2",
+          "probabilities": {
+            "1": 0.2502797245979309,
+            "2": 0.3123007118701935,
+            "3": 0.1495571732521057,
+            "4": 0.2878623902797699
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-08",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 108,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.6734033823013306,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.32659661769866943,
+            "false": 0.6734033823013306
+          }
+        },
+        "tipo": {
+          "confidence": 0.3455789089202881,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.15742823481559753,
+            "casa": 0.20174585282802582,
+            "kitnet": 0.1547049880027771,
+            "cobertura": 0.3455789089202881,
+            "qualquer": 0.14054201543331146
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.31297534704208374,
+          "expectedScore": 2.520656108856201,
+          "id": "faixa_preco",
+          "label": "2",
+          "probabilities": {
+            "1": 0.23454734683036804,
+            "2": 0.31297534704208374,
+            "3": 0.14975111186504364,
+            "4": 0.30272620916366577
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-09",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.5710218548774719,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4289781153202057,
+            "false": 0.5710218548774719
+          }
+        },
+        "tipo": {
+          "confidence": 0.30483439564704895,
+          "id": "tipo",
+          "label": "kitnet",
+          "probabilities": {
+            "apartamento": 0.18084381520748138,
+            "casa": 0.14489299058914185,
+            "kitnet": 0.30483439564704895,
+            "cobertura": 0.2597256004810333,
+            "qualquer": 0.1097031980752945
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.28636106848716736,
+          "expectedScore": 2.479099988937378,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.26614686846733093,
+            "2": 0.2749672830104828,
+            "3": 0.17252476513385773,
+            "4": 0.28636106848716736
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-10",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 105,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.6486386060714722,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.35136136412620544,
+            "false": 0.6486386060714722
+          }
+        },
+        "tipo": {
+          "confidence": 0.283698707818985,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.15962855517864227,
+            "casa": 0.20083938539028168,
+            "kitnet": 0.1529131531715393,
+            "cobertura": 0.283698707818985,
+            "qualquer": 0.20292018353939056
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.3344322144985199,
+          "expectedScore": 2.2807512283325195,
+          "id": "faixa_preco",
+          "label": "1",
+          "probabilities": {
+            "1": 0.3344322144985199,
+            "2": 0.27361586689949036,
+            "3": 0.16872036457061768,
+            "4": 0.22323156893253326
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-11",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 105,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.580136775970459,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4198632538318634,
+            "false": 0.580136775970459
+          }
+        },
+        "tipo": {
+          "confidence": 0.2823399603366852,
+          "id": "tipo",
+          "label": "kitnet",
+          "probabilities": {
+            "apartamento": 0.1619444638490677,
+            "casa": 0.16687166690826416,
+            "kitnet": 0.2823399603366852,
+            "cobertura": 0.23883982002735138,
+            "qualquer": 0.1500040739774704
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.3364306688308716,
+          "expectedScore": 2.564058303833008,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.2484373152256012,
+            "2": 0.27549776434898376,
+            "3": 0.13963423669338226,
+            "4": 0.3364306688308716
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-12",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "departamento": {
+          "confidence": 0.2230297327041626,
+          "id": "departamento",
+          "label": "juridico",
+          "probabilities": {
+            "financeiro": 0.13901861011981964,
+            "juridico": 0.2230297327041626,
+            "rh": 0.07428089529275894,
+            "ti": 0.12936365604400635,
+            "vendas": 0.1180717945098877,
+            "logistica": 0.18410605192184448,
+            "outro": 0.1321292668581009
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-13",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "departamento": {
+          "confidence": 0.2941955626010895,
+          "id": "departamento",
+          "label": "rh",
+          "probabilities": {
+            "financeiro": 0.07025433331727982,
+            "juridico": 0.17782379686832428,
+            "rh": 0.2941955626010895,
+            "ti": 0.06638021767139435,
+            "vendas": 0.09749342501163483,
+            "logistica": 0.1052069216966629,
+            "outro": 0.18864572048187256
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-14",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "departamento": {
+          "confidence": 0.3331173360347748,
+          "id": "departamento",
+          "label": "outro",
+          "probabilities": {
+            "financeiro": 0.05221392214298248,
+            "juridico": 0.2735234797000885,
+            "rh": 0.07098217308521271,
+            "ti": 0.06371423602104187,
+            "vendas": 0.07458918541669846,
+            "logistica": 0.1318596750497818,
+            "outro": 0.3331173360347748
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-15",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "departamento": {
+          "confidence": 0.21785420179367065,
+          "id": "departamento",
+          "label": "juridico",
+          "probabilities": {
+            "financeiro": 0.05710180848836899,
+            "juridico": 0.21785420179367065,
+            "rh": 0.0934208333492279,
+            "ti": 0.07604159414768219,
+            "vendas": 0.19659413397312164,
+            "logistica": 0.19093424081802368,
+            "outro": 0.16805319488048553
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-16",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "departamento": {
+          "confidence": 0.20960959792137146,
+          "id": "departamento",
+          "label": "outro",
+          "probabilities": {
+            "financeiro": 0.13001269102096558,
+            "juridico": 0.14505378901958466,
+            "rh": 0.09572816640138626,
+            "ti": 0.13815617561340332,
+            "vendas": 0.09704852104187012,
+            "logistica": 0.184391051530838,
+            "outro": 0.20960959792137146
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-17",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 52,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.7529560923576355,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.2470439076423645,
+            "false": 0.7529560923576355
+          }
+        },
+        "acao": {
+          "confidence": 0.7162958979606628,
+          "id": "acao",
+          "label": "publicar",
+          "probabilities": {
+            "publicar": 0.7162958979606628,
+            "revisar": 0.28370410203933716
+          }
+        },
+        "gravidade": {
+          "confidence": 0.37189850211143494,
+          "expectedScore": 2.0871329307556152,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.28476545214653015,
+            "moderada": 0.3433360457420349,
+            "grave": 0.37189850211143494
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-18",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.7108410596847534,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.2891589105129242,
+            "false": 0.7108410596847534
+          }
+        },
+        "acao": {
+          "confidence": 0.6380502581596375,
+          "id": "acao",
+          "label": "publicar",
+          "probabilities": {
+            "publicar": 0.6380502581596375,
+            "revisar": 0.36194971203804016
+          }
+        },
+        "gravidade": {
+          "confidence": 0.3549043536186218,
+          "expectedScore": 1.95225191116333,
+          "id": "gravidade",
+          "label": "moderada",
+          "probabilities": {
+            "leve": 0.34642186760902405,
+            "moderada": 0.3549043536186218,
+            "grave": 0.2986738085746765
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-19",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.6569962501525879,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.3430037200450897,
+            "false": 0.6569962501525879
+          }
+        },
+        "acao": {
+          "confidence": 0.7091063857078552,
+          "id": "acao",
+          "label": "publicar",
+          "probabilities": {
+            "publicar": 0.7091063857078552,
+            "revisar": 0.2908936142921448
+          }
+        },
+        "gravidade": {
+          "confidence": 0.37181365489959717,
+          "expectedScore": 1.9153636693954468,
+          "id": "gravidade",
+          "label": "leve",
+          "probabilities": {
+            "leve": 0.37181365489959717,
+            "moderada": 0.3410089612007141,
+            "grave": 0.2871773838996887
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-20",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 53,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.7137793898582458,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.28622063994407654,
+            "false": 0.7137793898582458
+          }
+        },
+        "acao": {
+          "confidence": 0.7687894105911255,
+          "id": "acao",
+          "label": "publicar",
+          "probabilities": {
+            "publicar": 0.7687894105911255,
+            "revisar": 0.23121057450771332
+          }
+        },
+        "gravidade": {
+          "confidence": 0.35820743441581726,
+          "expectedScore": 2.0252883434295654,
+          "id": "gravidade",
+          "label": "moderada",
+          "probabilities": {
+            "leve": 0.30825209617614746,
+            "moderada": 0.35820743441581726,
+            "grave": 0.33354049921035767
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-21",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 52,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.7413108348846436,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.25868919491767883,
+            "false": 0.7413108348846436
+          }
+        },
+        "acao": {
+          "confidence": 0.7965523600578308,
+          "id": "acao",
+          "label": "publicar",
+          "probabilities": {
+            "publicar": 0.7965523600578308,
+            "revisar": 0.2034476399421692
+          }
+        },
+        "gravidade": {
+          "confidence": 0.46688392758369446,
+          "expectedScore": 2.2064194679260254,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.26046445965766907,
+            "moderada": 0.2726516127586365,
+            "grave": 0.46688392758369446
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-22",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3755030632019043,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.3755030632019043,
+            "neutro": 0.2595014274120331,
+            "positivo": 0.3649955093860626
+          }
+        },
+        "aspecto": {
+          "confidence": 0.3767920136451721,
+          "id": "aspecto",
+          "label": "entrega",
+          "probabilities": {
+            "preco": 0.09068179875612259,
+            "qualidade": 0.013815748505294323,
+            "entrega": 0.3767920136451721,
+            "atendimento": 0.03733263909816742,
+            "design": 0.02729928120970726,
+            "durabilidade": 0.06607624143362045,
+            "facilidade_de_uso": 0.05425986647605896,
+            "outro": 0.3337424099445343
+          }
+        },
+        "nota": {
+          "confidence": 0.26630961894989014,
+          "expectedScore": 3.207615375518799,
+          "id": "nota",
+          "label": "5",
+          "probabilities": {
+            "1": 0.1610897034406662,
+            "2": 0.17878644168376923,
+            "3": 0.2178521752357483,
+            "4": 0.17596206068992615,
+            "5": 0.26630961894989014
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-23",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentimento": {
+          "confidence": 0.43989133834838867,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.43989133834838867,
+            "neutro": 0.2856022119522095,
+            "positivo": 0.27450644969940186
+          }
+        },
+        "aspecto": {
+          "confidence": 0.33486229181289673,
+          "id": "aspecto",
+          "label": "outro",
+          "probabilities": {
+            "preco": 0.06601530313491821,
+            "qualidade": 0.011426057666540146,
+            "entrega": 0.12559528648853302,
+            "atendimento": 0.09603462368249893,
+            "design": 0.24988338351249695,
+            "durabilidade": 0.06347247958183289,
+            "facilidade_de_uso": 0.05271056294441223,
+            "outro": 0.33486229181289673
+          }
+        },
+        "nota": {
+          "confidence": 0.2323477417230606,
+          "expectedScore": 2.910430908203125,
+          "id": "nota",
+          "label": "1",
+          "probabilities": {
+            "1": 0.2323477417230606,
+            "2": 0.1866922527551651,
+            "3": 0.20195408165454865,
+            "4": 0.19619309902191162,
+            "5": 0.18281282484531403
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-24",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentimento": {
+          "confidence": 0.361539363861084,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.361539363861084,
+            "neutro": 0.3183957636356354,
+            "positivo": 0.32006484270095825
+          }
+        },
+        "aspecto": {
+          "confidence": 0.3448757827281952,
+          "id": "aspecto",
+          "label": "outro",
+          "probabilities": {
+            "preco": 0.07085214555263519,
+            "qualidade": 0.014012686908245087,
+            "entrega": 0.07176771759986877,
+            "atendimento": 0.07200945913791656,
+            "design": 0.18309040367603302,
+            "durabilidade": 0.09784072637557983,
+            "facilidade_de_uso": 0.14555107057094574,
+            "outro": 0.3448757827281952
+          }
+        },
+        "nota": {
+          "confidence": 0.228517085313797,
+          "expectedScore": 2.952329635620117,
+          "id": "nota",
+          "label": "1",
+          "probabilities": {
+            "1": 0.228517085313797,
+            "2": 0.19274090230464935,
+            "3": 0.18182799220085144,
+            "4": 0.19172325730323792,
+            "5": 0.2051907479763031
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-25",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 106,
+      "result": {
+        "sentimento": {
+          "confidence": 0.35984310507774353,
+          "id": "sentimento",
+          "label": "neutro",
+          "probabilities": {
+            "negativo": 0.3361482322216034,
+            "neutro": 0.35984310507774353,
+            "positivo": 0.3040086627006531
+          }
+        },
+        "aspecto": {
+          "confidence": 0.3363751471042633,
+          "id": "aspecto",
+          "label": "outro",
+          "probabilities": {
+            "preco": 0.07711541652679443,
+            "qualidade": 0.020855369046330452,
+            "entrega": 0.3139347732067108,
+            "atendimento": 0.04770801216363907,
+            "design": 0.04858184605836868,
+            "durabilidade": 0.07840452343225479,
+            "facilidade_de_uso": 0.0770249143242836,
+            "outro": 0.3363751471042633
+          }
+        },
+        "nota": {
+          "confidence": 0.2233140468597412,
+          "expectedScore": 3.1308305263519287,
+          "id": "nota",
+          "label": "5",
+          "probabilities": {
+            "1": 0.15656216442584991,
+            "2": 0.20228546857833862,
+            "3": 0.21822617948055267,
+            "4": 0.19961214065551758,
+            "5": 0.2233140468597412
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-26",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 107,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3483195900917053,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.3483195900917053,
+            "neutro": 0.31283584237098694,
+            "positivo": 0.33884456753730774
+          }
+        },
+        "aspecto": {
+          "confidence": 0.733262836933136,
+          "id": "aspecto",
+          "label": "facilidade_de_uso",
+          "probabilities": {
+            "preco": 0.010399517603218555,
+            "qualidade": 0.0041901408694684505,
+            "entrega": 0.0153439249843359,
+            "atendimento": 0.006083574146032333,
+            "design": 0.005670982412993908,
+            "durabilidade": 0.1077745258808136,
+            "facilidade_de_uso": 0.733262836933136,
+            "outro": 0.11727448552846909
+          }
+        },
+        "nota": {
+          "confidence": 0.23676921427249908,
+          "expectedScore": 2.9464519023895264,
+          "id": "nota",
+          "label": "1",
+          "probabilities": {
+            "1": 0.23676921427249908,
+            "2": 0.17529571056365967,
+            "3": 0.200453519821167,
+            "4": 0.17967703938484192,
+            "5": 0.20780451595783234
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-27",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 554,
+      "result": {
+        "sentimento": {
+          "confidence": 0.39301395416259766,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.39301395416259766,
+            "neutro": 0.36845603585243225,
+            "positivo": 0.2385300099849701
+          }
+        },
+        "aspecto": {
+          "confidence": 0.30077528953552246,
+          "id": "aspecto",
+          "label": "outro",
+          "probabilities": {
+            "preco": 0.24870091676712036,
+            "qualidade": 0.030194049701094627,
+            "entrega": 0.09609244763851166,
+            "atendimento": 0.0769398957490921,
+            "design": 0.024192415177822113,
+            "durabilidade": 0.05559678375720978,
+            "facilidade_de_uso": 0.16750819981098175,
+            "outro": 0.30077528953552246
+          }
+        },
+        "nota": {
+          "confidence": 0.22672168910503387,
+          "expectedScore": 2.8500735759735107,
+          "id": "nota",
+          "label": "1",
+          "probabilities": {
+            "1": 0.22672168910503387,
+            "2": 0.20773205161094666,
+            "3": 0.2236686795949936,
+            "4": 0.172506183385849,
+            "5": 0.16937139630317688
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-28",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "campo": {
+          "confidence": 0.6250577569007874,
+          "id": "campo",
+          "label": "cpf",
+          "probabilities": {
+            "cpf": 0.6250577569007874,
+            "email": 0.010378782637417316,
+            "telefone": 0.10252951085567474,
+            "cep": 0.06476784497499466,
+            "outro": 0.197266086935997
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-29",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 37,
+      "result": {
+        "campo": {
+          "confidence": 0.400871217250824,
+          "id": "campo",
+          "label": "email",
+          "probabilities": {
+            "cpf": 0.10657051205635071,
+            "email": 0.400871217250824,
+            "telefone": 0.1768876016139984,
+            "cep": 0.07499200105667114,
+            "outro": 0.24067866802215576
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-30",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "campo": {
+          "confidence": 0.41081318259239197,
+          "id": "campo",
+          "label": "cep",
+          "probabilities": {
+            "cpf": 0.16671663522720337,
+            "email": 0.01896585524082184,
+            "telefone": 0.11157088726758957,
+            "cep": 0.41081318259239197,
+            "outro": 0.29193344712257385
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-31",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "campo": {
+          "confidence": 0.5844299793243408,
+          "id": "campo",
+          "label": "cep",
+          "probabilities": {
+            "cpf": 0.08840279281139374,
+            "email": 0.007686106022447348,
+            "telefone": 0.12550388276576996,
+            "cep": 0.5844299793243408,
+            "outro": 0.1939772367477417
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-32",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 36,
+      "result": {
+        "campo": {
+          "confidence": 0.44568732380867004,
+          "id": "campo",
+          "label": "outro",
+          "probabilities": {
+            "cpf": 0.11344103515148163,
+            "email": 0.030521592125296593,
+            "telefone": 0.15400546789169312,
+            "cep": 0.25634458661079407,
+            "outro": 0.44568732380867004
+          }
+        }
+      }
+    }
+  ],
+  "environment": {
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "language": "en-GB",
+    "hardwareConcurrency": 8,
+    "deviceMemory": null,
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "screen": {
+      "width": 402,
+      "height": 874,
+      "devicePixelRatio": 3
+    },
+    "connection": null,
+    "hasDecisionModel": false,
+    "wasm": {
+      "simd": true,
+      "threads": false,
+      "relaxedSimd": false,
+      "jspi": true,
+      "sharedArrayBuffer": false
+    },
+    "float16Array": true,
+    "performanceMemory": null,
+    "measureUserAgentSpecificMemory": false,
+    "webgl": {
+      "vendor": "Apple Inc.",
+      "renderer": "Apple GPU"
+    },
+    "webgpu": {
+      "hasNavigatorGpu": true,
+      "preferredCanvasFormat": "bgra8unorm",
+      "wgslLanguageFeatures": [
+        "packed_4x8_integer_dot_product",
+        "pointer_composite_access",
+        "readonly_and_readwrite_storage_textures",
+        "texture_formats_tier1",
+        "unrestricted_pointer_parameters"
+      ],
+      "high-performance": {
+        "adapter": false
+      },
+      "low-power": {
+        "adapter": false
+      }
+    }
+  },
+  "engineInfo": {
+    "model": "ts-ettin-17m",
+    "repo": "typestrict/TS-Ettin-17M",
+    "revision": "026af312e41d24a1126f8d927bb6314fc2d5f592",
+    "variant": "int8",
+    "runtime": "onnxruntime-web",
+    "version": "1.31.1",
+    "backend": "wasm",
+    "entry": "ort.wasm.min.mjs",
+    "graphOptimizationLevel": "all",
+    "executionProviders": [
+      "wasm"
+    ],
+    "threads": 1,
+    "modelUrl": "/models/typestrict/TS-Ettin-17M/026af312e41d24a1126f8d927bb6314fc2d5f592/onnx/model_int8.onnx",
+    "modelBytes": 17180077,
+    "inputNames": [
+      "ids",
+      "opt_positions",
+      "qtype",
+      "pad_mask",
+      "opt_mask"
+    ],
+    "outputNames": [
+      "logits",
+      "conf_logit"
+    ]
+  },
+  "availability": {
+    "en-support": "downloadable",
+    "en-hotel": "available",
+    "en-command": "available",
+    "en-draft": "available",
+    "en-field": "available",
+    "en-review": "available",
+    "en-moderation": "available",
+    "pt-atendimento": "available",
+    "pt-imoveis": "available",
+    "pt-encaminhamento": "available",
+    "pt-moderacao": "available",
+    "pt-avaliacao": "available",
+    "pt-formulario": "available"
+  },
+  "bytes": {
+    "method": "Resource Timing; encodedBodySize = bytes on the wire (brotli from serve.mjs for text, JS and Wasm; weights uncompressed)",
+    "byCategory": {
+      "page": {
+        "transferSize": 16186,
+        "encodedBodySize": 14986,
+        "decodedBodySize": 46125,
+        "files": [
+          {
+            "path": "/app.js",
+            "transferSize": 4200,
+            "encodedBodySize": 3900,
+            "decodedBodySize": 11372,
+            "durationMs": 11
+          },
+          {
+            "path": "/env.js",
+            "transferSize": 1996,
+            "encodedBodySize": 1696,
+            "decodedBodySize": 4624,
+            "durationMs": 10
+          },
+          {
+            "path": "/corpus.json",
+            "transferSize": 8484,
+            "encodedBodySize": 8184,
+            "decodedBodySize": 26191,
+            "durationMs": 22
+          },
+          {
+            "path": "/models.json",
+            "transferSize": 1506,
+            "encodedBodySize": 1206,
+            "decodedBodySize": 3938,
+            "durationMs": 6
+          }
+        ]
+      },
+      "adapter": {
+        "transferSize": 10921,
+        "encodedBodySize": 9421,
+        "decodedBodySize": 25832,
+        "files": [
+          {
+            "path": "/engines/registry.js",
+            "transferSize": 1932,
+            "encodedBodySize": 1632,
+            "decodedBodySize": 4035,
+            "durationMs": 15
+          },
+          {
+            "path": "/polyfill/decision-model.js",
+            "transferSize": 3555,
+            "encodedBodySize": 3255,
+            "decodedBodySize": 10644,
+            "durationMs": 4
+          },
+          {
+            "path": "/engines/fetch.js",
+            "transferSize": 904,
+            "encodedBodySize": 604,
+            "decodedBodySize": 1238,
+            "durationMs": 53
+          },
+          {
+            "path": "/engines/ts-ettin.js",
+            "transferSize": 3009,
+            "encodedBodySize": 2709,
+            "decodedBodySize": 6896,
+            "durationMs": 52
+          },
+          {
+            "path": "/engines/ort.js",
+            "transferSize": 1521,
+            "encodedBodySize": 1221,
+            "decodedBodySize": 3019,
+            "durationMs": 4
+          }
+        ]
+      },
+      "runtime": {
+        "transferSize": 3866523,
+        "encodedBodySize": 3865323,
+        "decodedBodySize": 14963916,
+        "files": [
+          {
+            "path": "/node_modules/@huggingface/tokenizers/dist/tokenizers.min.mjs",
+            "transferSize": 11844,
+            "encodedBodySize": 11544,
+            "decodedBodySize": 36601,
+            "durationMs": 3
+          },
+          {
+            "path": "/node_modules/onnxruntime-web/dist/ort.wasm.min.mjs",
+            "transferSize": 17491,
+            "encodedBodySize": 17191,
+            "decodedBodySize": 53725,
+            "durationMs": 6
+          },
+          {
+            "path": "/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+            "transferSize": 9516,
+            "encodedBodySize": 9216,
+            "decodedBodySize": 24738,
+            "durationMs": 5
+          },
+          {
+            "path": "/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm",
+            "transferSize": 3827672,
+            "encodedBodySize": 3827372,
+            "decodedBodySize": 14848852,
+            "durationMs": 37
+          }
+        ]
+      },
+      "api": {
+        "transferSize": 642,
+        "encodedBodySize": 42,
+        "decodedBodySize": 22,
+        "files": [
+          {
+            "path": "/api/progress",
+            "transferSize": 321,
+            "encodedBodySize": 21,
+            "decodedBodySize": 11,
+            "durationMs": 7
+          },
+          {
+            "path": "/api/progress",
+            "transferSize": 321,
+            "encodedBodySize": 21,
+            "decodedBodySize": 11,
+            "durationMs": 25
+          }
+        ]
+      },
+      "modelConfig": {
+        "transferSize": 1176,
+        "encodedBodySize": 876,
+        "decodedBodySize": 2648,
+        "files": [
+          {
+            "path": "/models/typestrict/TS-Ettin-17M/026af312e41d24a1126f8d927bb6314fc2d5f592/config.json",
+            "transferSize": 1176,
+            "encodedBodySize": 876,
+            "decodedBodySize": 2648,
+            "durationMs": 21
+          }
+        ]
+      },
+      "tokenizer": {
+        "transferSize": 637707,
+        "encodedBodySize": 637107,
+        "decodedBodySize": 3583867,
+        "files": [
+          {
+            "path": "/models/typestrict/TS-Ettin-17M/026af312e41d24a1126f8d927bb6314fc2d5f592/tokenizer.json",
+            "transferSize": 637048,
+            "encodedBodySize": 636748,
+            "decodedBodySize": 3583508,
+            "durationMs": 23
+          },
+          {
+            "path": "/models/typestrict/TS-Ettin-17M/026af312e41d24a1126f8d927bb6314fc2d5f592/tokenizer_config.json",
+            "transferSize": 659,
+            "encodedBodySize": 359,
+            "decodedBodySize": 359,
+            "durationMs": 24
+          }
+        ]
+      },
+      "weights": {
+        "transferSize": 17180377,
+        "encodedBodySize": 17180077,
+        "decodedBodySize": 17180077,
+        "files": [
+          {
+            "path": "/models/typestrict/TS-Ettin-17M/026af312e41d24a1126f8d927bb6314fc2d5f592/onnx/model_int8.onnx",
+            "transferSize": 17180377,
+            "encodedBodySize": 17180077,
+            "decodedBodySize": 17180077,
+            "durationMs": 80
+          }
+        ]
+      }
+    },
+    "firstVisitEncoded": 21692804,
+    "firstVisitDecoded": 35756340
+  },
+  "finishedAt": "2026-11-22T00:42:15.768Z",
+  "device": {
+    "simulator": {
+      "name": "som-webcore iPhone 18 Pro",
+      "udid": "4890F8D2-CE61-44D4-8758-F50E213389B3",
+      "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "runtimeVersion": "27.0",
+      "runtimeBuild": "24A434"
+    },
+    "mobileSafari": {
+      "version": "27.0",
+      "build": "8625.1.29.10.29"
+    },
+    "xcode": "Xcode 27.1 Build version 27A9269",
+    "macOS": "27.2",
+    "hostModel": "Macmini9,1",
+    "dataErased": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "readyPageOpens": 2,
+        "pageStarted": true
+      }
+    ]
+  },
+  "iosMemory": {
+    "method": "RSS on the Mac of the device's com.apple.WebKit WebContent, GPU and Networking processes (ps; matched by SIMULATOR_UDID in their environment), bytes",
+    "samples": [
+      {
+        "t": 0,
+        "rss": {
+          "WebContent#51109": 202817536,
+          "GPU#51110": 135331840,
+          "Networking#51111": 136593408,
+          "WebContent#51156": 255344640,
+          "WebContent#51210": 121257984
+        }
+      },
+      {
+        "t": 5254,
+        "rss": {
+          "WebContent#51109": 201949184,
+          "GPU#51110": 131956736,
+          "Networking#51111": 165363712,
+          "WebContent#51156": 555401216,
+          "WebContent#51210": 101892096
+        }
+      },
+      {
+        "t": 10000,
+        "rss": {
+          "WebContent#51109": 201916416,
+          "GPU#51110": 131317760,
+          "Networking#51111": 128172032,
+          "WebContent#51156": 476364800,
+          "WebContent#51210": 101875712
+        }
+      },
+      {
+        "t": 15215,
+        "rss": {
+          "WebContent#51109": 200130560,
+          "GPU#51110": 131301376,
+          "Networking#51111": 127877120,
+          "WebContent#51156": 481984512,
+          "WebContent#51210": 101695488
+        }
+      }
+    ]
+  }
+}

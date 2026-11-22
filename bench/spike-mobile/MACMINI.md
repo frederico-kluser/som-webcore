@@ -80,3 +80,11 @@ Duas execuções da [`probe.html`](probe.html) **[MEDIDO]** — iOS 27.0 (24A434
 | Arquivo | [`…-ios-simulador-probe.json`](../results/2026-11-21-ios-simulador-probe.json) | [`…-ios-simulador-probe-coi.json`](../results/2026-11-21-ios-simulador-probe-coi.json) |
 
 **Não há WebGPU no Safari do simulador** (o objeto existe, o adaptador não), como no emulador Android: o caminho WebGPU no iOS só pode ser medido num iPhone real.
+
+As duas sondas acima foram refeitas com o executor final (as primeiras gravavam uma descrição antiga do método de memória); o resultado não mudou.
+
+## 6. Página de teste no simulador
+
+A matriz (`bash bench/spike-mobile/matrix-ios.sh "1 2"`) rodou as dez configurações duas vezes; o primeiro resultado foi gravado às 21:13 e o último às 22:06 de 2026-11-21 no horário do Mac (00:13 e 01:06 UTC de 2026-11-22). Resultados, tabelas e conclusões: [relatório do marco T, seção 5](../../docs/reports/teste-mobile.md#5-safari-do-ios-no-simulador-complemento-da-t-08). Em resumo: o ONNX Runtime Web em Wasm e o `@johnhenry` em CPU rodam no Safari do iOS; os caminhos WebGPU falham por falta de adaptador; com o mesmo arquivo, o motor do navegador reproduz o ONNX Runtime nativo (menos no `int8`).
+
+**A primeira navegação depois de religar não carregou em nenhuma das 22 execuções** (20 da matriz e as 2 sondas): a página de prontidão precisou de 2 aberturas em 17, de 3 em 4 e de 4 em 1 (`device.attempts`); nenhuma execução precisou recomeçar do zero.

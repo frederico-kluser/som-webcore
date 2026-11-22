@@ -1,7 +1,7 @@
 # Teste do motor existente no Android — relatório do marco T
 
-> Atividades `T-01`, `T-08`, `T-09`, `T-03`, `T-10` e `T-04` do [roadmap](../../ROADMAP.md#mt). Tudo foi medido em 2026-11-21 nesta máquina; os dados brutos estão em `bench/results/` e cada tabela abaixo é gerada deles por `bench/spike-mobile/reference/summarize.py` e `compare.py`.
-> O emulador roda no processador do computador e não tem WebGPU: **nenhuma latência daqui é latência de celular** ([EMULADOR.md](../../bench/spike-mobile/EMULADOR.md)).
+> Atividades `T-01`, `T-08`, `T-09`, `T-03`, `T-10` e `T-04` do [roadmap](../../ROADMAP.md#mt). Tudo foi medido em 2026-11-21, no computador de desenvolvimento e, a partir da seção 5, no Mac mini ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)); os dados brutos estão em `bench/results/` e cada tabela abaixo é gerada deles pelos scripts de `bench/spike-mobile/reference/` (`summarize.py`, `compare.py`, `repeatability.py`, `web_vs_native.py`).
+> O emulador e o simulador rodam no processador de um computador e não têm WebGPU: **nenhuma latência daqui é latência de celular** ([EMULADOR.md](../../bench/spike-mobile/EMULADOR.md)).
 
 ## 1. Como cada critério do portão GT é verificado
 
@@ -51,4 +51,82 @@ O que a medição já mostrou, sem dados versionados que o sustentem — por iss
 
 Nenhum artefato testado cabe em 25 MB **e** cumpre a tolerância Q8 ao mesmo tempo: o único que cumpre (`q8emb32-f16`) leva a primeira visita a ≈ 26,3 MB. Em todos os de 8 bits por peso, as vencedoras trocadas são quase-empates — com margem da referência ≥ 0,01 a concordância é 138/138. O critério do portão não tem essa exceção e não foi mudado. No TS-Ettin-32M: `int8` → Δp 7,0e-1 e 105/156; `8bit` → Δp 4,5e-2 e 155/156.
 
-**Falta:** a comparação Web × nativo, a forma do resultado nas execuções do navegador, a identidade dos tokens numa execução versionada (`debug=1`) e as 200 decisões seguidas (com `--enable-precise-memory-info`).
+**Web × nativo e forma, no Safari do iOS:** feitas na [seção 5](#5-safari-do-ios-no-simulador-complemento-da-t-08) — com o mesmo arquivo, o motor do navegador reproduz o nativo em `8bit`, `fp32` e `q8emb-f16`; a forma das respostas confere em todas as execuções.
+
+**Falta:** as mesmas comparações no Chrome (emulador e desktop), a identidade dos tokens numa execução versionada (`debug=1`) e as 200 decisões seguidas (com `--enable-precise-memory-info`).
+
+## 5. Safari do iOS no simulador (complemento da `T-08`)
+
+> Medido em 2026-11-21 no **Mac mini** (Apple M1, 16 GB, macOS 27.2), no simulador do Xcode 27.1 — iOS 27.0 (24A434), Mobile Safari 27.0 (8625.1.29.10.29) —, pelo [`run-ios.mjs`](../../bench/spike-mobile/run-ios.mjs), que apaga e religa o aparelho antes de cada execução ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)). O simulador roda no processador e na GPU do Mac: **nenhuma latência daqui é latência de iPhone**. Complementa a `T-08` com o WebKit do iOS; não substitui a `T-02` (iPhone real). Mesmas dez configurações da matriz do emulador, duas execuções cada: `bench/results/2026-11-21-ios-simulador-safari27-*.json`.
+
+**O que rodou e o que não rodou.** Rodaram, nas duas execuções, com as 66 entradas respondidas e a forma de todas as respostas conferida (`check_shape.py`: nenhum problema): o ONNX Runtime Web em Wasm nas cinco variantes (`int8`, `8bit`, `fp32` e `q8emb-f16` no 17M; `int8` e `8bit` no 32M) e o motor `@johnhenry` em CPU (17M e 32M). **Não rodaram os dois caminhos WebGPU**: o Safari do simulador tem `navigator.gpu`, mas não entrega adaptador ([sonda](../../bench/results/2026-11-21-ios-simulador-probe.json)); a falha ficou no JSON com a mensagem de cada motor. O `DecisionModel` nativo não existe no Safari.
+
+**Quanto baixa, quanto ocupa e quanto demora.** Bytes na rede com **gzip** — o Safari só anuncia brotli em HTTPS, e a página é servida em `http://localhost`. Memória: o RSS, visto pelo Mac, dos processos WebKit do aparelho. Latência **[MEDIDO no simulador; indicativo]**:
+
+| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | Memória máx. (MB; PSS no Android, RSS no simulador iOS) | máx. \|Δp\| · top-1 | Falha |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-17m-r1` | jh-cpu | f32 | ts-ettin-17m | ok | 6,990 | 313.5 | 310.5 / 2,210.3 / 3,204.3 | 309.0 / 643.8 · 2,273.0 / 3,552.3 | 68.23 | — | 529 | 1.1e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-17m-r2` | jh-cpu | f32 | ts-ettin-17m | ok | 4,154 | 313.5 | 302.0 / 2,172.5 / 3,181.8 | 302.0 / 627.0 · 2,226.0 / 3,542.5 | 68.23 | — | 873 | 1.1e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-32m-r1` | jh-cpu | f32 | ts-ettin-32m | ok | 2,168 | 819.0 | 809.0 / 5,615.4 / 8,035.6 | 808.0 / 1,650.8 · 5,635.0 / 8,875.5 | 128.91 | — | 1,169 | 1.7e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-32m-r2` | jh-cpu | f32 | ts-ettin-32m | ok | 4,765 | 835.5 | 795.0 / 5,449.3 / 7,938.5 | 784.0 / 1,687.8 · 5,752.0 / 8,650.7 | 128.91 | — | 1,234 | 1.7e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-jh-webgpu-f32-ts-ettin-17m-r1` | jh-webgpu | f32 | ts-ettin-17m | failed | — | — | — / — / — | — | 0.79 | — | 878 | — | webgpu: no GPU adapter available |
+| `2026-11-21-ios-simulador-safari27-jh-webgpu-f32-ts-ettin-17m-r2` | jh-webgpu | f32 | ts-ettin-17m | failed | — | — | — / — / — | — | 0.79 | — | 882 | — | webgpu: no GPU adapter available |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-17m-r1` | ort-wasm | 8bit | ts-ettin-17m | ok | 4,923 | 59.5 | 59.0 / 350.1 / 504.5 | 58.0 / 119.8 · 361.0 / 563.0 | 22.17 | — | 867 | 4.5e-02 · 151/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-17m-r2` | ort-wasm | 8bit | ts-ettin-17m | ok | 1,579 | 59.5 | 58.0 / 348.1 / 490.9 | 58.0 / 118.0 · 435.0 / 538.5 | 22.17 | — | 1,053 | 4.5e-02 · 151/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-32m-r1` | ort-wasm | 8bit | ts-ettin-32m | ok | 2,760 | 179.0 | 179.0 / 1,050.5 / 1,539.1 | 178.0 / 361.4 · 1,085.0 / 1,679.8 | 38.56 | — | 705 | 4.5e-02 · 155/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-32m-r2` | ort-wasm | 8bit | ts-ettin-32m | ok | 24,512 | 190.5 | 172.5 / 943.3 / 1,434.6 | 171.0 / 335.0 · 1,059.0 / 1,476.2 | 38.56 | — | 1,183 | 4.5e-02 · 155/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-fp32-ts-ettin-17m-r1` | ort-wasm | fp32 | ts-ettin-17m | ok | 2,532 | 49.5 | 49.0 / 370.2 / 553.8 | 49.0 / 105.0 · 380.0 / 628.2 | 72.89 | — | 1,315 | 1.6e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-fp32-ts-ettin-17m-r2` | ort-wasm | fp32 | ts-ettin-17m | ok | 23,344 | 50.0 | 48.0 / 375.0 / 567.8 | 48.0 / 105.8 · 376.0 / 659.9 | 72.89 | — | 1,286 | 1.6e-06 · 156/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m-r1` | ort-wasm | int8 | ts-ettin-17m | ok | 9,199 | 55.0 | 53.0 / 346.1 / 490.2 | 53.0 / 108.0 · 368.0 / 543.5 | 21.69 | — | 1,235 | 4.1e-01 · 93/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m-r2` | ort-wasm | int8 | ts-ettin-17m | ok | 2,125 | 53.5 | 52.0 / 342.1 / 479.4 | 52.0 / 106.0 · 348.0 / 531.1 | 21.69 | — | 1,157 | 4.1e-01 · 93/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-32m-r1` | ort-wasm | int8 | ts-ettin-32m | ok | 2,767 | 155.0 | 153.0 / 992.8 / 1,403.6 | 153.0 / 322.4 · 1,107.0 / 1,551.0 | 37.01 | — | 1,196 | 7.1e-01 · 103/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-32m-r2` | ort-wasm | int8 | ts-ettin-32m | ok | 1,756 | 154.0 | 154.0 / 1,007.3 / 1,520.4 | 153.0 / 337.4 · 1,175.0 / 1,617.2 | 37.01 | — | 1,111 | 7.1e-01 · 103/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-q8emb-f16-ts-ettin-17m-r1` | ort-wasm | q8emb-f16 | ts-ettin-17m | ok | 6,090 | 51.0 | 48.0 / 371.2 / 557.2 | 48.0 / 103.4 · 379.0 / 616.8 | 26.47 | — | 1,336 | 2.0e-02 · 153/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-q8emb-f16-ts-ettin-17m-r2` | ort-wasm | q8emb-f16 | ts-ettin-17m | ok | 7,404 | 50.0 | 48.0 / 375.1 / 571.2 | 48.0 / 103.0 · 386.0 / 625.7 | 26.47 | — | 994 | 2.0e-02 · 153/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-webgpu-8bit-ts-ettin-17m-r1` | ort-webgpu | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | 25.49 | — | 748 | — | no available backend found. ERR: [webgpu] Error: Failed to get GPU adapter. You may need to enable flag "--enable-unsafe-webgpu" if you are  |
+| `2026-11-21-ios-simulador-safari27-ort-webgpu-8bit-ts-ettin-17m-r2` | ort-webgpu | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | 25.49 | — | 827 | — | no available backend found. ERR: [webgpu] Error: Failed to get GPU adapter. You may need to enable flag "--enable-unsafe-webgpu" if you are  |
+
+O Safari não expõe `performance.memory`, daí a coluna de heap vazia. O RSS da mesma configuração variou bastante entre as duas execuções (no `@johnhenry` 17M, 529 e 873 MB): ele inclui o que o WebKit guarda do carregamento e não serve para comparar motores entre si.
+
+**Repetição** (`repeatability.py`): o p50 quente variou no máximo 3,8% entre as duas execuções de cada configuração — abaixo do limite de 10% da `T-08`, então não houve terceira rodada.
+
+| Configuração | Repetições | Estado | Quente p50 por repetição (ms) | Maior diferença | Acima de 10%? |
+|---|---:|---|---|---:|---|
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-17m` | 2 | ok · ok | 310.5 / 302.0 | 2.8% | não |
+| `2026-11-21-ios-simulador-safari27-jh-cpu-f32-ts-ettin-32m` | 2 | ok · ok | 809.0 / 795.0 | 1.8% | não |
+| `2026-11-21-ios-simulador-safari27-jh-webgpu-f32-ts-ettin-17m` | 2 | failed · failed | — | — | — |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-17m` | 2 | ok · ok | 59.0 / 58.0 | 1.7% | não |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-32m` | 2 | ok · ok | 179.0 / 172.5 | 3.8% | não |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-fp32-ts-ettin-17m` | 2 | ok · ok | 49.0 / 48.0 | 2.1% | não |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m` | 2 | ok · ok | 53.0 / 52.0 | 1.9% | não |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-32m` | 2 | ok · ok | 153.0 / 154.0 | 0.7% | não |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-q8emb-f16-ts-ettin-17m` | 2 | ok · ok | 48.0 / 48.0 | 0.0% | não |
+| `2026-11-21-ios-simulador-safari27-ort-webgpu-8bit-ts-ettin-17m` | 2 | failed · failed | — | — | — |
+
+**O tempo até a primeira resposta não é estável no simulador:** de 1.579 a 24.512 ms na mesma bateria. A variação está quase toda no carregamento da própria página logo depois de religar o aparelho (`timings.navigationToScriptMs`, de 296 a 23.395 ms nas execuções do ONNX Runtime), não no motor: o preparo do motor na primeira pergunta (`timings.create[0].ms`, que inclui baixar e compilar runtime e pesos) ficou entre 628 e 4.535 ms. Este número fica fora das conclusões.
+
+**O motor do navegador contra o nativo, com o mesmo arquivo** (`web_vs_native.py`) — a comparação que faltava na `T-09`:
+
+| Execução | Variante | Modelo | Web × nativo: máx. \|Δp\| · vencedora igual | Nativo × referência | Web × referência |
+|---|---|---|---|---|---|
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-17m-r1` | 8bit | ts-ettin-17m | 1.2e-06 · 156/156 | 4.5e-02 · 151/156 | 4.5e-02 · 151/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-17m-r2` | 8bit | ts-ettin-17m | 1.2e-06 · 156/156 | 4.5e-02 · 151/156 | 4.5e-02 · 151/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-32m-r1` | 8bit | ts-ettin-32m | 1.1e-06 · 156/156 | 4.5e-02 · 155/156 | 4.5e-02 · 155/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-8bit-ts-ettin-32m-r2` | 8bit | ts-ettin-32m | 1.1e-06 · 156/156 | 4.5e-02 · 155/156 | 4.5e-02 · 155/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-fp32-ts-ettin-17m-r1` | fp32 | ts-ettin-17m | 1.2e-06 · 156/156 | 1.0e-06 · 156/156 | 1.6e-06 · 156/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-fp32-ts-ettin-17m-r2` | fp32 | ts-ettin-17m | 1.2e-06 · 156/156 | 1.0e-06 · 156/156 | 1.6e-06 · 156/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m-r1` | int8 | ts-ettin-17m | 1.7e-01 · 133/156 | 4.1e-01 · 96/156 | 4.1e-01 · 93/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-17m-r2` | int8 | ts-ettin-17m | 1.7e-01 · 133/156 | 4.1e-01 · 96/156 | 4.1e-01 · 93/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-32m-r1` | int8 | ts-ettin-32m | 2.8e-01 · 134/156 | 7.0e-01 · 105/156 | 7.1e-01 · 103/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-int8-ts-ettin-32m-r2` | int8 | ts-ettin-32m | 2.8e-01 · 134/156 | 7.0e-01 · 105/156 | 7.1e-01 · 103/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-q8emb-f16-ts-ettin-17m-r1` | q8emb-f16 | ts-ettin-17m | 1.4e-06 · 156/156 | 2.0e-02 · 153/156 | 2.0e-02 · 153/156 |
+| `2026-11-21-ios-simulador-safari27-ort-wasm-q8emb-f16-ts-ettin-17m-r2` | q8emb-f16 | ts-ettin-17m | 1.4e-06 · 156/156 | 2.0e-02 · 153/156 | 2.0e-02 · 153/156 |
+| `2026-11-21-ios-simulador-safari27-ort-webgpu-8bit-ts-ettin-17m-r1` | 8bit | ts-ettin-17m | — | 4.5e-02 · 151/156 | — |
+| `2026-11-21-ios-simulador-safari27-ort-webgpu-8bit-ts-ettin-17m-r2` | 8bit | ts-ettin-17m | — | 4.5e-02 · 151/156 | — |
+
+O que essas tabelas mostram **[MEDIDO]**:
+
+- Nas variantes `8bit`, `fp32` e `q8emb-f16`, o ONNX Runtime Web no Safari reproduz o ONNX Runtime nativo com o mesmo arquivo (máx. |Δp| ≤ 1,4e-6, vencedora igual em 156/156). **O erro contra a referência é do artefato quantizado, não do motor do navegador**; a fronteira tamanho × paridade da seção 4 vale também no navegador.
+- No `int8`, o Wasm se afasta do nativo (máx. |Δp| 1,7e-1 no 17M e 2,8e-1 no 32M): a quantização dinâmica das ativações não dá o mesmo resultado nos dois. O artefato já fica longe da referência (4,1e-1), então o veredito da variante não muda.
+- Só o FP32 cumpre a tolerância da sua variante: `fp32` no ONNX Runtime (1,6e-6) e o `@johnhenry` com os pesos publicados (1,1e-6 no 17M; 1,7e-6 no 32M) — mas com 72,89 e 68,23 MB na primeira visita. Com os mesmos pesos FP32, o p50 quente do `@johnhenry` em CPU é cerca de 6 vezes o do ONNX Runtime no mesmo simulador (310,5 e 302,0 ms contra 49,0 e 48,0 ms).
+- O runtime pesa diferente nos dois motores: 3.865.323 B em gzip no ONNX Runtime Web em Wasm (7.184.673 B no ponto de entrada WebGPU) contra 98.664 B no `@johnhenry`; o tokenizador, 637.107 B. Na variante `8bit` do 17M, o runtime do ONNX Runtime é 17% da primeira visita.
