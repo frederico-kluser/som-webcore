@@ -1,3 +1,8 @@
+# Finais de linha: LF no repositório para todo texto. Scripts em Python no Windows
+# gravavam CRLF, e arquivos mistos quebravam diffs; os binários são detectados sozinhos.
+* text=auto eol=lf
+*.png binary
+
 # GitHub linguist: o repositório é documentação nesta fase.
 # A memória CoALA vendorizada e os textos de pesquisa não devem dominar a
 # estatística de linguagens (o `coala.py` tem ~317 KB de Python stdlib).
