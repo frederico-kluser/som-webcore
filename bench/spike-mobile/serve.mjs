@@ -46,7 +46,7 @@ const BR_CACHE = join(tmpdir(), "som-spike-br");
 const PROGRESS = new Map();
 
 const LAB = process.env.SOM_LAB_TOKEN && process.env.SOM_LAB_SESSION
-  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0 }
+  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0, results: {} }
   : null;
 const LAB_FILE = (suffix) => join(RESULTS, `${LAB.session}-${suffix}`);
 const QUIET = new Set(["/api/lab/log", "/api/progress", "/api/log"]); // too frequent for the request log
@@ -172,6 +172,8 @@ async function handler(req, res) {
         });
       }
       if (url.pathname === "/api/lab/state") return await labState(req, res);
+      // What each step page posted in this session; the lab reads it when the tab comes back to it.
+      if (url.pathname === "/api/lab/results") return send(res, 200, LAB.results);
       if (req.method === "POST" && url.pathname === "/api/lab/log") {
         const entries = JSON.parse((await readBody(req, 4 << 20)).toString("utf8"));
         appendLabLogs(Array.isArray(entries) ? entries : [entries]);
@@ -192,6 +194,7 @@ async function handler(req, res) {
         const posted = JSON.parse(body.toString("utf8"));
         const why = posted.fatal?.message || posted.failures?.[0]?.error?.message || "";
         const firstLine = String(why).split(/\r?\n/)[0].slice(0, 160);
+        LAB.results[name] = { status: posted.status ?? null, kind: posted.kind ?? null, fatal: why ? firstLine : null };
         console.log(`[lab] ${LAB.session} result ${name.slice(LAB.session.length + 1)} ${posted.status ?? posted.kind ?? "posted"}${why ? ` — ${firstLine}` : ""}`);
       }
       return send(res, 200, { ok: true, path: target });

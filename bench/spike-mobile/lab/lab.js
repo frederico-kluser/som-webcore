@@ -1,13 +1,14 @@
 // Device lab orchestrator. Opened on a real device (iPhone, Android) through start-lab.sh: it runs
 // the environment probe, an extended environment check and the test page for each engine and
-// variant, one step at a time, each in an iframe. The session state lives on the server
-// (/api/lab/state), so a reload — Safari kills heavy tabs — resumes at the next step. Every page
-// of the session also carries hook.js, which sends its logs to the server.
+// variant, one step at a time. Each page step is a navigation of the tab (goToStep), and lab/hook.js
+// brings the tab back here when the page has posted. The session state lives on the server
+// (/api/lab/state), so a reload — Safari kills heavy tabs — resumes at the next step. Every page of
+// the session also carries hook.js, which sends its logs to the server.
 import { probeEnvironment } from "/env.js";
 
 const params = new URLSearchParams(location.search);
 const auto = params.get("auto") === "1";
-const continueAfterReopen = params.get("continue") === "1"; // set when the lab reopens itself cross-origin isolated
+const continueRun = params.get("continue") === "1"; // set when a step page comes back to the lab
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -29,7 +30,7 @@ const PLANS = {
     { id: "ort-wasm-q8emb32-f16-17m", url: PAGE("ort-wasm", "q8emb32-f16") },
     { id: "ort-webgpu-q8emb32-f16-17m", url: PAGE("ort-webgpu", "q8emb32-f16") },
     { id: "jh-webgpu-f32-17m", url: PAGE("jh-webgpu", "f32") },
-    { id: "sonda-coi", url: "/probe.html?coi=1", coi: true, timeout: 90 },
+    { id: "sonda-coi", url: "/probe.html?coi=1", timeout: 90 },
   ],
   completo: [
     ...BASE_STEPS,
@@ -50,7 +51,7 @@ const PLANS = {
     { id: "jh-webgpu-f32-17m-resistencia-200", url: PAGE("jh-webgpu", "f32", "ts-ettin-17m", "&warm=0&endurance=200"), timeout: 600 },
     { id: "ort-webgpu-8bit-17m", url: PAGE("ort-webgpu", "8bit"), timeout: HANG },
     { id: "ort-webgpu-int8-17m", url: PAGE("ort-webgpu", "int8"), timeout: HANG },
-    { id: "sonda-coi", url: "/probe.html?coi=1", coi: true, timeout: 90 },
+    { id: "sonda-coi", url: "/probe.html?coi=1", timeout: 90 },
   ],
 };
 PLANS.extra = [
@@ -64,7 +65,7 @@ PLANS.extra = [
 
 let state = null;
 let running = false;
-let current = null; // { step, frame, skip }
+let current = null; // { step }
 let wakeLock = null;
 
 function log(line) {
@@ -121,28 +122,41 @@ async function postFailure(step, name, message) {
   await api(`/api/results?name=${encodeURIComponent(name)}`, report);
 }
 
-async function runPageStep(step) {
+// Each page step is a navigation of this tab: the test page becomes the page, posts its result and
+// lab/hook.js brings the tab back to /lab/lab.html?continue=1 (or after the step's time limit). The
+// first version ran the steps in iframes, which share the tab's process: on the iPhone the Wasm
+// memory of a removed iframe was not given back in time, and after the fp32 step every Wasm step
+// failed with "RangeError: Out of memory" (2026-11-22). Leaving a no-store page frees it.
+function goToStep(step) {
   const name = `${state.session}-${step.id}`;
-  const url = `${step.url}${step.url.includes("?") ? "&" : "?"}name=${encodeURIComponent(name)}&trace=1&cache=1`;
-  const frame = document.createElement("iframe");
-  frame.title = step.id;
-  frame.src = url;
-  $("frame").replaceChildren(frame);
-  current.frame = frame;
-  const deadline = Date.now() + (step.timeout ?? 420) * 1000;
-  for (;;) {
-    if (current.skip) return { status: "skipped", note: "pulada na tela" };
-    let title = "";
-    try { title = frame.contentDocument?.title ?? ""; } catch { /* navigating */ }
-    if (title === "posted") return { status: "posted" }; // the run's own status is in its JSON
-    if (title === "post failed") return { status: "failed", note: "a página não conseguiu gravar o resultado" };
-    if (Date.now() > deadline) {
-      const message = `the page did not post a result within ${step.timeout ?? 420} s (device lab)`;
-      try { await postFailure(step, name, message); } catch (error) { log(`falha ao gravar o tempo esgotado: ${error.message}`); }
-      return { status: "timeout", note: `sem resultado em ${step.timeout ?? 420} s` };
-    }
-    await sleep(500);
+  const query = `name=${encodeURIComponent(name)}&trace=1&cache=1&labstep=${encodeURIComponent(step.id)}&labtimeout=${step.timeout ?? 420}`;
+  location.href = `${step.url}${step.url.includes("?") ? "&" : "?"}${query}`;
+}
+
+// Back from a step page: what did it leave on the server?
+async function settleRunningStep() {
+  const step = state.steps.find((s) => s.status === "running");
+  if (!step) return;
+  const name = `${state.session}-${step.id}`;
+  const now = new Date().toISOString();
+  let posted = null;
+  try { posted = (await api("/api/lab/results"))[name] ?? null; } catch { /* server without the list */ }
+  if (posted) {
+    Object.assign(step, { status: "posted", outcome: posted.status ?? posted.kind ?? null, note: posted.fatal ?? "", endedAt: now });
+  } else if (params.get("labtimedout") === step.id) {
+    const message = `the page did not post a result within ${step.timeout ?? 420} s (device lab)`;
+    try { await postFailure(step, name, message); } catch (error) { log(`falha ao gravar o tempo esgotado: ${error.message}`); }
+    Object.assign(step, { status: "timeout", note: `sem resultado em ${step.timeout ?? 420} s`, endedAt: now });
+  } else {
+    // Neither a result nor the time limit: the page crashed, reloaded or was left by hand.
+    const retry = (step.attempts ?? 1) < 2;
+    Object.assign(step, retry
+      ? { status: "pending", note: "voltou sem resultado; repetindo" }
+      : { status: "interrupted", note: "voltou sem resultado duas vezes", endedAt: now });
+    console.warn(`[lab] step ${step.id} came back without a result`);
   }
+  log(`${step.id}: ${step.status}${step.outcome ? ` (${step.outcome})` : ""}`);
+  await save();
 }
 
 async function runEnvStep(step) {
@@ -156,49 +170,34 @@ async function runEnvStep(step) {
 async function run() {
   running = true;
   $("start").hidden = true;
-  $("skip").hidden = false;
   await keepAwake();
   state.startedAt ??= new Date().toISOString();
   for (const step of state.steps) {
     if (step.status !== "pending") continue;
-    if (step.coi && !crossOriginIsolated) {
-      await save();
-      log("abrindo o laboratório com isolamento de origem (COOP/COEP)");
-      location.href = `/lab/lab.html?coi=1&continue=1${auto ? "&auto=1" : ""}`;
-      return;
-    }
-    current = { step, frame: null, skip: false };
+    current = { step };
     step.status = "running";
     step.startedAt = new Date().toISOString();
     step.attempts = (step.attempts ?? 0) + 1;
     await save();
     render();
     log(`etapa ${step.id}`);
+    if (step.kind !== "env") {
+      window.__somLab?.flush();
+      await sleep(400);
+      goToStep(step);
+      return; // the tab navigates to the step; settleRunningStep() picks it up on the way back
+    }
     let outcome;
-    try {
-      outcome = step.kind === "env" ? await runEnvStep(step) : await runPageStep(step);
-    } catch (error) {
-      outcome = { status: "failed", note: `${error.name}: ${error.message}` };
-    }
-    if (current.frame) {
-      // Last logs of the page out before it goes (hook.js sends them as beacons).
-      try { current.frame.contentWindow?.__somLab?.flush(); } catch { /* cross-origin or gone */ }
-      await sleep(500);
-      current.frame.src = "about:blank";
-      current.frame.remove();
-    }
+    try { outcome = await runEnvStep(step); } catch (error) { outcome = { status: "failed", note: `${error.name}: ${error.message}` }; }
     Object.assign(step, outcome, { endedAt: new Date().toISOString() });
     current = null;
     await save();
     render();
-    log(`${step.id}: ${step.status}${step.note ? ` (${step.note})` : ""}`);
-    await sleep(2000); // let the removed page's memory go before the next one
   }
   state.done = true;
   state.finishedAt = new Date().toISOString();
   await save();
   running = false;
-  $("skip").hidden = true;
   render();
   log("pronto");
   try { await wakeLock?.release(); } catch { /* already released */ }
@@ -211,23 +210,13 @@ async function main() {
     state.steps = plan.map((s) => ({ ...s, status: "pending", attempts: 0 }));
     await save();
   }
-  // A step still "running" means the page reloaded or crashed in the middle of it.
-  for (const step of state.steps) {
-    if (step.status === "running") {
-      const retry = (step.attempts ?? 1) < 2;
-      Object.assign(step, retry ? { status: "pending", note: "a página recarregou; repetindo" } : { status: "interrupted", note: "a página recarregou duas vezes nesta etapa", endedAt: new Date().toISOString() });
-      log(`a página recarregou durante ${step.id}`);
-      console.warn(`[lab] page reloaded during step ${step.id}`);
-    }
-  }
-  await save();
+  await settleRunningStep();
   render();
-  $("skip").addEventListener("click", () => { if (current) current.skip = true; });
   if (state.done) return;
   const resume = state.steps.some((s) => s.status !== "pending");
   $("status").textContent = resume ? "Toque para continuar" : "Toque para começar";
   $("start").textContent = resume ? "Continuar" : "Começar";
-  if (auto || continueAfterReopen) { run(); return; }
+  if (auto || continueRun) { run(); return; }
   $("start").hidden = false;
   $("start").addEventListener("click", () => run(), { once: true });
 }
