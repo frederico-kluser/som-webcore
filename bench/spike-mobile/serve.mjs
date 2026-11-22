@@ -22,6 +22,7 @@
 // each request is recorded in <session>-requests.jsonl; files other than HTML may be cached.
 
 import { createServer } from "node:http";
+import { createServer as createTlsServer } from "node:https";
 import { appendFileSync, createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, renameSync } from "node:fs";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -35,6 +36,11 @@ const RESULTS = join(ROOT, "bench", "results");
 const args = process.argv.slice(2);
 const PORT = Number(args[args.indexOf("--port") + 1] || 0) || 8377;
 const HOST = args.includes("--host") ? args[args.indexOf("--host") + 1] : "127.0.0.1";
+const arg = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
+// HTTPS with a local certificate (device lab on the LAN: a secure context needs it), and the CA
+// certificate on a separate plain-HTTP port, the only way a device can fetch it before trusting it.
+const TLS = arg("--tls-cert") && arg("--tls-key") ? { cert: readFileSync(arg("--tls-cert")), key: readFileSync(arg("--tls-key")) } : null;
+const CA = arg("--ca-port") && arg("--ca-file") ? { port: Number(arg("--ca-port")), file: arg("--ca-file") } : null;
 const COMPRESS = !args.includes("--no-compress");
 const BR_CACHE = join(tmpdir(), "som-spike-br");
 const PROGRESS = new Map();
@@ -134,7 +140,7 @@ function readBody(req, limit = 64 << 20) {
   });
 }
 
-const server = createServer(async (req, res) => {
+async function handler(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const common = { "Cache-Control": "no-store", "Cross-Origin-Resource-Policy": "same-origin", "Timing-Allow-Origin": "*" };
   try {
@@ -182,6 +188,12 @@ const server = createServer(async (req, res) => {
       writeFileSync(target + ".tmp", body);
       renameSync(target + ".tmp", target);
       console.log(`[results] ${target} (${body.length} bytes)`);
+      if (LAB && name.startsWith(LAB.session)) {
+        const posted = JSON.parse(body.toString("utf8"));
+        const why = posted.fatal?.message || posted.failures?.[0]?.error?.message || "";
+        const firstLine = String(why).split(/\r?\n/)[0].slice(0, 160);
+        console.log(`[lab] ${LAB.session} result ${name.slice(LAB.session.length + 1)} ${posted.status ?? posted.kind ?? "posted"}${why ? ` — ${firstLine}` : ""}`);
+      }
       return send(res, 200, { ok: true, path: target });
     }
     if (req.method === "POST" && url.pathname === "/api/log") {
@@ -244,7 +256,7 @@ const server = createServer(async (req, res) => {
     console.error(`[error] ${req.method} ${req.url}: ${error.message}`);
     if (!res.headersSent) send(res, 500, { ok: false, error: error.message });
   }
-});
+}
 
 // Brotli at quality 11 takes tens of seconds for the large Wasm files. Compress them before
 // listening (the result is cached on disk), so no measured run pays for the compression.
@@ -265,6 +277,19 @@ function precompress() {
 }
 
 precompress();
+const server = TLS ? createTlsServer(TLS, handler) : createServer(handler);
 server.listen(PORT, HOST, () => {
-  console.log(`serve.mjs ready on http://${HOST === "127.0.0.1" ? "localhost" : HOST}:${PORT}/ (models: ${modelCache()}, results: ${RESULTS}, brotli: ${COMPRESS}${LAB ? `, lab session ${LAB.session}` : ""})`);
+  console.log(`serve.mjs ready on ${TLS ? "https" : "http"}://${HOST === "127.0.0.1" ? "localhost" : HOST}:${PORT}/ (models: ${modelCache()}, results: ${RESULTS}, brotli: ${COMPRESS}${LAB ? `, lab session ${LAB.session}` : ""})`);
 });
+if (CA) {
+  createServer((req, res) => {
+    if (req.method === "GET" && new URL(req.url, "http://localhost").pathname === "/ca.crt") {
+      const body = readFileSync(CA.file);
+      res.writeHead(200, { "Content-Type": "application/x-x509-ca-cert", "Content-Length": body.length, "Cache-Control": "no-store" });
+      console.log(`[lab] CA certificate downloaded: ${String(req.headers["user-agent"] || "").slice(0, 120)}`);
+      return res.end(body);
+    }
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("not found");
+  }).listen(CA.port, HOST, () => console.log(`CA certificate on http://${HOST}:${CA.port}/ca.crt`));
+}

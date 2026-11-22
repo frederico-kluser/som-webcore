@@ -215,7 +215,10 @@ def main(argv: list[str]) -> int:
                 seen.add(key)
                 say(f"- `{e.get('source')}` — {e.get('level')}: {str(e.get('text'))[:300]}")
             say("")
-        hidden = [e for e in logs if e.get("kind") == "lifecycle" and "visibility hidden" in str(e.get("text"))]
+        # The lab page itself hidden during the run; removed iframes also report "hidden", and do not count.
+        start, end = state.get("startedAt") or "", state.get("finishedAt") or "9999"
+        hidden = [e for e in logs if e.get("kind") == "lifecycle" and "visibility hidden" in str(e.get("text"))
+                  and "(iframe)" not in str(e.get("source")) and start <= str(e.get("at")) <= end]
         say(f"**Ciclo de vida:** a página ficou oculta {len(hidden)} vez(es)" + (" — as medições dessas etapas podem ter sido estranguladas pelo navegador" if hidden else "") + ".")
         for e in hidden[:10]:
             say(f"- {e.get('at')} em `{e.get('source')}`")

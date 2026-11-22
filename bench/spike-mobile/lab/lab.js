@@ -134,7 +134,7 @@ async function runPageStep(step) {
     if (current.skip) return { status: "skipped", note: "pulada na tela" };
     let title = "";
     try { title = frame.contentDocument?.title ?? ""; } catch { /* navigating */ }
-    if (title === "posted") return { status: "ok" };
+    if (title === "posted") return { status: "posted" }; // the run's own status is in its JSON
     if (title === "post failed") return { status: "failed", note: "a página não conseguiu gravar o resultado" };
     if (Date.now() > deadline) {
       const message = `the page did not post a result within ${step.timeout ?? 420} s (device lab)`;
