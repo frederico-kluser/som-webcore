@@ -125,3 +125,22 @@ A porta 5580 fica fora da padrão (5554), que um emulador de outro projeto usari
 | `host` (Apple M1) | `--enable-unsafe-webgpu --enable-features=Vulkan` | adaptador `apple` (não é fallback) | falha: a mesma mensagem | [`…-gpuhost-flags-webgpu.json`](../results/2026-11-21-emulador-macmini-probe-gpuhost-flags-webgpu.json) |
 
 Diferença em relação ao emulador x86_64 do Acer: com as flags inseguras, o Chrome do emulador arm64 **entrega um adaptador**, que o do Acer não entregava — mas nenhum dispositivo. Com `-gpu host` e as flags, os dois motores WebGPU também falharam, duas vezes cada (`…-gpuhost-flags-webgpu-r*.json`): depois de o `requestDevice()` da sonda da página falhar, eles já não recebem adaptador. **Não há WebGPU utilizável no Chrome 133 do emulador**, em nenhuma configuração. WebAssembly como no Acer: SIMD e SIMD relaxado **sim**, JSPI e `Float16Array` **não**, threads só com `?coi=1`.
+
+## 8. Chrome de desktop no Mac (`T-01`)
+
+O Chrome 157.0.8103.79 do Mac (`/Applications`), com perfil próprio no HD externo e janela real na área de trabalho do Mac, aberto pela sessão SSH:
+
+```bash
+cd /Volumes/Ext2TB/Projects/som-webcore
+TMPDIR=/Volumes/Ext2TB/tmp/som-webcore node bench/spike-mobile/run-desktop.mjs --browser stable --no-api --fresh \
+  --result <nome> --url "http://localhost:8377/probe.html?name=<nome>"
+PREFIX=desktop-macmini TMPDIR=/Volumes/Ext2TB/tmp/som-webcore bash bench/spike-mobile/matrix-desktop.sh [configurações...]
+```
+
+**Armadilhas** (o `run-desktop.mjs` já trata as duas primeiras):
+
+- **Abrir pelo LaunchServices (`open -a`) não funciona aqui.** O navegador passa a rodar com as próprias permissões de privacidade e, com o perfil no HD externo, parou antes de criar o perfil (sem nenhum processo filho e sem o protocolo de depuração), à espera da permissão de “volume removível” que ninguém concede por SSH. Aberto **direto** pela sessão SSH, o executável herda o acesso ao disco da sessão e ainda abre a janela na área de trabalho do Mac.
+- **Keychain.** Um perfil novo do Chrome no macOS pede o Keychain do usuário (“Chrome Safe Storage”); o executor passa `--use-mock-keychain`, como as ferramentas de automação.
+- O shell remoto do Mac é o zsh, que **não divide palavras** de uma variável sem aspas (`set -- $c` vira um argumento só). Laços com configurações em `ssh macmini '…'` devem rodar em `bash -s` ou usar `${=c}`; uma rodada de resistência foi perdida e apagada por isso.
+
+A [sonda](../results/2026-11-21-desktop-macmini-chrome157-probe.json) confirma WebGPU sobre Metal (adaptador `apple`, arquitetura `metal-3`, dispositivo criado, `shader-f16`) e WebAssembly com SIMD, SIMD relaxado e JSPI. Resultados da página: [relatório do marco T, seção 2](../../docs/reports/teste-mobile.md#2-a-página-de-teste-t-01).

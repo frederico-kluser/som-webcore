@@ -148,6 +148,14 @@ async function attachConsole(collector) {
   writeFileSync(resultFile, JSON.stringify(data, null, 2));
 }
 
+// The browser and the command-line flags of the run, next to the page's own result.
+function attachBrowser() {
+  if (!existsSync(resultFile)) return;
+  const data = JSON.parse(readFileSync(resultFile, "utf8"));
+  data.browser = { name: browser, executable: exe, flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), headless: flag("headless") };
+  writeFileSync(resultFile, JSON.stringify(data, null, 2));
+}
+
 async function closeBrowser() {
   try {
     const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
@@ -195,5 +203,6 @@ if (!ok) {
   console.error(`wrote a failure result (timeout): ${resultFile}`);
 }
 if (collector) { await sleep(500); await attachConsole(collector); collector.cdp.close(); }
+attachBrowser();
 if (!flag("keep")) { await closeBrowser(); await sleep(1500); try { child.kill(); } catch { /* ignore */ } }
 process.exit(ok ? 0 : 1);
