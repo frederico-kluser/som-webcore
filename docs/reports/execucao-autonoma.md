@@ -58,6 +58,40 @@
 
 **Para retomar:** `python3 scripts/roadmap.py waves`. A `DP-01` escolheu o fork do motor leve existente ([ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md)); as próximas são a `K-01` (base do fork) e o tronco comum da PoC (`P-01` a `P-04`). No Mac mini, o servidor da página pode continuar ligado (`/Volumes/Ext2TB/tmp/som-webcore/serve.pid`); emulador, simulador e navegadores ficam desligados entre as rodadas.
 
+## Relatório desta execução (2026-11-22, pelo Mac mini)
+
+### O que foi feito
+
+- **O Mac mini virou a máquina de execução**, a pedido do dono, e o Acer só desenvolve: repositório clonado no HD externo do Mac, modelos baixados das revisões fixadas e conferidos por SHA-256, servidor da página no Mac e três executores novos ou adaptados — o simulador de iOS (`run-ios.mjs`), o emulador Android arm64 do SDK do Mac e o Chrome de desktop do macOS ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)).
+- **O marco T está fechado**: `T-01`, `T-03`, `T-04`, `T-08`, `T-09` e `T-10` feitos nesta execução (os PRs #13 a #19), somados a `T-05`, `T-06`, `T-07` e `S-01`, da anterior. O relatório completo está em [teste-mobile.md](teste-mobile.md).
+- **Dados brutos versionados:** 22 execuções no Safari do simulador de iOS, 42 no emulador Android do Mac, 19 no Chrome de desktop do macOS e 5 da API nativa, todos em `bench/results/`. Toda tabela do relatório é gerada desses arquivos por script.
+
+### Decisões de bifurcação, todas por delegação do dono
+
+| Bifurcação | Decisão | ADR |
+|---|---|---|
+| `DT-02` | **não se aplica**: o modelo nativo ficou disponível sem uma pessoa, no Windows e no macOS | [0001](../adr/0001-dt-02-modelo-nativo-disponivel.md) |
+| `DT-01` | **só emulador**; a `T-02` (celulares reais) fica descartada | [0002](../adr/0002-dt-01-seguir-com-o-emulador.md) |
+| `GT` | **motor nosso em WebGPU**; o ramo do motor existente (`L-01`, `L-02`) fica descartado | [0003](../adr/0003-gt-motor-nosso-em-webgpu.md) |
+| `DP-01` | **fork do motor leve existente** (`@johnhenry`); o motor do zero (`P-05` a `P-10`) fica descartado | [0004](../adr/0004-dp-01-fork-do-motor-leve.md) |
+
+### O que os dados mostraram **[MEDIDO]**
+
+- O ONNX Runtime Web em Wasm roda no Chrome do Android e no Safari do iOS, reproduz o ONNX Runtime nativo com o mesmo arquivo e aguenta 200 decisões seguidas. Mas a única variante de 8 bits que acerta (`q8emb32-f16`) pesa 26,34 MB na primeira visita, acima dos 25 MB do portão — e 2,48 MB disso são o runtime.
+- No WebGPU (só no desktop), o ONNX Runtime erra mesmo com os pesos FP32 (máx. |Δp| 4,8e-2) e trava com os quantizados publicados. O motor leve `@johnhenry` acerta em FP32, tem um runtime de 0,09 MB, mas só baixa pesos FP32 (68 MB) e o heap dele cresce em 200 decisões.
+- Nem o emulador Android nem o simulador de iOS têm WebGPU utilizável.
+
+### O que ficou pendente e por quê
+
+- **Pendências externas:** latência e WebGPU em celular real (não há aparelho; a `T-02` foi descartada pela regra do dono); o Chrome atual no Android (o emulador tem o 133, e atualizar exige uma conta Google); a qualidade das decisões em português (não há gabarito).
+- **Próximas atividades** (marco M1, `python3 scripts/roadmap.py waves`): a `K-01` (base do fork) e o tronco comum da PoC (`P-01` a `P-04`); depois a `K-02` e o restante do tronco, até o portão `G1`. Nenhuma tag nem release foi criada: nenhum portão com release foi cumprido.
+
+### O que recomendo fazer primeiro
+
+1. **Medir num celular real com WebGPU** — um Android com GPU que o Chrome aceita e um iPhone com Safari 26 ou mais novo. É o que falta para o critério de latência do `GT` e para saber se a janela do WebGPU vale no celular; a página e os executores já servem (`run-android.mjs` funciona com qualquer aparelho ligado por `adb`).
+2. **Decidir o que fazer com os aparelhos sem WebGPU.** O motor nosso é WebGPU, e o roadmap deixa o fallback para CPU fora da PoC; nesses aparelhos, o caminho comprovado hoje (o ONNX Runtime em Wasm) não cumpre os 25 MB com paridade.
+3. **Seguir com a `K-01`**, que confere o que sai do fork, o que muda e como acompanhar o projeto original, antes de qualquer fork.
+
 ## Retomada pelo Mac mini (pedido do dono, 2026-11-21)
 
 Depois do relatório acima, o dono pediu para continuar o projeto **testando pelo Mac mini**, com o Safari do simulador de iPhone. Isso segue também a regra da skill `macmini`: desenvolver aqui e rodar e testar lá, com tudo no HD externo. O servidor e o emulador encerrados por falta de memória **neste** computador continuam parados; a execução passa a ser no Mac.
@@ -68,7 +102,7 @@ Depois do relatório acima, o dono pediu para continuar o projeto **testando pel
 - **Feito no Mac (2026-11-21):** repositório clonado no HD externo, modelos baixados e conferidos (os derivados copiados do Acer com SHA-256 igual ao registrado), servidor no Mac, simulador dedicado, sonda e matriz do Safari — tudo no [relatório, seção 5](teste-mobile.md#5-safari-do-ios-no-simulador-complemento-da-t-08).
 - **Próximo, no mesmo Mac:** o Mac tem o SDK Android no HD externo; um aparelho virtual só do projeto (`som-webcore-android36`, Android 36 arm64) foi criado para retomar ali a `T-08` e as 200 decisões da `T-09`, paradas no Acer. Depois, o Chrome 157 do macOS para a validação da `T-01` e o Chrome Canary, instalado no HD externo, para a página sobre o modelo nativo (`T-03`).
 
-## Relatório final desta execução (2026-11-21)
+## Relatório da execução anterior (2026-11-21)
 
 ### O que foi feito
 
