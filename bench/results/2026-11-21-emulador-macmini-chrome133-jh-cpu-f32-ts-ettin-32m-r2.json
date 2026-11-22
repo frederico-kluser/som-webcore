@@ -1,0 +1,3636 @@
+{
+  "kind": "spike-mobile-run",
+  "schemaVersion": 1,
+  "startedAt": "2026-11-22T01:43:00.727Z",
+  "page": "http://localhost:8377/index.html?engine=jh-cpu&variant=f32&model=ts-ettin-32m&name=2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-32m-r2",
+  "config": {
+    "engine": "jh-cpu",
+    "model": "ts-ettin-32m",
+    "variant": "f32",
+    "threads": 1,
+    "optimization": null,
+    "warmup": 3,
+    "warm": 120,
+    "endurance": 0,
+    "lang": "all",
+    "debug": false,
+    "uaMemory": false
+  },
+  "status": "ok",
+  "failures": [],
+  "timings": {
+    "navigationToScriptMs": 313.89999999990687,
+    "create": [
+      {
+        "schema": "en-support",
+        "ms": 1038.6000000000931,
+        "monitorEvents": 243
+      },
+      {
+        "schema": "en-hotel",
+        "ms": 1.1999999999534339,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-command",
+        "ms": 0.8000000000465661,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-draft",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-field",
+        "ms": 0.8000000000465661,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-review",
+        "ms": 2.300000000046566,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "en-moderation",
+        "ms": 0.5,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-atendimento",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-imoveis",
+        "ms": 1.4000000001396984,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-encaminhamento",
+        "ms": 0.6999999999534339,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-moderacao",
+        "ms": 1,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-avaliacao",
+        "ms": 1.7000000001862645,
+        "monitorEvents": 2
+      },
+      {
+        "schema": "pt-formulario",
+        "ms": 1,
+        "monitorEvents": 2
+      }
+    ],
+    "firstAnswerMs": 3390.399999999907
+  },
+  "latency": {
+    "firstPass": {
+      "n": 66,
+      "p50": 1065.0999999999767,
+      "p95": 5943.350000000035,
+      "p99": 11022.175000000127,
+      "mean": 1809.046969696957,
+      "min": 697.0999999998603,
+      "max": 12449.90000000014
+    },
+    "warm": {
+      "n": 120,
+      "p50": 1118.9000000000233,
+      "p95": 7444.71999999996,
+      "p99": 11253.505999999938,
+      "mean": 1840.188333333338,
+      "min": 736.9000000001397,
+      "max": 13034,
+      "samplesMs": [
+        1156.6000000000931,
+        1270,
+        1208.1999999999534,
+        1247.8999999999069,
+        1148.4000000001397,
+        7437.199999999953,
+        1114.4000000001397,
+        1103,
+        1125.1000000000931,
+        1089.5,
+        1083.8000000000466,
+        809.3000000000466,
+        769.8999999999069,
+        771,
+        789.1000000000931,
+        811.8999999999069,
+        1069.6999999999534,
+        2268,
+        2166.4000000001397,
+        2170.2999999998137,
+        1093.4000000001397,
+        757.3000000000466,
+        834.5999999998603,
+        819.5,
+        756.8000000000466,
+        2159,
+        2155.399999999907,
+        2254.899999999907,
+        2205.100000000093,
+        7835.199999999953,
+        798.8999999999069,
+        747.6000000000931,
+        825.3000000000466,
+        950.9000000001397,
+        1129.0999999998603,
+        2244.6999999999534,
+        2223.5,
+        2170,
+        2227.2000000001863,
+        11383.199999999953,
+        2219.0999999998603,
+        2241.600000000093,
+        2216.8000000000466,
+        2208.5,
+        2233.5999999998603,
+        788.7000000001863,
+        800.8999999999069,
+        785.8000000000466,
+        767.3999999999069,
+        770.5,
+        1092.6000000000931,
+        1074.5999999998603,
+        1117.3000000000466,
+        1163.6999999999534,
+        1102,
+        2426.600000000093,
+        2173,
+        2147.5,
+        2212.5999999998603,
+        2195.5,
+        13034,
+        809.9000000001397,
+        809.4000000001397,
+        864.4000000001397,
+        875.2000000001863,
+        819.3999999999069,
+        1103,
+        1108.8999999999069,
+        1117.9000000001397,
+        1149,
+        1190.6999999999534,
+        7587.600000000093,
+        1151,
+        1103.2999999998137,
+        1079,
+        1076.1000000000931,
+        1134.3999999999069,
+        809.2000000001863,
+        770.1999999999534,
+        769.5999999998603,
+        771.9000000001397,
+        778.8000000000466,
+        1098,
+        2375.899999999907,
+        2222.2999999998137,
+        2195.100000000093,
+        1066.8999999999069,
+        758.9000000001397,
+        776.5,
+        814.6999999999534,
+        802,
+        2189.600000000093,
+        2233.6999999999534,
+        2205.8000000000466,
+        2193.100000000093,
+        7797.199999999953,
+        746.8000000000466,
+        743.8999999999069,
+        763.6999999999534,
+        736.9000000001397,
+        1091,
+        2211.6999999999534,
+        2174.6999999999534,
+        2152.5,
+        2243.9000000001397,
+        10700.59999999986,
+        2442.2000000001863,
+        2317.2999999998137,
+        2293.3000000000466,
+        2366.9000000001397,
+        2472.899999999907,
+        986.1000000000931,
+        801,
+        816,
+        807.3999999999069,
+        839.1999999999534,
+        1141,
+        1130.4000000001397,
+        1161.0999999998603,
+        1119.8999999999069
+      ]
+    }
+  },
+  "memory": [
+    {
+      "label": "start",
+      "t": 1103.1000000000931,
+      "jsHeapUsed": 10000000,
+      "jsHeapTotal": 10000000
+    },
+    {
+      "label": "after-first-pass",
+      "t": 121734.69999999995,
+      "jsHeapUsed": 10000000,
+      "jsHeapTotal": 10000000
+    },
+    {
+      "label": "after-warm",
+      "t": 345974.30000000005,
+      "jsHeapUsed": 10000000,
+      "jsHeapTotal": 10000000
+    }
+  ],
+  "answers": [
+    {
+      "item": "en-01",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 1110.3999999999069,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5524765849113464,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4475233852863312,
+            "false": 0.5524765849113464
+          }
+        },
+        "topic": {
+          "confidence": 0.7109676599502563,
+          "id": "topic",
+          "label": "billing",
+          "probabilities": {
+            "billing": 0.7109676599502563,
+            "delivery": 0.12646429240703583,
+            "account": 0.028591306880116463,
+            "other": 0.1339767426252365
+          }
+        },
+        "urgency": {
+          "confidence": 0.5290889739990234,
+          "expectedScore": 3.0041491985321045,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.13637353479862213,
+            "2": 0.062233708798885345,
+            "3": 0.5290889739990234,
+            "4": 0.2054775506258011,
+            "5": 0.066826231777668
+          }
+        }
+      }
+    },
+    {
+      "item": "en-02",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 1111.0999999998603,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5914565324783325,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4085434675216675,
+            "false": 0.5914565324783325
+          }
+        },
+        "topic": {
+          "confidence": 0.7485286593437195,
+          "id": "topic",
+          "label": "delivery",
+          "probabilities": {
+            "billing": 0.12217992544174194,
+            "delivery": 0.7485286593437195,
+            "account": 0.025780891999602318,
+            "other": 0.1035105288028717
+          }
+        },
+        "urgency": {
+          "confidence": 0.5099278092384338,
+          "expectedScore": 2.8312788009643555,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.15637563169002533,
+            "2": 0.12325990945100784,
+            "3": 0.5099278092384338,
+            "4": 0.15358343720436096,
+            "5": 0.05685322731733322
+          }
+        }
+      }
+    },
+    {
+      "item": "en-03",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 1063.5,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.6049936413764954,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.39500635862350464,
+            "false": 0.6049936413764954
+          }
+        },
+        "topic": {
+          "confidence": 0.6793557405471802,
+          "id": "topic",
+          "label": "account",
+          "probabilities": {
+            "billing": 0.08331173658370972,
+            "delivery": 0.053761422634124756,
+            "account": 0.6793557405471802,
+            "other": 0.18357107043266296
+          }
+        },
+        "urgency": {
+          "confidence": 0.5193456411361694,
+          "expectedScore": 2.842651844024658,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.12104331701993942,
+            "2": 0.16864918172359467,
+            "3": 0.5193456411361694,
+            "4": 0.1285361498594284,
+            "5": 0.06242573261260986
+          }
+        }
+      }
+    },
+    {
+      "item": "en-04",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 1042.9000000001397,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5445768237113953,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4554232060909271,
+            "false": 0.5445768237113953
+          }
+        },
+        "topic": {
+          "confidence": 0.37156862020492554,
+          "id": "topic",
+          "label": "billing",
+          "probabilities": {
+            "billing": 0.37156862020492554,
+            "delivery": 0.09155117720365524,
+            "account": 0.19022725522518158,
+            "other": 0.34665295481681824
+          }
+        },
+        "urgency": {
+          "confidence": 0.5369648933410645,
+          "expectedScore": 2.865994930267334,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.07765810191631317,
+            "2": 0.21061104536056519,
+            "3": 0.5369648933410645,
+            "4": 0.11760985851287842,
+            "5": 0.05715613067150116
+          }
+        }
+      }
+    },
+    {
+      "item": "en-05",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 1039.8999999999069,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5581955313682556,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.441804438829422,
+            "false": 0.5581955313682556
+          }
+        },
+        "topic": {
+          "confidence": 0.5021751523017883,
+          "id": "topic",
+          "label": "billing",
+          "probabilities": {
+            "billing": 0.5021751523017883,
+            "delivery": 0.30745095014572144,
+            "account": 0.035094983875751495,
+            "other": 0.15527892112731934
+          }
+        },
+        "urgency": {
+          "confidence": 0.5008216500282288,
+          "expectedScore": 3.023935556411743,
+          "id": "urgency",
+          "label": "3",
+          "probabilities": {
+            "1": 0.09630925208330154,
+            "2": 0.13604311645030975,
+            "3": 0.5008216500282288,
+            "4": 0.1810547113418579,
+            "5": 0.08577124774456024
+          }
+        }
+      }
+    },
+    {
+      "item": "en-06",
+      "lang": "en",
+      "schema": "en-support",
+      "availability": "downloadable",
+      "status": "ok",
+      "ms": 7291.699999999953,
+      "result": {
+        "wants_refund": {
+          "confidence": 0.5773460865020752,
+          "id": "wants_refund",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4226539134979248,
+            "false": 0.5773460865020752
+          }
+        },
+        "topic": {
+          "confidence": 0.4778795540332794,
+          "id": "topic",
+          "label": "delivery",
+          "probabilities": {
+            "billing": 0.37079426646232605,
+            "delivery": 0.4778795540332794,
+            "account": 0.010877522639930248,
+            "other": 0.14044862985610962
+          }
+        },
+        "urgency": {
+          "confidence": 0.305316686630249,
+          "expectedScore": 3.384606122970581,
+          "id": "urgency",
+          "label": "4",
+          "probabilities": {
+            "1": 0.1181630864739418,
+            "2": 0.11018405109643936,
+            "3": 0.2534363865852356,
+            "4": 0.305316686630249,
+            "5": 0.21289978921413422
+          }
+        }
+      }
+    },
+    {
+      "item": "en-07",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1036.5999999998603,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.521228551864624,
+          "id": "pet_friendly",
+          "label": "false",
+          "probabilities": {
+            "true": 0.478771448135376,
+            "false": 0.521228551864624
+          }
+        },
+        "property_type": {
+          "confidence": 0.31089648604393005,
+          "id": "property_type",
+          "label": "hotel",
+          "probabilities": {
+            "hotel": 0.31089648604393005,
+            "rental": 0.25737476348876953,
+            "hostel": 0.18935076892375946,
+            "any": 0.24237799644470215
+          }
+        },
+        "price_tier": {
+          "confidence": 0.29372161626815796,
+          "expectedScore": 2.6619763374328613,
+          "id": "price_tier",
+          "label": "4",
+          "probabilities": {
+            "1": 0.19666652381420135,
+            "2": 0.2384122759103775,
+            "3": 0.2711995840072632,
+            "4": 0.29372161626815796
+          }
+        }
+      }
+    },
+    {
+      "item": "en-08",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1033.5,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.5547610521316528,
+          "id": "pet_friendly",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4452389180660248,
+            "false": 0.5547610521316528
+          }
+        },
+        "property_type": {
+          "confidence": 0.3150893449783325,
+          "id": "property_type",
+          "label": "hotel",
+          "probabilities": {
+            "hotel": 0.3150893449783325,
+            "rental": 0.22819994390010834,
+            "hostel": 0.21224573254585266,
+            "any": 0.2444649636745453
+          }
+        },
+        "price_tier": {
+          "confidence": 0.414315402507782,
+          "expectedScore": 2.950977325439453,
+          "id": "price_tier",
+          "label": "4",
+          "probabilities": {
+            "1": 0.14913420379161835,
+            "2": 0.16506966948509216,
+            "3": 0.2714807391166687,
+            "4": 0.414315402507782
+          }
+        }
+      }
+    },
+    {
+      "item": "en-09",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1045.3000000000466,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.5664843916893005,
+          "id": "pet_friendly",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4335155785083771,
+            "false": 0.5664843916893005
+          }
+        },
+        "property_type": {
+          "confidence": 0.3572479486465454,
+          "id": "property_type",
+          "label": "hostel",
+          "probabilities": {
+            "hotel": 0.19873645901679993,
+            "rental": 0.2551049590110779,
+            "hostel": 0.3572479486465454,
+            "any": 0.1889106184244156
+          }
+        },
+        "price_tier": {
+          "confidence": 0.296238511800766,
+          "expectedScore": 2.384512186050415,
+          "id": "price_tier",
+          "label": "1",
+          "probabilities": {
+            "1": 0.296238511800766,
+            "2": 0.27666065096855164,
+            "3": 0.17345109581947327,
+            "4": 0.2536497414112091
+          }
+        }
+      }
+    },
+    {
+      "item": "en-10",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1043.4000000001397,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.5471044182777405,
+          "id": "pet_friendly",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4528955817222595,
+            "false": 0.5471044182777405
+          }
+        },
+        "property_type": {
+          "confidence": 0.6110905408859253,
+          "id": "property_type",
+          "label": "rental",
+          "probabilities": {
+            "hotel": 0.1696888506412506,
+            "rental": 0.6110905408859253,
+            "hostel": 0.06423144042491913,
+            "any": 0.15498916804790497
+          }
+        },
+        "price_tier": {
+          "confidence": 0.2972608804702759,
+          "expectedScore": 2.5977511405944824,
+          "id": "price_tier",
+          "label": "4",
+          "probabilities": {
+            "1": 0.21609559655189514,
+            "2": 0.2673184871673584,
+            "3": 0.21932503581047058,
+            "4": 0.2972608804702759
+          }
+        }
+      }
+    },
+    {
+      "item": "en-11",
+      "lang": "en",
+      "schema": "en-hotel",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1037.3000000000466,
+      "result": {
+        "pet_friendly": {
+          "confidence": 0.5919613242149353,
+          "id": "pet_friendly",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4080386757850647,
+            "false": 0.5919613242149353
+          }
+        },
+        "property_type": {
+          "confidence": 0.3285287022590637,
+          "id": "property_type",
+          "label": "rental",
+          "probabilities": {
+            "hotel": 0.28427353501319885,
+            "rental": 0.3285287022590637,
+            "hostel": 0.22298426926136017,
+            "any": 0.16421347856521606
+          }
+        },
+        "price_tier": {
+          "confidence": 0.35397449135780334,
+          "expectedScore": 2.7357656955718994,
+          "id": "price_tier",
+          "label": "4",
+          "probabilities": {
+            "1": 0.21160827577114105,
+            "2": 0.1949922889471054,
+            "3": 0.2394249588251114,
+            "4": 0.35397449135780334
+          }
+        }
+      }
+    },
+    {
+      "item": "en-12",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 729.3999999999069,
+      "result": {
+        "command": {
+          "confidence": 0.26976537704467773,
+          "id": "command",
+          "label": "archive_doc",
+          "probabilities": {
+            "export_pdf": 0.2508760094642639,
+            "share_link": 0.17395301163196564,
+            "archive_doc": 0.26976537704467773,
+            "rename_doc": 0.11251039057970047,
+            "print_doc": 0.12381932139396667,
+            "undo_change": 0.06907588988542557
+          }
+        }
+      }
+    },
+    {
+      "item": "en-13",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 729.0999999998603,
+      "result": {
+        "command": {
+          "confidence": 0.6630680561065674,
+          "id": "command",
+          "label": "export_pdf",
+          "probabilities": {
+            "export_pdf": 0.6630680561065674,
+            "share_link": 0.06819640845060349,
+            "archive_doc": 0.09550147503614426,
+            "rename_doc": 0.09352777153253555,
+            "print_doc": 0.06143971532583237,
+            "undo_change": 0.018266573548316956
+          }
+        }
+      }
+    },
+    {
+      "item": "en-14",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 736.8999999999069,
+      "result": {
+        "command": {
+          "confidence": 0.40865013003349304,
+          "id": "command",
+          "label": "archive_doc",
+          "probabilities": {
+            "export_pdf": 0.1994027942419052,
+            "share_link": 0.08178167790174484,
+            "archive_doc": 0.40865013003349304,
+            "rename_doc": 0.07949337363243103,
+            "print_doc": 0.08808335661888123,
+            "undo_change": 0.14258867502212524
+          }
+        }
+      }
+    },
+    {
+      "item": "en-15",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 731.3999999999069,
+      "result": {
+        "command": {
+          "confidence": 0.28019121289253235,
+          "id": "command",
+          "label": "archive_doc",
+          "probabilities": {
+            "export_pdf": 0.2118830680847168,
+            "share_link": 0.09283215552568436,
+            "archive_doc": 0.28019121289253235,
+            "rename_doc": 0.1798703670501709,
+            "print_doc": 0.13332022726535797,
+            "undo_change": 0.10190298408269882
+          }
+        }
+      }
+    },
+    {
+      "item": "en-16",
+      "lang": "en",
+      "schema": "en-command",
+      "availability": "available",
+      "status": "ok",
+      "ms": 731.1000000000931,
+      "result": {
+        "command": {
+          "confidence": 0.4220442473888397,
+          "id": "command",
+          "label": "archive_doc",
+          "probabilities": {
+            "export_pdf": 0.16220331192016602,
+            "share_link": 0.09069257974624634,
+            "archive_doc": 0.4220442473888397,
+            "rename_doc": 0.09628678113222122,
+            "print_doc": 0.12595179677009583,
+            "undo_change": 0.10282129049301147
+          }
+        }
+      }
+    },
+    {
+      "item": "en-17",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1033.5999999998603,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5796714425086975,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4203285574913025,
+            "false": 0.5796714425086975
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5987309217453003,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4012690782546997,
+            "false": 0.5987309217453003
+          }
+        },
+        "clarity": {
+          "confidence": 0.4283962845802307,
+          "expectedScore": 2.153305768966675,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.4283962845802307,
+            "fair": 0.1866178810596466,
+            "good": 0.1882696896791458,
+            "excellent": 0.19671614468097687
+          }
+        }
+      }
+    },
+    {
+      "item": "en-18",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2112.9000000001397,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.517119288444519,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.48288071155548096,
+            "false": 0.517119288444519
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5363439917564392,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4636559784412384,
+            "false": 0.5363439917564392
+          }
+        },
+        "clarity": {
+          "confidence": 0.36975789070129395,
+          "expectedScore": 2.856175661087036,
+          "id": "clarity",
+          "label": "excellent",
+          "probabilities": {
+            "poor": 0.19363123178482056,
+            "fair": 0.12631988525390625,
+            "good": 0.31029099225997925,
+            "excellent": 0.36975789070129395
+          }
+        }
+      }
+    },
+    {
+      "item": "en-19",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2096.5,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5608441233634949,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4391558766365051,
+            "false": 0.5608441233634949
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5787862539291382,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4212137460708618,
+            "false": 0.5787862539291382
+          }
+        },
+        "clarity": {
+          "confidence": 0.4941721558570862,
+          "expectedScore": 2.149322271347046,
+          "id": "clarity",
+          "label": "poor",
+          "probabilities": {
+            "poor": 0.4941721558570862,
+            "fair": 0.11132465302944183,
+            "good": 0.14551199972629547,
+            "excellent": 0.2489911913871765
+          }
+        }
+      }
+    },
+    {
+      "item": "en-20",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2178.6999999999534,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.545639157295227,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.45436081290245056,
+            "false": 0.545639157295227
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5728505253791809,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4271494746208191,
+            "false": 0.5728505253791809
+          }
+        },
+        "clarity": {
+          "confidence": 0.29033538699150085,
+          "expectedScore": 2.623708724975586,
+          "id": "clarity",
+          "label": "good",
+          "probabilities": {
+            "poor": 0.23595787584781647,
+            "fair": 0.1890411078929901,
+            "good": 0.29033538699150085,
+            "excellent": 0.28466564416885376
+          }
+        }
+      }
+    },
+    {
+      "item": "en-21",
+      "lang": "en",
+      "schema": "en-draft",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1089.6999999999534,
+      "result": {
+        "has_repro_steps": {
+          "confidence": 0.5719487071037292,
+          "id": "has_repro_steps",
+          "label": "false",
+          "probabilities": {
+            "true": 0.42805132269859314,
+            "false": 0.5719487071037292
+          }
+        },
+        "contains_pii": {
+          "confidence": 0.5828659534454346,
+          "id": "contains_pii",
+          "label": "false",
+          "probabilities": {
+            "true": 0.41713404655456543,
+            "false": 0.5828659534454346
+          }
+        },
+        "clarity": {
+          "confidence": 0.30080047249794006,
+          "expectedScore": 2.6361122131347656,
+          "id": "clarity",
+          "label": "excellent",
+          "probabilities": {
+            "poor": 0.2527284622192383,
+            "fair": 0.15923137962818146,
+            "good": 0.287239670753479,
+            "excellent": 0.30080047249794006
+          }
+        }
+      }
+    },
+    {
+      "item": "en-22",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 789,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.42144230008125305,
+          "id": "field_purpose",
+          "label": "account",
+          "probabilities": {
+            "account": 0.42144230008125305,
+            "sign_in": 0.08589547127485275,
+            "sign_up": 0.09246408939361572,
+            "one_time_code": 0.23336303234100342,
+            "other": 0.16683511435985565
+          }
+        }
+      }
+    },
+    {
+      "item": "en-23",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 783.6999999999534,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.8963149785995483,
+          "id": "field_purpose",
+          "label": "account",
+          "probabilities": {
+            "account": 0.8963149785995483,
+            "sign_in": 0.01516992598772049,
+            "sign_up": 0.011535007506608963,
+            "one_time_code": 0.045584000647068024,
+            "other": 0.031396061182022095
+          }
+        }
+      }
+    },
+    {
+      "item": "en-24",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 870.8000000000466,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.39218512177467346,
+          "id": "field_purpose",
+          "label": "sign_in",
+          "probabilities": {
+            "account": 0.24522607028484344,
+            "sign_in": 0.39218512177467346,
+            "sign_up": 0.30421769618988037,
+            "one_time_code": 0.002970470581203699,
+            "other": 0.055400632321834564
+          }
+        }
+      }
+    },
+    {
+      "item": "en-25",
+      "lang": "en",
+      "schema": "en-field",
+      "availability": "available",
+      "status": "ok",
+      "ms": 797.6000000000931,
+      "result": {
+        "field_purpose": {
+          "confidence": 0.4673014283180237,
+          "id": "field_purpose",
+          "label": "account",
+          "probabilities": {
+            "account": 0.4673014283180237,
+            "sign_in": 0.10542754083871841,
+            "sign_up": 0.0399036779999733,
+            "one_time_code": 0.08416518568992615,
+            "other": 0.30320215225219727
+          }
+        }
+      }
+    },
+    {
+      "item": "en-26",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2182.399999999907,
+      "result": {
+        "sentiment": {
+          "confidence": 0.6702782511711121,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.09721827507019043,
+            "neutral": 0.6702782511711121,
+            "positive": 0.2325034737586975
+          }
+        },
+        "aspect": {
+          "confidence": 0.2846972346305847,
+          "id": "aspect",
+          "label": "quality",
+          "probabilities": {
+            "price": 0.13432422280311584,
+            "quality": 0.2846972346305847,
+            "delivery": 0.09073212742805481,
+            "support": 0.1895480901002884,
+            "design": 0.11365313827991486,
+            "durability": 0.03473488986492157,
+            "ease_of_use": 0.054258957505226135,
+            "other": 0.09805135428905487
+          }
+        },
+        "rating": {
+          "confidence": 0.5442600846290588,
+          "expectedScore": 3.0124874114990234,
+          "id": "rating",
+          "label": "3",
+          "probabilities": {
+            "1": 0.05890057981014252,
+            "2": 0.1748623251914978,
+            "3": 0.5442600846290588,
+            "4": 0.13880297541618347,
+            "5": 0.08317400515079498
+          }
+        }
+      }
+    },
+    {
+      "item": "en-27",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2107.0999999998603,
+      "result": {
+        "sentiment": {
+          "confidence": 0.43643254041671753,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.366035521030426,
+            "neutral": 0.43643254041671753,
+            "positive": 0.19753193855285645
+          }
+        },
+        "aspect": {
+          "confidence": 0.7347606420516968,
+          "id": "aspect",
+          "label": "support",
+          "probabilities": {
+            "price": 0.0207675714045763,
+            "quality": 0.04627159982919693,
+            "delivery": 0.008651704527437687,
+            "support": 0.7347606420516968,
+            "design": 0.05090128630399704,
+            "durability": 0.03503183647990227,
+            "ease_of_use": 0.03210700303316116,
+            "other": 0.07150833308696747
+          }
+        },
+        "rating": {
+          "confidence": 0.49743926525115967,
+          "expectedScore": 3.029768943786621,
+          "id": "rating",
+          "label": "3",
+          "probabilities": {
+            "1": 0.12316857278347015,
+            "2": 0.10203121602535248,
+            "3": 0.49743926525115967,
+            "4": 0.17658455669879913,
+            "5": 0.10077639669179916
+          }
+        }
+      }
+    },
+    {
+      "item": "en-28",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2062,
+      "result": {
+        "sentiment": {
+          "confidence": 0.5336098074913025,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.19043618440628052,
+            "neutral": 0.5336098074913025,
+            "positive": 0.2759539783000946
+          }
+        },
+        "aspect": {
+          "confidence": 0.35250478982925415,
+          "id": "aspect",
+          "label": "quality",
+          "probabilities": {
+            "price": 0.16732269525527954,
+            "quality": 0.35250478982925415,
+            "delivery": 0.05989734083414078,
+            "support": 0.10148284584283829,
+            "design": 0.1598837524652481,
+            "durability": 0.028054915368556976,
+            "ease_of_use": 0.04756996035575867,
+            "other": 0.0832836925983429
+          }
+        },
+        "rating": {
+          "confidence": 0.4036411643028259,
+          "expectedScore": 2.9395761489868164,
+          "id": "rating",
+          "label": "3",
+          "probabilities": {
+            "1": 0.1378280222415924,
+            "2": 0.18538765609264374,
+            "3": 0.4036411643028259,
+            "4": 0.14566649496555328,
+            "5": 0.12747667729854584
+          }
+        }
+      }
+    },
+    {
+      "item": "en-29",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2057.399999999907,
+      "result": {
+        "sentiment": {
+          "confidence": 0.5377911925315857,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.21858614683151245,
+            "neutral": 0.5377911925315857,
+            "positive": 0.24362269043922424
+          }
+        },
+        "aspect": {
+          "confidence": 0.477276086807251,
+          "id": "aspect",
+          "label": "ease_of_use",
+          "probabilities": {
+            "price": 0.0235928725451231,
+            "quality": 0.13473506271839142,
+            "delivery": 0.02719215303659439,
+            "support": 0.03982582315802574,
+            "design": 0.08306021988391876,
+            "durability": 0.1360318958759308,
+            "ease_of_use": 0.477276086807251,
+            "other": 0.07828589528799057
+          }
+        },
+        "rating": {
+          "confidence": 0.4315292239189148,
+          "expectedScore": 2.7739264965057373,
+          "id": "rating",
+          "label": "3",
+          "probabilities": {
+            "1": 0.08831503987312317,
+            "2": 0.3055106997489929,
+            "3": 0.4315292239189148,
+            "4": 0.09322287142276764,
+            "5": 0.08142217248678207
+          }
+        }
+      }
+    },
+    {
+      "item": "en-30",
+      "lang": "en",
+      "schema": "en-review",
+      "availability": "available",
+      "status": "ok",
+      "ms": 7087.300000000047,
+      "result": {
+        "sentiment": {
+          "confidence": 0.4966066777706146,
+          "id": "sentiment",
+          "label": "neutral",
+          "probabilities": {
+            "negative": 0.15617318451404572,
+            "neutral": 0.4966066777706146,
+            "positive": 0.34722015261650085
+          }
+        },
+        "aspect": {
+          "confidence": 0.383941113948822,
+          "id": "aspect",
+          "label": "quality",
+          "probabilities": {
+            "price": 0.1807757467031479,
+            "quality": 0.383941113948822,
+            "delivery": 0.13385650515556335,
+            "support": 0.03694071248173714,
+            "design": 0.06469961255788803,
+            "durability": 0.06426270306110382,
+            "ease_of_use": 0.044729944318532944,
+            "other": 0.0907936692237854
+          }
+        },
+        "rating": {
+          "confidence": 0.48954319953918457,
+          "expectedScore": 3.186690092086792,
+          "id": "rating",
+          "label": "3",
+          "probabilities": {
+            "1": 0.027321498841047287,
+            "2": 0.15933725237846375,
+            "3": 0.48954319953918457,
+            "4": 0.2469257116317749,
+            "5": 0.0768723264336586
+          }
+        }
+      }
+    },
+    {
+      "item": "en-31",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 706.5,
+      "result": {
+        "action": {
+          "confidence": 0.538438618183136,
+          "id": "action",
+          "label": "review",
+          "probabilities": {
+            "allow": 0.4615613520145416,
+            "review": 0.538438618183136
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5126299858093262,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4873700439929962,
+            "false": 0.5126299858093262
+          }
+        }
+      }
+    },
+    {
+      "item": "en-32",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 704.5,
+      "result": {
+        "action": {
+          "confidence": 0.7088366746902466,
+          "id": "action",
+          "label": "allow",
+          "probabilities": {
+            "allow": 0.7088366746902466,
+            "review": 0.29116329550743103
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5161260962486267,
+          "id": "is_spam",
+          "label": "true",
+          "probabilities": {
+            "true": 0.5161260962486267,
+            "false": 0.4838738739490509
+          }
+        }
+      }
+    },
+    {
+      "item": "en-33",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 697.0999999998603,
+      "result": {
+        "action": {
+          "confidence": 0.5044239163398743,
+          "id": "action",
+          "label": "allow",
+          "probabilities": {
+            "allow": 0.5044239163398743,
+            "review": 0.49557608366012573
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5063796043395996,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.493620365858078,
+            "false": 0.5063796043395996
+          }
+        }
+      }
+    },
+    {
+      "item": "en-34",
+      "lang": "en",
+      "schema": "en-moderation",
+      "availability": "available",
+      "status": "ok",
+      "ms": 706.0999999998603,
+      "result": {
+        "action": {
+          "confidence": 0.5603469610214233,
+          "id": "action",
+          "label": "review",
+          "probabilities": {
+            "allow": 0.43965303897857666,
+            "review": 0.5603469610214233
+          }
+        },
+        "is_spam": {
+          "confidence": 0.5068480968475342,
+          "id": "is_spam",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4931519329547882,
+            "false": 0.5068480968475342
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-01",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1027.8999999999069,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6050689220428467,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.3949311077594757,
+            "false": 0.6050689220428467
+          }
+        },
+        "assunto": {
+          "confidence": 0.34736350178718567,
+          "id": "assunto",
+          "label": "entrega",
+          "probabilities": {
+            "pagamento": 0.33315372467041016,
+            "entrega": 0.34736350178718567,
+            "outro": 0.3194827437400818
+          }
+        },
+        "urgencia": {
+          "confidence": 0.5963447690010071,
+          "expectedScore": 2.698758125305176,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.14297829568386078,
+            "2": 0.15812884271144867,
+            "3": 0.5963447690010071,
+            "4": 0.06225243955850601,
+            "5": 0.040295619517564774
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-02",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2056.3000000000466,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.5927867293357849,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4072133004665375,
+            "false": 0.5927867293357849
+          }
+        },
+        "assunto": {
+          "confidence": 0.3408900797367096,
+          "id": "assunto",
+          "label": "entrega",
+          "probabilities": {
+            "pagamento": 0.3323274254798889,
+            "entrega": 0.3408900797367096,
+            "outro": 0.3267824947834015
+          }
+        },
+        "urgencia": {
+          "confidence": 0.39832204580307007,
+          "expectedScore": 2.2306461334228516,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.38460773229599,
+            "2": 0.12215674668550491,
+            "3": 0.39832204580307007,
+            "4": 0.06780865788459778,
+            "5": 0.027104834094643593
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-03",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2056.5,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.5885286927223206,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.41147127747535706,
+            "false": 0.5885286927223206
+          }
+        },
+        "assunto": {
+          "confidence": 0.3700094223022461,
+          "id": "assunto",
+          "label": "pagamento",
+          "probabilities": {
+            "pagamento": 0.3700094223022461,
+            "entrega": 0.35458001494407654,
+            "outro": 0.27541056275367737
+          }
+        },
+        "urgencia": {
+          "confidence": 0.5474063158035278,
+          "expectedScore": 2.6432909965515137,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.18177860975265503,
+            "2": 0.1532529592514038,
+            "3": 0.5474063158035278,
+            "4": 0.07502315193414688,
+            "5": 0.04253897815942764
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-04",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2241,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6315575242042542,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.36844247579574585,
+            "false": 0.6315575242042542
+          }
+        },
+        "assunto": {
+          "confidence": 0.3573003113269806,
+          "id": "assunto",
+          "label": "entrega",
+          "probabilities": {
+            "pagamento": 0.33081865310668945,
+            "entrega": 0.3573003113269806,
+            "outro": 0.31188103556632996
+          }
+        },
+        "urgencia": {
+          "confidence": 0.4411899149417877,
+          "expectedScore": 2.5422823429107666,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.2610738277435303,
+            "2": 0.1421956866979599,
+            "3": 0.4411899149417877,
+            "4": 0.10445553809404373,
+            "5": 0.051085032522678375
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-05",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2076.0999999998603,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.6069762706756592,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.3930237591266632,
+            "false": 0.6069762706756592
+          }
+        },
+        "assunto": {
+          "confidence": 0.3612512946128845,
+          "id": "assunto",
+          "label": "pagamento",
+          "probabilities": {
+            "pagamento": 0.3612512946128845,
+            "entrega": 0.32424989342689514,
+            "outro": 0.31449881196022034
+          }
+        },
+        "urgencia": {
+          "confidence": 0.5865480899810791,
+          "expectedScore": 2.642012357711792,
+          "id": "urgencia",
+          "label": "3",
+          "probabilities": {
+            "1": 0.16104952991008759,
+            "2": 0.16248436272144318,
+            "3": 0.5865480899810791,
+            "4": 0.053240321576595306,
+            "5": 0.03667771816253662
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-06",
+      "lang": "pt",
+      "schema": "pt-atendimento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 10253.40000000014,
+      "result": {
+        "quer_reembolso": {
+          "confidence": 0.5219228267669678,
+          "id": "quer_reembolso",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4780771732330322,
+            "false": 0.5219228267669678
+          }
+        },
+        "assunto": {
+          "confidence": 0.3738330900669098,
+          "id": "assunto",
+          "label": "entrega",
+          "probabilities": {
+            "pagamento": 0.30604469776153564,
+            "entrega": 0.3738330900669098,
+            "outro": 0.32012221217155457
+          }
+        },
+        "urgencia": {
+          "confidence": 0.25615963339805603,
+          "expectedScore": 2.8284337520599365,
+          "id": "urgencia",
+          "label": "1",
+          "probabilities": {
+            "1": 0.25615963339805603,
+            "2": 0.17163105309009552,
+            "3": 0.24238741397857666,
+            "4": 0.14725978672504425,
+            "5": 0.18256211280822754
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-07",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2150.0999999998603,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.561688244342804,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.43831172585487366,
+            "false": 0.561688244342804
+          }
+        },
+        "tipo": {
+          "confidence": 0.25744765996932983,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.23623521625995636,
+            "casa": 0.155708447098732,
+            "kitnet": 0.16942067444324493,
+            "cobertura": 0.25744765996932983,
+            "qualquer": 0.18118801712989807
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.2835501432418823,
+          "expectedScore": 2.616642713546753,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.21103264391422272,
+            "2": 0.24484223127365112,
+            "3": 0.26057499647140503,
+            "4": 0.2835501432418823
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-08",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2219,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.5523357391357422,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4476642906665802,
+            "false": 0.5523357391357422
+          }
+        },
+        "tipo": {
+          "confidence": 0.32097840309143066,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.21205304563045502,
+            "casa": 0.15641576051712036,
+            "kitnet": 0.1606537252664566,
+            "cobertura": 0.32097840309143066,
+            "qualquer": 0.14989906549453735
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.30428481101989746,
+          "expectedScore": 2.6570465564727783,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.20652638375759125,
+            "2": 0.23418547213077545,
+            "3": 0.25500333309173584,
+            "4": 0.30428481101989746
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-09",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2103.5,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.5464180111885071,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4535820186138153,
+            "false": 0.5464180111885071
+          }
+        },
+        "tipo": {
+          "confidence": 0.24543119966983795,
+          "id": "tipo",
+          "label": "kitnet",
+          "probabilities": {
+            "apartamento": 0.19194136559963226,
+            "casa": 0.2034982442855835,
+            "kitnet": 0.24543119966983795,
+            "cobertura": 0.1730475276708603,
+            "qualquer": 0.186081662774086
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.26272010803222656,
+          "expectedScore": 2.5189080238342285,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.2509831190109253,
+            "2": 0.24184586107730865,
+            "3": 0.24445092678070068,
+            "4": 0.26272010803222656
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-10",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2155.3000000000466,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.5674430131912231,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.43255698680877686,
+            "false": 0.5674430131912231
+          }
+        },
+        "tipo": {
+          "confidence": 0.2621939778327942,
+          "id": "tipo",
+          "label": "apartamento",
+          "probabilities": {
+            "apartamento": 0.2621939778327942,
+            "casa": 0.17778617143630981,
+            "kitnet": 0.1544608473777771,
+            "cobertura": 0.19473828375339508,
+            "qualquer": 0.210820734500885
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.2992418110370636,
+          "expectedScore": 2.659198760986328,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.20420539379119873,
+            "2": 0.2316322773694992,
+            "3": 0.26492050290107727,
+            "4": 0.2992418110370636
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-11",
+      "lang": "pt",
+      "schema": "pt-imoveis",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2177.3000000000466,
+      "result": {
+        "aceita_pet": {
+          "confidence": 0.5456963777542114,
+          "id": "aceita_pet",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4543036222457886,
+            "false": 0.5456963777542114
+          }
+        },
+        "tipo": {
+          "confidence": 0.2462879866361618,
+          "id": "tipo",
+          "label": "cobertura",
+          "probabilities": {
+            "apartamento": 0.18933121860027313,
+            "casa": 0.20670536160469055,
+            "kitnet": 0.1821611523628235,
+            "cobertura": 0.2462879866361618,
+            "qualquer": 0.17551428079605103
+          }
+        },
+        "faixa_preco": {
+          "confidence": 0.27055278420448303,
+          "expectedScore": 2.5762057304382324,
+          "id": "faixa_preco",
+          "label": "4",
+          "probabilities": {
+            "1": 0.22125154733657837,
+            "2": 0.2518438696861267,
+            "3": 0.2563517987728119,
+            "4": 0.27055278420448303
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-12",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 742.1999999999534,
+      "result": {
+        "departamento": {
+          "confidence": 0.21716944873332977,
+          "id": "departamento",
+          "label": "outro",
+          "probabilities": {
+            "financeiro": 0.047541890293359756,
+            "juridico": 0.20475563406944275,
+            "rh": 0.13474422693252563,
+            "ti": 0.10361849516630173,
+            "vendas": 0.15965048968791962,
+            "logistica": 0.13251982629299164,
+            "outro": 0.21716944873332977
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-13",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 811.1000000000931,
+      "result": {
+        "departamento": {
+          "confidence": 0.2978918254375458,
+          "id": "departamento",
+          "label": "rh",
+          "probabilities": {
+            "financeiro": 0.05564479902386665,
+            "juridico": 0.16820532083511353,
+            "rh": 0.2978918254375458,
+            "ti": 0.058753445744514465,
+            "vendas": 0.11071775108575821,
+            "logistica": 0.15194794535636902,
+            "outro": 0.15683890879154205
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-14",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 770.6999999999534,
+      "result": {
+        "departamento": {
+          "confidence": 0.19793139398097992,
+          "id": "departamento",
+          "label": "juridico",
+          "probabilities": {
+            "financeiro": 0.061723966151475906,
+            "juridico": 0.19793139398097992,
+            "rh": 0.18608622252941132,
+            "ti": 0.09434773027896881,
+            "vendas": 0.15639454126358032,
+            "logistica": 0.14607882499694824,
+            "outro": 0.15743732452392578
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-15",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 770.9000000001397,
+      "result": {
+        "departamento": {
+          "confidence": 0.4476674795150757,
+          "id": "departamento",
+          "label": "vendas",
+          "probabilities": {
+            "financeiro": 0.03143864497542381,
+            "juridico": 0.1116487979888916,
+            "rh": 0.10650286078453064,
+            "ti": 0.08036040514707565,
+            "vendas": 0.4476674795150757,
+            "logistica": 0.10089033842086792,
+            "outro": 0.1214914619922638
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-16",
+      "lang": "pt",
+      "schema": "pt-encaminhamento",
+      "availability": "available",
+      "status": "ok",
+      "ms": 768.8000000000466,
+      "result": {
+        "departamento": {
+          "confidence": 0.1856687068939209,
+          "id": "departamento",
+          "label": "juridico",
+          "probabilities": {
+            "financeiro": 0.07198093086481094,
+            "juridico": 0.1856687068939209,
+            "rh": 0.15713036060333252,
+            "ti": 0.10330958664417267,
+            "vendas": 0.14715930819511414,
+            "logistica": 0.17041315138339996,
+            "outro": 0.16433797776699066
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-17",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1086.5999999998603,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.5596456527709961,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.4403543472290039,
+            "false": 0.5596456527709961
+          }
+        },
+        "acao": {
+          "confidence": 0.5270975828170776,
+          "id": "acao",
+          "label": "revisar",
+          "probabilities": {
+            "publicar": 0.47290244698524475,
+            "revisar": 0.5270975828170776
+          }
+        },
+        "gravidade": {
+          "confidence": 0.34524160623550415,
+          "expectedScore": 2.020728588104248,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.32451313734054565,
+            "moderada": 0.3302452564239502,
+            "grave": 0.34524160623550415
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-18",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1098.2000000001863,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.6015454530715942,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.39845457673072815,
+            "false": 0.6015454530715942
+          }
+        },
+        "acao": {
+          "confidence": 0.547738790512085,
+          "id": "acao",
+          "label": "revisar",
+          "probabilities": {
+            "publicar": 0.45226120948791504,
+            "revisar": 0.547738790512085
+          }
+        },
+        "gravidade": {
+          "confidence": 0.3838322162628174,
+          "expectedScore": 2.076603412628174,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.3072287440299988,
+            "moderada": 0.30893900990486145,
+            "grave": 0.3838322162628174
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-19",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1090.1999999999534,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.6017130613327026,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.39828693866729736,
+            "false": 0.6017130613327026
+          }
+        },
+        "acao": {
+          "confidence": 0.5286580920219421,
+          "id": "acao",
+          "label": "revisar",
+          "probabilities": {
+            "publicar": 0.47134190797805786,
+            "revisar": 0.5286580920219421
+          }
+        },
+        "gravidade": {
+          "confidence": 0.3512718975543976,
+          "expectedScore": 2.0393946170806885,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.31187739968299866,
+            "moderada": 0.33685073256492615,
+            "grave": 0.3512718975543976
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-20",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1123.6999999999534,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.6120063662528992,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.38799363374710083,
+            "false": 0.6120063662528992
+          }
+        },
+        "acao": {
+          "confidence": 0.5369171500205994,
+          "id": "acao",
+          "label": "revisar",
+          "probabilities": {
+            "publicar": 0.463082879781723,
+            "revisar": 0.5369171500205994
+          }
+        },
+        "gravidade": {
+          "confidence": 0.3877549469470978,
+          "expectedScore": 2.0794477462768555,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.3083072006702423,
+            "moderada": 0.3039378225803375,
+            "grave": 0.3877549469470978
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-21",
+      "lang": "pt",
+      "schema": "pt-moderacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 1066.6999999999534,
+      "result": {
+        "contem_ofensa": {
+          "confidence": 0.6061781644821167,
+          "id": "contem_ofensa",
+          "label": "false",
+          "probabilities": {
+            "true": 0.3938218653202057,
+            "false": 0.6061781644821167
+          }
+        },
+        "acao": {
+          "confidence": 0.5334282517433167,
+          "id": "acao",
+          "label": "revisar",
+          "probabilities": {
+            "publicar": 0.46657174825668335,
+            "revisar": 0.5334282517433167
+          }
+        },
+        "gravidade": {
+          "confidence": 0.3659384548664093,
+          "expectedScore": 2.069241523742676,
+          "id": "gravidade",
+          "label": "grave",
+          "probabilities": {
+            "leve": 0.29669684171676636,
+            "moderada": 0.33736470341682434,
+            "grave": 0.3659384548664093
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-22",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2235,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3981233835220337,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.3981233835220337,
+            "neutro": 0.3255513608455658,
+            "positivo": 0.2763252258300781
+          }
+        },
+        "aspecto": {
+          "confidence": 0.22205308079719543,
+          "id": "aspecto",
+          "label": "facilidade_de_uso",
+          "probabilities": {
+            "preco": 0.08623459190130234,
+            "qualidade": 0.0932813286781311,
+            "entrega": 0.07880900055170059,
+            "atendimento": 0.14552375674247742,
+            "design": 0.10327623784542084,
+            "durabilidade": 0.1335243135690689,
+            "facilidade_de_uso": 0.22205308079719543,
+            "outro": 0.13729770481586456
+          }
+        },
+        "nota": {
+          "confidence": 0.510866105556488,
+          "expectedScore": 2.8786087036132812,
+          "id": "nota",
+          "label": "3",
+          "probabilities": {
+            "1": 0.15245823562145233,
+            "2": 0.12252092361450195,
+            "3": 0.510866105556488,
+            "4": 0.1222633644938469,
+            "5": 0.09189137071371078
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-23",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2392,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3724212050437927,
+          "id": "sentimento",
+          "label": "neutro",
+          "probabilities": {
+            "negativo": 0.33871325850486755,
+            "neutro": 0.3724212050437927,
+            "positivo": 0.2888655662536621
+          }
+        },
+        "aspecto": {
+          "confidence": 0.17684398591518402,
+          "id": "aspecto",
+          "label": "atendimento",
+          "probabilities": {
+            "preco": 0.12197582423686981,
+            "qualidade": 0.12024278938770294,
+            "entrega": 0.1019287183880806,
+            "atendimento": 0.17684398591518402,
+            "design": 0.08742039650678635,
+            "durabilidade": 0.10123715549707413,
+            "facilidade_de_uso": 0.16540776193141937,
+            "outro": 0.12494336813688278
+          }
+        },
+        "nota": {
+          "confidence": 0.538088321685791,
+          "expectedScore": 2.8788528442382812,
+          "id": "nota",
+          "label": "3",
+          "probabilities": {
+            "1": 0.11127350479364395,
+            "2": 0.16147726774215698,
+            "3": 0.538088321685791,
+            "4": 0.11544481664896011,
+            "5": 0.07371611893177032
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-24",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2511.5,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3419007658958435,
+          "id": "sentimento",
+          "label": "neutro",
+          "probabilities": {
+            "negativo": 0.3381844758987427,
+            "neutro": 0.3419007658958435,
+            "positivo": 0.3199147582054138
+          }
+        },
+        "aspecto": {
+          "confidence": 0.1815507411956787,
+          "id": "aspecto",
+          "label": "facilidade_de_uso",
+          "probabilities": {
+            "preco": 0.11006473004817963,
+            "qualidade": 0.11367730051279068,
+            "entrega": 0.10246847569942474,
+            "atendimento": 0.1495499610900879,
+            "design": 0.12029863893985748,
+            "durabilidade": 0.10654574632644653,
+            "facilidade_de_uso": 0.1815507411956787,
+            "outro": 0.11584439873695374
+          }
+        },
+        "nota": {
+          "confidence": 0.5633715391159058,
+          "expectedScore": 2.907954692840576,
+          "id": "nota",
+          "label": "3",
+          "probabilities": {
+            "1": 0.08733709901571274,
+            "2": 0.1656479835510254,
+            "3": 0.5633715391159058,
+            "4": 0.11900993436574936,
+            "5": 0.06463347375392914
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-25",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2188.9000000001397,
+      "result": {
+        "sentimento": {
+          "confidence": 0.36321017146110535,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.36321017146110535,
+            "neutro": 0.34970080852508545,
+            "positivo": 0.2870890498161316
+          }
+        },
+        "aspecto": {
+          "confidence": 0.15920911729335785,
+          "id": "aspecto",
+          "label": "atendimento",
+          "probabilities": {
+            "preco": 0.1344756931066513,
+            "qualidade": 0.13462138175964355,
+            "entrega": 0.12931068241596222,
+            "atendimento": 0.15920911729335785,
+            "design": 0.099272221326828,
+            "durabilidade": 0.10155102610588074,
+            "facilidade_de_uso": 0.13254407048225403,
+            "outro": 0.10901582986116409
+          }
+        },
+        "nota": {
+          "confidence": 0.6123558878898621,
+          "expectedScore": 3.0732364654541016,
+          "id": "nota",
+          "label": "3",
+          "probabilities": {
+            "1": 0.05465177074074745,
+            "2": 0.11670294404029846,
+            "3": 0.6123558878898621,
+            "4": 0.13333578407764435,
+            "5": 0.08295358717441559
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-26",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 2238,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3615257143974304,
+          "id": "sentimento",
+          "label": "negativo",
+          "probabilities": {
+            "negativo": 0.3615257143974304,
+            "neutro": 0.34267258644104004,
+            "positivo": 0.29580172896385193
+          }
+        },
+        "aspecto": {
+          "confidence": 0.24583598971366882,
+          "id": "aspecto",
+          "label": "facilidade_de_uso",
+          "probabilities": {
+            "preco": 0.12130804359912872,
+            "qualidade": 0.10800255089998245,
+            "entrega": 0.08696134388446808,
+            "atendimento": 0.15156808495521545,
+            "design": 0.10984397679567337,
+            "durabilidade": 0.09127864986658096,
+            "facilidade_de_uso": 0.24583598971366882,
+            "outro": 0.08520136773586273
+          }
+        },
+        "nota": {
+          "confidence": 0.5818815231323242,
+          "expectedScore": 2.696319103240967,
+          "id": "nota",
+          "label": "3",
+          "probabilities": {
+            "1": 0.2025124728679657,
+            "2": 0.07820584625005722,
+            "3": 0.5818815231323242,
+            "4": 0.09525031596422195,
+            "5": 0.04214981943368912
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-27",
+      "lang": "pt",
+      "schema": "pt-avaliacao",
+      "availability": "available",
+      "status": "ok",
+      "ms": 12449.90000000014,
+      "result": {
+        "sentimento": {
+          "confidence": 0.3894122838973999,
+          "id": "sentimento",
+          "label": "neutro",
+          "probabilities": {
+            "negativo": 0.26924610137939453,
+            "neutro": 0.3894122838973999,
+            "positivo": 0.34134164452552795
+          }
+        },
+        "aspecto": {
+          "confidence": 0.22336545586585999,
+          "id": "aspecto",
+          "label": "facilidade_de_uso",
+          "probabilities": {
+            "preco": 0.07132408767938614,
+            "qualidade": 0.1252405196428299,
+            "entrega": 0.15338240563869476,
+            "atendimento": 0.10113883018493652,
+            "design": 0.0561363585293293,
+            "durabilidade": 0.11398841440677643,
+            "facilidade_de_uso": 0.22336545586585999,
+            "outro": 0.15542393922805786
+          }
+        },
+        "nota": {
+          "confidence": 0.24046611785888672,
+          "expectedScore": 3.083709716796875,
+          "id": "nota",
+          "label": "5",
+          "probabilities": {
+            "1": 0.18196803331375122,
+            "2": 0.1920410394668579,
+            "3": 0.22677011787891388,
+            "4": 0.15875467658042908,
+            "5": 0.24046611785888672
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-28",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 743.5,
+      "result": {
+        "campo": {
+          "confidence": 0.5997818112373352,
+          "id": "campo",
+          "label": "cpf",
+          "probabilities": {
+            "cpf": 0.5997818112373352,
+            "email": 0.08445506542921066,
+            "telefone": 0.060655396431684494,
+            "cep": 0.11874227970838547,
+            "outro": 0.13636545836925507
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-29",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 772.6999999999534,
+      "result": {
+        "campo": {
+          "confidence": 0.5865179300308228,
+          "id": "campo",
+          "label": "email",
+          "probabilities": {
+            "cpf": 0.13926279544830322,
+            "email": 0.5865179300308228,
+            "telefone": 0.08612732589244843,
+            "cep": 0.06939806044101715,
+            "outro": 0.11869390308856964
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-30",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 841.3999999999069,
+      "result": {
+        "campo": {
+          "confidence": 0.8072847723960876,
+          "id": "campo",
+          "label": "telefone",
+          "probabilities": {
+            "cpf": 0.023992953822016716,
+            "email": 0.059990573674440384,
+            "telefone": 0.8072847723960876,
+            "cep": 0.06064562499523163,
+            "outro": 0.04808604717254639
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-31",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 805.3000000000466,
+      "result": {
+        "campo": {
+          "confidence": 0.9593719244003296,
+          "id": "campo",
+          "label": "cep",
+          "probabilities": {
+            "cpf": 0.005001693964004517,
+            "email": 0.009837767109274864,
+            "telefone": 0.012422477826476097,
+            "cep": 0.9593719244003296,
+            "outro": 0.013366159982979298
+          }
+        }
+      }
+    },
+    {
+      "item": "pt-32",
+      "lang": "pt",
+      "schema": "pt-formulario",
+      "availability": "available",
+      "status": "ok",
+      "ms": 797,
+      "result": {
+        "campo": {
+          "confidence": 0.2690770924091339,
+          "id": "campo",
+          "label": "outro",
+          "probabilities": {
+            "cpf": 0.1918487697839737,
+            "email": 0.21941417455673218,
+            "telefone": 0.16310782730579376,
+            "cep": 0.15655213594436646,
+            "outro": 0.2690770924091339
+          }
+        }
+      }
+    }
+  ],
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36",
+    "platform": "Linux armv81",
+    "language": "en-US",
+    "hardwareConcurrency": 4,
+    "deviceMemory": 4,
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "screen": {
+      "width": 412,
+      "height": 915,
+      "devicePixelRatio": 2.625
+    },
+    "connection": {
+      "effectiveType": "4g",
+      "saveData": false
+    },
+    "hasDecisionModel": false,
+    "wasm": {
+      "simd": true,
+      "threads": false,
+      "relaxedSimd": true,
+      "jspi": false,
+      "sharedArrayBuffer": false
+    },
+    "float16Array": false,
+    "performanceMemory": {
+      "jsHeapSizeLimit": 1070000000
+    },
+    "measureUserAgentSpecificMemory": false,
+    "userAgentData": {
+      "architecture": "",
+      "brands": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133"
+        }
+      ],
+      "fullVersionList": [
+        {
+          "brand": "Not(A:Brand",
+          "version": "99.0.0.0"
+        },
+        {
+          "brand": "Google Chrome",
+          "version": "133.0.6943.137"
+        },
+        {
+          "brand": "Chromium",
+          "version": "133.0.6943.137"
+        }
+      ],
+      "mobile": true,
+      "model": "sdk_gphone64_arm64",
+      "platform": "Android",
+      "platformVersion": "16.0.0"
+    },
+    "webgl": {
+      "vendor": "Google (Google Inc. (Google))",
+      "renderer": "Android Emulator OpenGL ES Translator (ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver-5.0.0))"
+    },
+    "webgpu": {
+      "hasNavigatorGpu": true,
+      "preferredCanvasFormat": "rgba8unorm",
+      "wgslLanguageFeatures": [
+        "packed_4x8_integer_dot_product",
+        "pointer_composite_access",
+        "readonly_and_readwrite_storage_textures",
+        "unrestricted_pointer_parameters"
+      ],
+      "high-performance": {
+        "adapter": false
+      },
+      "low-power": {
+        "adapter": false
+      }
+    }
+  },
+  "engineInfo": {
+    "model": "ts-ettin-32m",
+    "repo": "typestrict/TS-Ettin-32M",
+    "revision": "a0f7b67dc8618365792896f46d52ec4013b899de",
+    "variant": "f32",
+    "runtime": "@johnhenry/modernbert",
+    "backend": "cpu",
+    "dtype": "f32",
+    "modelUrl": "/models/typestrict/TS-Ettin-32M/a0f7b67dc8618365792896f46d52ec4013b899de/model.safetensors",
+    "modelBytes": 128161120,
+    "deviceName": "cpu"
+  },
+  "availability": {
+    "en-support": "downloadable",
+    "en-hotel": "available",
+    "en-command": "available",
+    "en-draft": "available",
+    "en-field": "available",
+    "en-review": "available",
+    "en-moderation": "available",
+    "pt-atendimento": "available",
+    "pt-imoveis": "available",
+    "pt-encaminhamento": "available",
+    "pt-moderacao": "available",
+    "pt-avaliacao": "available",
+    "pt-formulario": "available"
+  },
+  "bytes": {
+    "method": "Resource Timing; encodedBodySize = bytes on the wire (brotli from serve.mjs for text, JS and Wasm; weights uncompressed)",
+    "byCategory": {
+      "page": {
+        "transferSize": 13954,
+        "encodedBodySize": 12754,
+        "decodedBodySize": 46125,
+        "files": [
+          {
+            "path": "/app.js",
+            "transferSize": 3700,
+            "encodedBodySize": 3400,
+            "decodedBodySize": 11372,
+            "durationMs": 5.800000000046566
+          },
+          {
+            "path": "/env.js",
+            "transferSize": 1723,
+            "encodedBodySize": 1423,
+            "decodedBodySize": 4624,
+            "durationMs": 9.400000000139698
+          },
+          {
+            "path": "/corpus.json",
+            "transferSize": 7172,
+            "encodedBodySize": 6872,
+            "decodedBodySize": 26191,
+            "durationMs": 91.19999999995343
+          },
+          {
+            "path": "/models.json",
+            "transferSize": 1359,
+            "encodedBodySize": 1059,
+            "decodedBodySize": 3938,
+            "durationMs": 70.4000000001397
+          }
+        ]
+      },
+      "adapter": {
+        "transferSize": 9798,
+        "encodedBodySize": 8298,
+        "decodedBodySize": 26596,
+        "files": [
+          {
+            "path": "/engines/registry.js",
+            "transferSize": 1711,
+            "encodedBodySize": 1411,
+            "decodedBodySize": 4035,
+            "durationMs": 9.700000000186265
+          },
+          {
+            "path": "/polyfill/decision-model.js",
+            "transferSize": 3067,
+            "encodedBodySize": 2767,
+            "decodedBodySize": 10644,
+            "durationMs": 5.300000000046566
+          },
+          {
+            "path": "/engines/fetch.js",
+            "transferSize": 804,
+            "encodedBodySize": 504,
+            "decodedBodySize": 1238,
+            "durationMs": 10.900000000139698
+          },
+          {
+            "path": "/engines/ts-ettin.js",
+            "transferSize": 2650,
+            "encodedBodySize": 2350,
+            "decodedBodySize": 6896,
+            "durationMs": 16.300000000046566
+          },
+          {
+            "path": "/engines/johnhenry.js",
+            "transferSize": 1566,
+            "encodedBodySize": 1266,
+            "decodedBodySize": 3783,
+            "durationMs": 74.60000000009313
+          }
+        ]
+      },
+      "runtime": {
+        "transferSize": 93698,
+        "encodedBodySize": 86798,
+        "decodedBodySize": 338677,
+        "files": [
+          {
+            "path": "/node_modules/@huggingface/tokenizers/dist/tokenizers.min.mjs",
+            "transferSize": 10776,
+            "encodedBodySize": 10476,
+            "decodedBodySize": 36601,
+            "durationMs": 13.800000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/index.js",
+            "transferSize": 1337,
+            "encodedBodySize": 1037,
+            "decodedBodySize": 2846,
+            "durationMs": 4.800000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/backend-cpu/dist/index.js",
+            "transferSize": 1096,
+            "encodedBodySize": 796,
+            "decodedBodySize": 796,
+            "durationMs": 8.5
+          },
+          {
+            "path": "/node_modules/@johnhenry/modernbert/dist/index.js",
+            "transferSize": 5624,
+            "encodedBodySize": 5324,
+            "decodedBodySize": 19318,
+            "durationMs": 8.399999999906868
+          },
+          {
+            "path": "/node_modules/@johnhenry/tensor-backend/dist/index.js",
+            "transferSize": 1045,
+            "encodedBodySize": 745,
+            "decodedBodySize": 1629,
+            "durationMs": 8.100000000093132
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/header.js",
+            "transferSize": 2780,
+            "encodedBodySize": 2480,
+            "decodedBodySize": 8434,
+            "durationMs": 8.600000000093132
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/views.js",
+            "transferSize": 1489,
+            "encodedBodySize": 1189,
+            "decodedBodySize": 3509,
+            "durationMs": 14.199999999953434
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/writer.js",
+            "transferSize": 1700,
+            "encodedBodySize": 1400,
+            "decodedBodySize": 3670,
+            "durationMs": 14.300000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/lazy.js",
+            "transferSize": 1897,
+            "encodedBodySize": 1597,
+            "decodedBodySize": 5133,
+            "durationMs": 14.199999999953434
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-safetensors/dist/sources.js",
+            "transferSize": 2639,
+            "encodedBodySize": 2339,
+            "decodedBodySize": 7821,
+            "durationMs": 21.199999999953434
+          },
+          {
+            "path": "/node_modules/@johnhenry/tensor-backend/dist/host.js",
+            "transferSize": 2231,
+            "encodedBodySize": 1931,
+            "decodedBodySize": 7375,
+            "durationMs": 19.100000000093132
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-cpu/dist/index.js",
+            "transferSize": 9062,
+            "encodedBodySize": 8762,
+            "decodedBodySize": 39840,
+            "durationMs": 19.800000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/tensor-backend/dist/compose.js",
+            "transferSize": 4968,
+            "encodedBodySize": 4668,
+            "decodedBodySize": 17107,
+            "durationMs": 19.699999999953434
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/public-kernels.js",
+            "transferSize": 935,
+            "encodedBodySize": 635,
+            "decodedBodySize": 635,
+            "durationMs": 21
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/index.js",
+            "transferSize": 19790,
+            "encodedBodySize": 19490,
+            "decodedBodySize": 98622,
+            "durationMs": 21.699999999953434
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-cpu/dist/device-array.js",
+            "transferSize": 5466,
+            "encodedBodySize": 5166,
+            "decodedBodySize": 20273,
+            "durationMs": 21.300000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-cpu/dist/host.js",
+            "transferSize": 1832,
+            "encodedBodySize": 1532,
+            "decodedBodySize": 4567,
+            "durationMs": 20.800000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/kernels.js",
+            "transferSize": 5421,
+            "encodedBodySize": 5121,
+            "decodedBodySize": 24373,
+            "durationMs": 39.60000000009313
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/nn-kernels.js",
+            "transferSize": 3874,
+            "encodedBodySize": 3574,
+            "decodedBodySize": 12253,
+            "durationMs": 39
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/dtype.js",
+            "transferSize": 1716,
+            "encodedBodySize": 1416,
+            "decodedBodySize": 4140,
+            "durationMs": 33.9000000001397
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/npy.js",
+            "transferSize": 2164,
+            "encodedBodySize": 1864,
+            "decodedBodySize": 5186,
+            "durationMs": 32.800000000046566
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-special/dist/index.js",
+            "transferSize": 4001,
+            "encodedBodySize": 3701,
+            "decodedBodySize": 10484,
+            "durationMs": 32.799999999813735
+          },
+          {
+            "path": "/node_modules/@johnhenry/math-plus-tensor-core/dist/random.js",
+            "transferSize": 1855,
+            "encodedBodySize": 1555,
+            "decodedBodySize": 4065,
+            "durationMs": 32.800000000046566
+          }
+        ]
+      },
+      "modelConfig": {
+        "transferSize": 1076,
+        "encodedBodySize": 776,
+        "decodedBodySize": 2721,
+        "files": [
+          {
+            "path": "/models/typestrict/TS-Ettin-32M/a0f7b67dc8618365792896f46d52ec4013b899de/config.json",
+            "transferSize": 1076,
+            "encodedBodySize": 776,
+            "decodedBodySize": 2721,
+            "durationMs": 53.5999999998603
+          }
+        ]
+      },
+      "tokenizer": {
+        "transferSize": 484263,
+        "encodedBodySize": 483663,
+        "decodedBodySize": 3583867,
+        "files": [
+          {
+            "path": "/models/typestrict/TS-Ettin-32M/a0f7b67dc8618365792896f46d52ec4013b899de/tokenizer.json",
+            "transferSize": 483604,
+            "encodedBodySize": 483304,
+            "decodedBodySize": 3583508,
+            "durationMs": 146.0999999998603
+          },
+          {
+            "path": "/models/typestrict/TS-Ettin-32M/a0f7b67dc8618365792896f46d52ec4013b899de/tokenizer_config.json",
+            "transferSize": 659,
+            "encodedBodySize": 359,
+            "decodedBodySize": 359,
+            "durationMs": 81
+          }
+        ]
+      }
+    },
+    "firstVisitEncoded": 579535,
+    "firstVisitDecoded": 3951861
+  },
+  "finishedAt": "2026-11-22T01:48:46.390Z",
+  "device": {
+    "serial": "emulator-5580",
+    "emulatorCommandLine": "/Volumes/Ext2TB/Android/sdk/emulator/qemu/darwin-aarch64/qemu-system-aarch64-headless -avd som-webcore-android36 -port 5580 -no-boot-anim -no-snapshot -accel on -netfast -no-metrics -no-audio -no-window -gpu swiftshader_indirect",
+    "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+    "androidRelease": "16",
+    "sdk": "36",
+    "model": "sdk_gphone64_arm64",
+    "emulatorGpuMode": null,
+    "vulkan": "ranchu",
+    "chrome": "133.0.6943.137",
+    "chromeFlags": "",
+    "chromeDataCleared": true
+  },
+  "androidMemory": {
+    "method": "dumpsys meminfo --package com.android.chrome (Total PSS by process), bytes",
+    "samples": [
+      {
+        "t": 0,
+        "pss": {
+          "com.android.chrome#13100": 4278272
+        }
+      },
+      {
+        "t": 5146,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43948032,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274678784,
+          "com.android.chrome#13100": 102163456
+        }
+      },
+      {
+        "t": 10274,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43600896,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 298483712,
+          "com.android.chrome#13100": 100961280
+        }
+      },
+      {
+        "t": 15394,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43547648,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 293959680,
+          "com.android.chrome#13100": 103869440
+        }
+      },
+      {
+        "t": 20008,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43536384,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 275651584,
+          "com.android.chrome#13100": 102383616
+        }
+      },
+      {
+        "t": 25125,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43540480,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 265890816,
+          "com.android.chrome#13100": 102715392
+        }
+      },
+      {
+        "t": 30255,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43540480,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 273337344,
+          "com.android.chrome#13100": 102711296
+        }
+      },
+      {
+        "t": 35372,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43511808,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 266589184,
+          "com.android.chrome#13100": 103950336
+        }
+      },
+      {
+        "t": 40046,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43511808,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 275256320,
+          "com.android.chrome#13100": 103733248
+        }
+      },
+      {
+        "t": 45178,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43511808,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 273466368,
+          "com.android.chrome#13100": 103680000
+        }
+      },
+      {
+        "t": 50286,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43523072,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 308574208,
+          "com.android.chrome#13100": 103724032
+        }
+      },
+      {
+        "t": 55415,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43527168,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274458624,
+          "com.android.chrome#13100": 103715840
+        }
+      },
+      {
+        "t": 60035,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43527168,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 275240960,
+          "com.android.chrome#13100": 103711744
+        }
+      },
+      {
+        "t": 65150,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42952704,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 287645696,
+          "com.android.chrome#13100": 103751680
+        }
+      },
+      {
+        "t": 70276,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42952704,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 291082240,
+          "com.android.chrome#13100": 117489664
+        }
+      },
+      {
+        "t": 75398,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42952704,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 267599872,
+          "com.android.chrome#13100": 118841344
+        }
+      },
+      {
+        "t": 80034,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42952704,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 273915904,
+          "com.android.chrome#13100": 118448128
+        }
+      },
+      {
+        "t": 85146,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42952704,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 275845120,
+          "com.android.chrome#13100": 118411264
+        }
+      },
+      {
+        "t": 90274,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42950656,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274479104,
+          "com.android.chrome#13100": 118417408
+        }
+      },
+      {
+        "t": 95413,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42954752,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 278067200,
+          "com.android.chrome#13100": 118384640
+        }
+      },
+      {
+        "t": 100076,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42958848,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 276027392,
+          "com.android.chrome#13100": 118384640
+        }
+      },
+      {
+        "t": 105242,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42958848,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 278816768,
+          "com.android.chrome#13100": 118347776
+        }
+      },
+      {
+        "t": 110426,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42962944,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 280811520,
+          "com.android.chrome#13100": 118347776
+        }
+      },
+      {
+        "t": 115047,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42962944,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 324802560,
+          "com.android.chrome#13100": 118372352
+        }
+      },
+      {
+        "t": 120186,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 42962944,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 265504768,
+          "com.android.chrome#13100": 118360064
+        }
+      },
+      {
+        "t": 125336,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43049984,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274390016,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 130493,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 275790848,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 135200,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 293776384,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 140342,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 267017216,
+          "com.android.chrome#13100": 118063104
+        }
+      },
+      {
+        "t": 145482,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274811904,
+          "com.android.chrome#13100": 118063104
+        }
+      },
+      {
+        "t": 150158,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274979840,
+          "com.android.chrome#13100": 118063104
+        }
+      },
+      {
+        "t": 155306,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 271383552,
+          "com.android.chrome#13100": 118059008
+        }
+      },
+      {
+        "t": 160437,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 266730496,
+          "com.android.chrome#13100": 118063104
+        }
+      },
+      {
+        "t": 165120,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 273820672,
+          "com.android.chrome#13100": 118059008
+        }
+      },
+      {
+        "t": 170260,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 282475520,
+          "com.android.chrome#13100": 118059008
+        }
+      },
+      {
+        "t": 175458,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 303291392,
+          "com.android.chrome#13100": 118059008
+        }
+      },
+      {
+        "t": 180137,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 267209728,
+          "com.android.chrome#13100": 118063104
+        }
+      },
+      {
+        "t": 185281,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 280071168,
+          "com.android.chrome#13100": 118079488
+        }
+      },
+      {
+        "t": 190432,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 279342080,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 195083,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 311393280,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 200207,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 303762432,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 205331,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 288996352,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 210479,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 270109696,
+          "com.android.chrome#13100": 118071296
+        }
+      },
+      {
+        "t": 215100,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 269478912,
+          "com.android.chrome#13100": 118067200
+        }
+      },
+      {
+        "t": 220248,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43041792,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 276524032,
+          "com.android.chrome#13100": 118067200
+        }
+      },
+      {
+        "t": 225407,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43499520,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 280778752,
+          "com.android.chrome#13100": 118065152
+        }
+      },
+      {
+        "t": 230065,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43126784,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 269719552,
+          "com.android.chrome#13100": 118065152
+        }
+      },
+      {
+        "t": 235195,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43126784,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 312866816,
+          "com.android.chrome#13100": 118065152
+        }
+      },
+      {
+        "t": 240349,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43126784,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 312870912,
+          "com.android.chrome#13100": 118245376
+        }
+      },
+      {
+        "t": 245021,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43126784,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 340359168,
+          "com.android.chrome#13100": 118106112
+        }
+      },
+      {
+        "t": 250178,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43126784,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 267454464,
+          "com.android.chrome#13100": 118106112
+        }
+      },
+      {
+        "t": 255349,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43114496,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 277374976,
+          "com.android.chrome#13100": 118106112
+        }
+      },
+      {
+        "t": 260479,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43114496,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 278816768,
+          "com.android.chrome#13100": 118073344
+        }
+      },
+      {
+        "t": 265136,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43116544,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 273078272,
+          "com.android.chrome#13100": 118061056
+        }
+      },
+      {
+        "t": 270265,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43116544,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 277485568,
+          "com.android.chrome#13100": 118061056
+        }
+      },
+      {
+        "t": 275413,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43116544,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 279615488,
+          "com.android.chrome#13100": 118056960
+        }
+      },
+      {
+        "t": 280063,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43116544,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 286308352,
+          "com.android.chrome#13100": 118056960
+        }
+      },
+      {
+        "t": 285187,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43116544,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 268609536,
+          "com.android.chrome#13100": 118056960
+        }
+      },
+      {
+        "t": 290313,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274995200,
+          "com.android.chrome#13100": 118065152
+        }
+      },
+      {
+        "t": 295448,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 283129856,
+          "com.android.chrome#13100": 118065152
+        }
+      },
+      {
+        "t": 300080,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 278583296,
+          "com.android.chrome#13100": 118118400
+        }
+      },
+      {
+        "t": 305221,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43497472,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 266926080,
+          "com.android.chrome#13100": 118110208
+        }
+      },
+      {
+        "t": 310363,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43124736,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 282347520,
+          "com.android.chrome#13100": 118211584
+        }
+      },
+      {
+        "t": 315481,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43124736,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 271554560,
+          "com.android.chrome#13100": 118195200
+        }
+      },
+      {
+        "t": 320118,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 326690816,
+          "com.android.chrome#13100": 118326272
+        }
+      },
+      {
+        "t": 325243,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 312461312,
+          "com.android.chrome#13100": 118146048
+        }
+      },
+      {
+        "t": 330377,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 270379008,
+          "com.android.chrome#13100": 118162432
+        }
+      },
+      {
+        "t": 335084,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 274900992,
+          "com.android.chrome#13100": 118166528
+        }
+      },
+      {
+        "t": 340249,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 262879232,
+          "com.android.chrome#13100": 118166528
+        }
+      },
+      {
+        "t": 345389,
+        "pss": {
+          "com.android.chrome:privileged_process0#13168": 43120640,
+          "com.android.chrome:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0#13143": 277567488,
+          "com.android.chrome#13100": 118166528
+        }
+      }
+    ]
+  }
+}

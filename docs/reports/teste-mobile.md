@@ -26,11 +26,82 @@ Fixado em 2026-11-21, **antes** das medições finais, a partir do texto do port
 
 A tradução de uma pergunta da API para o formato do TS-Ettin está no [README da página](../../bench/spike-mobile/README.md#tradução-para-o-ts-ettin); o script de referência em Python aplica a mesma regra. A forma de cada resposta é conferida contra a [especificação](../spec/decisions-api-surface.md) por `reference/check_shape.py`.
 
-## 3. Medição no emulador (`T-08`) — **em curso**
+## 3. Medição no emulador (`T-08`)
 
-> **Interrompida.** Em 2026-11-21 o Claude Code encerrou o servidor da página e a rodada desta medição por falta de memória no computador, e a orientação do ambiente é não religá-los sem o dono pedir. Antes disso, duas rodadas foram descartadas por defeito de método: o Chrome do Android restaurava as abas da sessão anterior e páginas antigas rodavam ao lado da execução medida ([diário, incidentes](execucao-autonoma.md#incidentes-de-medição)). Uma terceira rodada, já com o Chrome zerado antes de cada execução, também foi descartada: os rótulos da pergunta de classificação de campos (“nome de usuário”, “senha atual”, em inglês) faziam o verificador de segredos do repositório tratar as probabilidades como credenciais, e o corpus foi trocado. **Não há, por enquanto, nenhuma execução versionada da `T-08`.**
+> **No emulador Android do Mac mini** (arm64), não no do Acer: a rodada do Acer foi interrompida pela falta de memória do computador ([diário](execucao-autonoma.md#incidentes-de-medição)), e o dono pediu para seguir testando pelo Mac. Ambiente **[MEDIDO]**: Android Emulator 37.2.12, aparelho virtual `som-webcore-android36` (Pixel 6, Android 16 / API 36, `google_apis` arm64-v8a, 4 GB), GPU por software (`swiftshader_indirect`, como no Acer) e **Chrome 133.0.6943.137**, a mesma versão do emulador do Acer ([MACMINI.md, seção 7](../../bench/spike-mobile/MACMINI.md#7-emulador-android-no-mac-t-08)). O Chrome é zerado antes de cada execução. **Toda latência daqui é de emulador: indicativa, não é latência de celular.**
 
-O que a medição já mostrou, sem dados versionados que o sustentem — por isso só como orientação para a retomada: o ONNX Runtime Web em Wasm e o motor `@johnhenry` em CPU rodam no Chrome 133 do emulador, e o WebGPU não roda ali ([EMULADOR.md](../../bench/spike-mobile/EMULADOR.md), este sim com dados).
+**Funciona ou não.**
+
+- **Rodam**, nas duas execuções (três nas que variaram mais de 10%), com as 66 entradas respondidas, a forma de todas as respostas conferida (`check_shape.py`: nenhum problema) e os tokens idênticos aos da referência (156/156 nas execuções com `debug=1`): o ONNX Runtime Web em Wasm, nas variantes `int8`, `8bit`, `fp32`, `q8emb-f16` e `q8emb32-f16` do 17M e `int8` e `8bit` do 32M; o motor `@johnhenry` em CPU, no 17M e no 32M.
+- **Não rodam os caminhos WebGPU** (`ort-webgpu` e `jh-webgpu`): o Chrome do emulador não entrega adaptador. Com as flags inseguras (`--enable-unsafe-webgpu --enable-features=Vulkan`) ele entrega um — de fallback com a GPU por software, da Apple com `-gpu host` —, mas nenhum dispositivo (“A valid external Instance reference no longer exists.”); com `-gpu host` e as flags, os dois motores falharam também, duas vezes cada (`…-gpuhost-flags-webgpu-r*.json`). A falha fica no JSON com a mensagem de cada motor.
+- **O `DecisionModel` nativo não existe** no Chrome do Android: a implementação responde sempre “indisponível” no Android (achado da `T-05`).
+
+**Quanto baixa, quanto ocupa e quanto demora** (`summarize.py`). Bytes com brotli de qualidade máxima para JS e Wasm e pesos sem compressão; memória: PSS de todos os processos do Chrome. O heap JS aparece como 10,0 MB em todas porque, sem `--enable-precise-memory-info`, o Chrome arredonda `performance.memory`; as 200 decisões seguidas (seção 4) usam o valor preciso. Latência **[MEDIDO no emulador; indicativo]**:
+
+| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | Memória máx. (MB; PSS no Android, RSS no simulador iOS) | máx. \|Δp\| · top-1 | Falha |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-17m-r1` | jh-cpu | f32 | ts-ettin-17m | ok | 3,658 | 410.0 | 408.2 / 2,860.2 / 4,275.1 | 405.4 / 879.1 · 3,230.8 / 4,635.0 | 0.58 ⚠ sem o registro dos pesos | 10.0 | 415 | 1.1e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-17m-r2` | jh-cpu | f32 | ts-ettin-17m | ok | 2,067 | 366.0 | 366.7 / 2,623.6 / 3,859.4 | 365.5 / 770.9 · 2,821.2 / 4,289.4 | 0.58 ⚠ sem o registro dos pesos | 10.0 | 442 | 1.1e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-17m-r3` | jh-cpu | f32 | ts-ettin-17m | ok | 3,143 | 398.4 | 399.0 / 2,826.6 / 4,128.0 | 394.6 / 830.2 · 2,905.9 / 4,561.8 | 68.06 | 10.0 | 415 | 1.1e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-32m-r1` | jh-cpu | f32 | ts-ettin-32m | ok | 4,400 | 1,146.7 | 1,121.3 / 7,549.9 / 10,860.0 | 1,112.1 / 2,324.7 · 7,710.9 / 12,154.7 | 0.58 ⚠ sem o registro dos pesos | 10.0 | 527 | 1.7e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-32m-r2` | jh-cpu | f32 | ts-ettin-32m | ok | 3,390 | 1,065.1 | 1,118.9 / 7,444.7 / 11,253.5 | 1,108.9 / 2,302.9 · 7,835.2 / 12,538.8 | 0.58 ⚠ sem o registro dos pesos | 10.0 | 502 | 1.7e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-jh-webgpu-f32-ts-ettin-17m-r1` | jh-webgpu | f32 | ts-ettin-17m | failed | — | — | — / — / — | — | 0.62 | 10.0 | — | — | webgpu: no GPU adapter available |
+| `2026-11-21-emulador-macmini-chrome133-jh-webgpu-f32-ts-ettin-17m-r2` | jh-webgpu | f32 | ts-ettin-17m | failed | — | — | — / — / — | — | 0.62 | 10.0 | 280 | — | webgpu: no GPU adapter available |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-17m-r1` | ort-wasm | 8bit | ts-ettin-17m | ok | 4,250 | 101.7 | 94.9 / 577.1 / 796.3 | 94.3 / 188.5 · 586.4 / 926.2 | 20.63 | 10.0 | 482 | 4.5e-02 · 151/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-17m-r2` | ort-wasm | 8bit | ts-ettin-17m | ok | 3,546 | 109.4 | 95.7 / 568.9 / 793.1 | 95.2 / 188.0 · 683.9 / 880.5 | 20.63 | 10.0 | 480 | 4.5e-02 · 151/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-32m-r1` | ort-wasm | 8bit | ts-ettin-32m | ok | 4,982 | 334.7 | 288.8 / 1,665.2 / 2,499.2 | 286.2 / 577.6 · 1,862.4 / 2,599.1 | 37.02 | 10.0 | 598 | 4.5e-02 · 155/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-32m-r2` | ort-wasm | 8bit | ts-ettin-32m | ok | 2,631 | 259.0 | 264.8 / 1,527.1 / 2,226.8 | 257.5 / 544.3 · 1,809.1 / 2,355.6 | 37.02 | 10.0 | 598 | 4.5e-02 · 155/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m-r1` | ort-wasm | fp32 | ts-ettin-17m | ok | 4,169 | 85.1 | 78.8 / 606.1 / 894.5 | 78.5 / 168.4 · 651.3 / 1,022.9 | 71.36 | 10.0 | 678 | 1.6e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m-r2` | ort-wasm | fp32 | ts-ettin-17m | ok | 3,707 | 85.9 | 96.5 / 698.7 / 1,130.6 | 94.0 / 228.2 · 747.5 / 1,210.3 | 71.36 | 10.0 | 675 | 1.6e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m-r3` | ort-wasm | fp32 | ts-ettin-17m | ok | 3,943 | 86.2 | 79.5 / 611.5 / 890.6 | 79.2 / 167.3 · 670.3 / 1,022.8 | 71.36 | 10.0 | 677 | 1.6e-06 · 156/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-17m-r1` | ort-wasm | int8 | ts-ettin-17m | ok | 6,922 | 105.2 | 69.1 / 449.4 / 653.3 | 68.5 / 142.7 · 461.8 / 734.8 | 20.16 | 10.0 | 467 | 4.1e-01 · 93/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-17m-r2` | ort-wasm | int8 | ts-ettin-17m | ok | 3,364 | 72.9 | 67.9 / 433.9 / 648.5 | 67.1 / 143.3 · 499.4 / 720.2 | 20.16 | 10.0 | 472 | 4.1e-01 · 93/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-32m-r1` | ort-wasm | int8 | ts-ettin-32m | ok | 4,353 | 202.2 | 206.3 / 1,292.7 / 2,046.2 | 203.0 / 567.1 · 1,339.6 / 2,143.7 | 35.47 | 10.0 | 594 | 7.1e-01 · 103/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-32m-r2` | ort-wasm | int8 | ts-ettin-32m | ok | 2,641 | 180.7 | 179.3 / 1,178.5 / 1,634.0 | 178.3 / 395.7 · 1,300.6 / 1,803.0 | 35.47 | 10.0 | 598 | 7.1e-01 · 103/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-32m-r3` | ort-wasm | int8 | ts-ettin-32m | ok | 3,409 | 198.7 | 193.9 / 1,277.6 / 1,784.1 | 193.6 / 409.7 · 1,286.8 / 1,952.7 | 35.47 | 10.0 | 565 | 7.1e-01 · 103/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb-f16-ts-ettin-17m-r1` | ort-wasm | q8emb-f16 | ts-ettin-17m | ok | 6,342 | 85.4 | 79.3 / 609.6 / 887.0 | 79.1 / 167.7 · 625.8 / 998.8 | 24.93 | 10.0 | 517 | 2.0e-02 · 153/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb-f16-ts-ettin-17m-r2` | ort-wasm | q8emb-f16 | ts-ettin-17m | ok | 3,648 | 100.8 | 79.7 / 615.3 / 904.3 | 79.0 / 170.8 · 646.5 / 1,033.2 | 24.93 | 10.0 | 508 | 2.0e-02 · 153/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m-r1` | ort-wasm | q8emb32-f16 | ts-ettin-17m | ok | 3,822 | 85.0 | 79.5 / 618.6 / 896.7 | 79.2 / 169.2 · 638.5 / 1,004.1 | 26.34 | 10.0 | 538 | 8.9e-03 · 155/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m-r2` | ort-wasm | q8emb32-f16 | ts-ettin-17m | ok | 3,265 | 89.7 | 78.8 / 595.1 / 909.6 | 78.3 / 179.1 · 737.8 / 1,012.1 | 26.34 | 10.0 | 538 | 8.9e-03 · 155/156 | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-webgpu-8bit-ts-ettin-17m-r1` | ort-webgpu | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | 22.51 | 10.0 | 429 | — | no available backend found. ERR: [webgpu] Error: Failed to get GPU adapter. You may need to enable flag "--enable-unsafe-webgpu" if you are  |
+| `2026-11-21-emulador-macmini-chrome133-ort-webgpu-8bit-ts-ettin-17m-r2` | ort-webgpu | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | 22.51 | 10.0 | 431 | — | no available backend found. ERR: [webgpu] Error: Failed to get GPU adapter. You may need to enable flag "--enable-unsafe-webgpu" if you are  |
+
+Em quatro execuções do `@johnhenry` (r1 e r2, no 17M e no 32M) o motor carregou os 67,48 MB de pesos (`engineInfo.modelBytes`), mas o Chrome não registrou o download na Resource Timing, e a tabela marca o total como incompleto; a primeira visita correta é a da r3, **68,06 MB**. A causa não foi estabelecida: as execuções seguintes, com o mesmo procedimento, registraram.
+
+**Repetição** (`repeatability.py`). Três configurações variaram mais de 10% entre a primeira e a segunda execução e, como manda a `T-08`, foram medidas uma terceira vez. Em duas, a terceira confirma a primeira e a segunda foi o ponto fora (`fp32` 17M: 78,8 · 96,5 · 79,5 ms; `@johnhenry` 17M: 408,2 · 366,7 · 399,0 ms); no `int8` do 32M as três se espalham em 15% (206,3 · 179,3 · 193,9 ms). Nas demais, a diferença ficou entre 0,2% e 9,1%.
+
+| Configuração | Repetições | Estado | Quente p50 por repetição (ms) | Maior diferença | Acima de 10%? |
+|---|---:|---|---|---:|---|
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-17m` | 3 | ok · ok · ok | 408.2 / 366.7 / 399.0 | 11.3% | **sim** |
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-32m` | 2 | ok · ok | 1121.3 / 1118.9 | 0.2% | não |
+| `2026-11-21-emulador-macmini-chrome133-jh-webgpu-f32-ts-ettin-17m` | 2 | failed · failed | — | — | — |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-17m` | 2 | ok · ok | 94.9 / 95.7 | 0.9% | não |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-32m` | 2 | ok · ok | 288.8 / 264.8 | 9.1% | não |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m` | 3 | ok · ok · ok | 78.8 / 96.5 / 79.5 | 22.4% | **sim** |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-17m` | 2 | ok · ok | 69.1 / 67.9 | 1.8% | não |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-32m` | 3 | ok · ok · ok | 206.3 / 179.3 / 193.9 | 15.0% | **sim** |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb-f16-ts-ettin-17m` | 2 | ok · ok | 79.3 / 79.7 | 0.4% | não |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m` | 2 | ok · ok | 79.5 / 78.8 | 0.8% | não |
+| `2026-11-21-emulador-macmini-chrome133-ort-webgpu-8bit-ts-ettin-17m` | 2 | failed · failed | — | — | — |
+
+**O motor do navegador contra o nativo, com o mesmo arquivo** (`web_vs_native.py`): o mesmo do Safari do iOS (seção 5). Idêntico ao nativo em `8bit`, `fp32`, `q8emb-f16` e `q8emb32-f16` (máx. |Δp| ≤ 1,6e-6) e o mesmo desvio no `int8` (1,7e-1 no 17M; 2,8e-1 no 32M) nos dois navegadores — o desvio é do kernel `int8` do ONNX Runtime Web, não do navegador.
+
+| Execução | Variante | Modelo | Web × nativo: máx. \|Δp\| · vencedora igual | Nativo × referência | Web × referência |
+|---|---|---|---|---|---|
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-17m-r1` | 8bit | ts-ettin-17m | 1.2e-06 · 156/156 | 4.5e-02 · 151/156 | 4.5e-02 · 151/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-32m-r1` | 8bit | ts-ettin-32m | 1.1e-06 · 156/156 | 4.5e-02 · 155/156 | 4.5e-02 · 155/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m-r1` | fp32 | ts-ettin-17m | 1.2e-06 · 156/156 | 1.0e-06 · 156/156 | 1.6e-06 · 156/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-17m-r1` | int8 | ts-ettin-17m | 1.7e-01 · 133/156 | 4.1e-01 · 96/156 | 4.1e-01 · 93/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-32m-r1` | int8 | ts-ettin-32m | 2.8e-01 · 134/156 | 7.0e-01 · 105/156 | 7.1e-01 · 103/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb-f16-ts-ettin-17m-r1` | q8emb-f16 | ts-ettin-17m | 1.4e-06 · 156/156 | 2.0e-02 · 153/156 | 2.0e-02 · 153/156 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m-r1` | q8emb32-f16 | ts-ettin-17m | 1.6e-06 · 156/156 | 8.9e-03 · 155/156 | 8.9e-03 · 155/156 |
+
+**Resumo da `T-08`** **[MEDIDO no emulador]**:
+
+- **Funciona** no Chrome do Android: o ONNX Runtime Web em Wasm, em todas as variantes, e o `@johnhenry` em CPU. **Não funciona:** WebGPU, em nenhuma configuração do emulador.
+- **Primeira visita** (brotli): `int8` 20,16 MB · `8bit` 20,63 MB · `q8emb-f16` 24,93 MB · `q8emb32-f16` 26,34 MB · `fp32` 71,36 MB · `@johnhenry` `f32` 68,06 MB. O runtime do ONNX Runtime Web em Wasm tem 2.483.259 B (o do ponto de entrada WebGPU, 4.362.190 B); o do `@johnhenry`, 86.798 B; o tokenizador, 483.663 B.
+- **Memória** (PSS máximo do Chrome): de 415 a 678 MB nas execuções que rodaram.
+- **Latência quente no emulador** (indicativa): p50 de 67,9 a 96,5 ms no ONNX Runtime 17M e de 366,7 a 408,2 ms no `@johnhenry` 17M. A p95 do ONNX Runtime 17M (de 433,9 a 698,7 ms) cai nas 4 entradas longas (346 a 523 tokens; p50 de 461,8 a 747,5 ms entre elas); só com as entradas de até 128 tokens, a p95 fica entre 142,7 e 228,2 ms.
 
 ## 4. Teste do motor existente (`T-09`) — **em curso**
 
@@ -51,9 +122,35 @@ O que a medição já mostrou, sem dados versionados que o sustentem — por iss
 
 Nenhum artefato testado cabe em 25 MB **e** cumpre a tolerância Q8 ao mesmo tempo: o único que cumpre (`q8emb32-f16`) leva a primeira visita a ≈ 26,3 MB. Em todos os de 8 bits por peso, as vencedoras trocadas são quase-empates — com margem da referência ≥ 0,01 a concordância é 138/138. O critério do portão não tem essa exceção e não foi mudado. No TS-Ettin-32M: `int8` → Δp 7,0e-1 e 105/156; `8bit` → Δp 4,5e-2 e 155/156.
 
-**Web × nativo e forma, no Safari do iOS:** feitas na [seção 5](#5-safari-do-ios-no-simulador-complemento-da-t-08) — com o mesmo arquivo, o motor do navegador reproduz o nativo em `8bit`, `fp32` e `q8emb-f16`; a forma das respostas confere em todas as execuções.
+**Web × nativo, forma e tokens:** no Chrome do Android (seção 3) e no Safari do iOS (seção 5), com o mesmo arquivo, o motor do navegador reproduz o nativo em todas as variantes, menos `int8`; a forma confere em todas as execuções; os tokens são idênticos aos da referência (156/156 com `debug=1`, nos dois motores).
 
-**Falta:** as mesmas comparações no Chrome (emulador e desktop), a identidade dos tokens numa execução versionada (`debug=1`) e as 200 decisões seguidas (com `--enable-precise-memory-info`).
+**200 decisões seguidas** (`endurance.py`), no emulador do Mac, uma execução por variante do 17M, com `--enable-precise-memory-info` **[MEDIDO]**:
+
+| Execução | Motor | Variante | Estado | Decisões ok / pedidas | Falhas | Heap JS início → fim (MB) | Diferença (MiB) | Sem crescimento (≤ 1 MiB)? | Heap preciso? | PSS máx. (MB) | p50 / p95 (ms) |
+|---|---|---|---|---:|---:|---|---:|---|---|---:|---:|
+| `2026-11-21-emulador-macmini-chrome133-jh-cpu-f32-ts-ettin-17m-resistencia-200-r1` | jh-cpu | f32 | ok | 200 / 200 | 0 | 90.27 → 98.53 | +7.88 | **não** | sim | 429 | 398.6 / 2896.4 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-8bit-ts-ettin-17m-resistencia-200-r1` | ort-wasm | 8bit | ok | 200 / 200 | 0 | 22.25 → 17.17 | -4.85 | sim | sim | 457 | 94.0 / 573.7 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-fp32-ts-ettin-17m-resistencia-200-r1` | ort-wasm | fp32 | ok | 200 / 200 | 0 | 152.45 → 15.52 | -130.58 | sim | sim | 678 | 80.2 / 612.7 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-int8-ts-ettin-17m-resistencia-200-r1` | ort-wasm | int8 | ok | 200 / 200 | 0 | 32.99 → 14.91 | -17.24 | sim | sim | 480 | 69.4 / 461.2 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb-f16-ts-ettin-17m-resistencia-200-r1` | ort-wasm | q8emb-f16 | ok | 200 / 200 | 0 | 37.61 → 38.41 | +0.76 | sim | sim | 534 | 79.3 / 613.1 |
+| `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m-resistencia-200-r1` | ort-wasm | q8emb32-f16 | ok | 200 / 200 | 0 | 39.16 → 14.92 | -23.11 | sim | sim | 538 | 76.0 / 585.5 |
+
+Nenhuma falha e nenhuma aba recarregada ou travada nas seis: o critério “aguenta” do portão GT é cumprido por todas. O critério de memória da `T-09` (heap JS no fim ≤ início + 1 MiB, fixado na seção 1) é cumprido pelo ONNX Runtime em todas as variantes (no pior caso, +0,76 MiB no `q8emb-f16`) e **não** pelo `@johnhenry` (+7,88 MiB: o heap subiu de 90,27 para 98,53 MB, passando por 89,45, 96,54 e 96,41 MB a cada 50 decisões). O heap é lido sem forçar coleta de lixo — as quedas grandes do ONNX Runtime (de 152,45 para 15,52 MB no `fp32`) são coletas no meio do caminho, e a subida do `@johnhenry` pode ser coleta ainda não feita —, mas o critério não tem essa exceção e não foi mudado.
+
+**Veredito de corretude da `T-09`**, por variante do 17M **[MEDIDO]**:
+
+| Motor e variante | Acerta igual (tolerância da variante)? | Forma | 200 decisões sem falha | Sem crescimento de memória |
+|---|---|---|---|---|
+| ONNX Runtime `fp32` | **sim** — máx. \|Δp\| 1,6e-6, 156/156 | igual à especificação | sim | sim |
+| ONNX Runtime `q8emb32-f16` | **sim** — 8,9e-3 e 155/156 (99,4%) | igual | sim | sim |
+| ONNX Runtime `q8emb-f16` | não — 153/156 (98,1% < 99%) | igual | sim | sim |
+| ONNX Runtime `8bit` (publicado) | não — 4,5e-2 > 0,03 | igual | sim | sim |
+| ONNX Runtime `int8` (publicado) | não — 4,1e-1 | igual | sim | sim |
+| `@johnhenry` `f32` | **sim** — 1,1e-6, 156/156 | igual | sim | **não** (+7,88 MiB) |
+
+**Em uma frase:** o ONNX Runtime Web responde certo no navegador quando o artefato é bom — em `fp32` e na `q8emb32-f16`, com forma idêntica e sem falhas nem crescimento de memória em 200 decisões —, e o erro das variantes publicadas é do artefato, não do motor; mas a única variante de 8 bits que acerta leva a primeira visita a 26,34 MB no Chrome do Android, acima dos 25 MB do portão, e a que cabe (`q8emb-f16`, 24,93 MB) erra a vencedora em 3 das 156 perguntas.
+
+**Falta:** as mesmas medidas nos caminhos WebGPU, que só existem no desktop (Chrome do macOS, com a `T-01`).
 
 ## 5. Safari do iOS no simulador (complemento da `T-08`)
 
