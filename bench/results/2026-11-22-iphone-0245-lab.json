@@ -1,0 +1,165 @@
+{
+  "session": "2026-11-22-iphone-0245",
+  "label": "iphone",
+  "profile": "onnx",
+  "mode": "local",
+  "createdAt": "2026-11-22T05:45:44.913256+00:00",
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:46:38.706Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-22T05:46:40.244Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:46:40.270Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:46:55.823Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:46:55.846Z",
+      "outcome": "failed",
+      "note": "o processo do Safari caiu (duas vezes)",
+      "endedAt": "2026-11-22T05:48:29.256306Z"
+    },
+    {
+      "id": "ort-webgpu-fp32-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=fp32&model=ts-ettin-17m",
+      "status": "skipped",
+      "attempts": 0,
+      "note": "pulada: o ONNX Runtime WebGPU derrubou o processo do Safari na etapa q8emb32-f16"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m-resistencia-200",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m&warm=0&endurance=200",
+      "timeout": 600,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:49:38.627Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:50:01.314Z"
+    },
+    {
+      "id": "ort-wasm-q8emb-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:51:28.227Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T05:51:43.327Z"
+    },
+    {
+      "id": "ort-wasm-8bit-17m-debug",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-17m&debug=1&warm=0",
+      "status": "posted",
+      "attempts": 3,
+      "previous": [
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:51:43.348Z",
+          "endedAt": "2026-11-22T05:51:44.820Z",
+          "where": "aba aberta pelo botao Continuar numa aba nova (window.open com noopener)"
+        },
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:57:35.420Z",
+          "endedAt": "2026-11-22T05:57:37.017Z",
+          "where": "mesmo processo do Safari das abas anteriores (aba antiga recarregada e aba aberta pelo botao)"
+        }
+      ],
+      "startedAt": "2026-11-22T06:00:30.163Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T06:00:36.202Z"
+    },
+    {
+      "id": "ort-wasm-int8-32m",
+      "url": "/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 3,
+      "previous": [
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:51:44.843Z",
+          "endedAt": "2026-11-22T05:51:46.284Z",
+          "where": "aba aberta pelo botao Continuar numa aba nova (window.open com noopener)"
+        },
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:57:37.044Z",
+          "endedAt": "2026-11-22T05:57:38.473Z",
+          "where": "mesmo processo do Safari das abas anteriores (aba antiga recarregada e aba aberta pelo botao)"
+        }
+      ],
+      "startedAt": "2026-11-22T06:00:39.712Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T06:01:21.928Z"
+    },
+    {
+      "id": "ort-wasm-8bit-32m",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 3,
+      "previous": [
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:52:58.861Z",
+          "endedAt": "2026-11-22T05:53:02.028Z",
+          "where": "aba aberta pelo botao Continuar numa aba nova (window.open com noopener)"
+        },
+        {
+          "outcome": "failed",
+          "note": "no available backend found. ERR: [wasm] RangeError: Out of memory",
+          "startedAt": "2026-11-22T05:57:41.751Z",
+          "endedAt": "2026-11-22T05:57:44.700Z",
+          "where": "mesmo processo do Safari das abas anteriores (aba antiga recarregada e aba aberta pelo botao)"
+        }
+      ],
+      "startedAt": "2026-11-22T06:01:21.967Z",
+      "outcome": "ok",
+      "note": "",
+      "endedAt": "2026-11-22T06:02:10.995Z"
+    },
+    {
+      "id": "ort-webgpu-8bit-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=8bit&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "skipped",
+      "attempts": 0,
+      "note": "pulada: o ONNX Runtime WebGPU derrubou o processo do Safari na etapa q8emb32-f16"
+    },
+    {
+      "id": "ort-webgpu-int8-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=int8&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "skipped",
+      "attempts": 0,
+      "note": "pulada: o ONNX Runtime WebGPU derrubou o processo do Safari na etapa q8emb32-f16"
+    }
+  ],
+  "startedAt": "2026-11-22T05:46:38.706Z",
+  "done": true,
+  "finishedAt": "2026-11-22T06:02:11.033Z"
+}

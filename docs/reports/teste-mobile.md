@@ -333,10 +333,81 @@ Junta as seções 2 a 7: a página (`T-01`), o emulador (`T-08`), o teste do mot
 
 **O que continua sem resposta:**
 
-- Latência em celular real (Android intermediário, Android de entrada, iPhone): a `T-02` foi descartada por falta de aparelhos.
-- WebGPU em celular real (Android com GPU que o Chrome aceita; iPhone com Safari 26 ou mais novo).
+- Latência em celular real (Android intermediário, Android de entrada, iPhone): a `T-02` foi descartada por falta de aparelhos. Para o iPhone, a seção 9 tem uma resposta parcial (um aparelho).
+- WebGPU em celular real (Android com GPU que o Chrome aceita; iPhone com Safari 26 ou mais novo). No iPhone funciona: seção 9.
 - O Chrome atual no Android: o emulador tem o 133 da imagem, e atualizá-lo exige uma conta Google.
 - A qualidade das decisões em português: só há paridade com o próprio modelo.
 - Por que o provedor WebGPU do ONNX Runtime erra, e por que trava com os quantizados (as causas não foram confirmadas).
 - Se um build reduzido do ONNX Runtime caberia em 25 MB com a `q8emb32-f16` (o repositório-fonte estava indisponível).
 - Por que o Chrome do emulador não registrou o download dos pesos em 4 execuções do `@johnhenry`.
+
+## 9. iPhone real, pelo laboratório de aparelho (complemento, 2026-11-22)
+
+Depois do veredito da `T-04`, o dono abriu no próprio iPhone a página de teste servida pelo Mac mini, pelo laboratório de aparelho ([skill `som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md), [MACMINI.md, seção 9](../../bench/spike-mobile/MACMINI.md#9-laboratório-de-aparelho-real-iphone-android)).
+
+- **Como foi servida:** HTTPS na rede de casa, com uma CA do Mac. Cada etapa é uma navegação da aba, e os pesos ficam em cache entre as etapas: o tempo até a primeira resposta não é o de uma primeira visita.
+- **Rodadas:** três, todas no mesmo aparelho.
+  - `2026-11-22-iphone-0229` e `-0240`: perfil completo.
+  - `-0245`: só as etapas do ONNX Runtime que faltavam.
+- **Dados:** `bench/results/2026-11-22-iphone-*`, com o relatório automático de cada rodada (`…-relatorio.md`, gerado pelo [`analyze.py`](../../bench/spike-mobile/lab/analyze.py)).
+
+É **um aparelho**: a `T-02` continua descartada ([ADR 0002](../adr/0002-dt-01-seguir-com-o-emulador.md)), e nenhuma decisão foi refeita. A seção responde, para o iPhone, duas perguntas da seção 8: a latência e o WebGPU.
+
+**O aparelho, segundo o navegador [REPORTADO]:** Safari 26.6.3 (o user agent diz `iPhone OS 18_7`), tela de 390×844 a 3×, `hardwareConcurrency` 4.
+
+**O ambiente [MEDIDO]:**
+
+- **APIs e Wasm:**
+  - Contexto seguro. `DecisionModel` não existe no Safari.
+  - Sem isolamento de origem, o Wasm tem SIMD, mas não threads. Com isolamento (sonda `coi`), há threads e `SharedArrayBuffer`.
+- **WebGPU:**
+  - Adaptador `apple`, com `shader-f16`.
+  - Um passe real de computação por rodada (1 Mi floats, `x·2+1`), sem nenhuma divergência: 129 ms na rodada 1 e 8 ms na rodada 2.
+
+**Latência e paridade com o modelo de 17M [MEDIDO]:** rodadas 1 e 2 para os motores do perfil completo; rodada 3 para as variantes do ONNX Runtime que faltavam. O alvo de 150 ms é **[ALVO]** do portão GT.
+
+| Motor · variante | Rodada | Quente p50 / p95 / p99 (ms) | p95 com ≤ 128 tokens · > 128 (ms) | máx. \|Δp\| · top-1 contra a referência | Tolerância | Contra o nativo (mesmo arquivo) | p95 ≤ 150 ms? |
+|---|---|---:|---:|---|---|---|---|
+| `@johnhenry` WebGPU · `f32` | 1 · 2 | 10 / 70,0 / 105,2 · 10 / 71,0 / 106,4 | 22 · 113,0 — 22 · 113,3 | 1,3e-6 · 156/156 | cumpre | — | **sim** |
+| `@johnhenry` WebGPU · `f16` | 1 · 2 | 5 / 28,0 / 41,0 · 5 / 29,0 / 42,0 | 9 · 45,2 — 9 · 46,2 | 1,5e-3 · 155/156 | não cumpre (FP16: Δp ≤ 1e-3) | — | sim |
+| `@johnhenry` CPU · `f32` | 1 · 2 | 217 / 1 534,3 / 2 266,0 · 223 / 1 600,3 / 2 419,9 | 451,4 — 472,0 | 1,1e-6 · 156/156 | cumpre | — | não |
+| ONNX Runtime Wasm · `int8` | 1 · 2 | 43 / 276,3 / 400,9 · 44 / 282,3 / 410,5 | 89 — 91 | 4,1e-1 · 93/156 | não cumpre | 1,7e-1 · 133/156 | não |
+| ONNX Runtime Wasm · `8bit` | 1 · 2 | 50 / 310,1 / 434,6 · 50 / 309,2 / 437,4 | 98,0 — 99,4 | 4,5e-2 · 151/156 | não cumpre | 1,2e-6 · 156/156 | não |
+| ONNX Runtime Wasm · `fp32` | 1 · 2 | 45 / 344,1 / 513,3 · 45 / 344,2 / 510,3 | 96 — 96 | 1,6e-6 · 156/156 | cumpre | 1,2e-6 · 156/156 | não |
+| ONNX Runtime Wasm · `q8emb-f16` | 3 | 41 / 306,5 / 479,6 | 89 · 525,0 | 2,0e-2 · 153/156 | não cumpre (top-1 < 99%) | 1,4e-6 · 156/156 | não |
+| ONNX Runtime Wasm · `q8emb32-f16` | 3 | 42 / 321,1 / 487,0 | 90 · 541,1 | 8,9e-3 · 155/156 | **cumpre** (8 bits) | 1,6e-6 · 156/156 | não |
+| ONNX Runtime WebGPU · `q8emb32-f16` | 3 | o processo do Safari caiu duas vezes seguidas | — | — | — | — | — |
+
+- **Repetição:** entre as rodadas 1 e 2, o p95 de cada configuração variou no máximo 4,3% (`@johnhenry` CPU).
+- **200 decisões seguidas, sem falha:** `@johnhenry` WebGPU `f32` nas rodadas 1 e 2, e ONNX Runtime Wasm `q8emb32-f16` na rodada 3.
+- **Modelo de 32M (rodada 3):** o ONNX Runtime Wasm é cerca de 3 vezes mais lento que no 17M.
+  - `int8`: 135,5 / 856,8 / 1 217,4 ms, paridade 7,1e-1 · 103/156 (contra o nativo, 2,8e-1).
+  - `8bit`: 159,0 / 934,1 / 1 286,8 ms, paridade 4,5e-2 · 155/156 (contra o nativo, 1,1e-6).
+- **Não medido no iPhone:** o ONNX Runtime WebGPU com `fp32`, `8bit` e `int8`. Nas rodadas 1 e 2 parou em `Out of memory` (veja abaixo); na rodada 3 foi pulado depois da queda.
+
+**Os critérios de GT neste iPhone (17M)**
+
+- **Acerta igual:** cumprem o `@johnhenry` WebGPU `f32`, o ONNX Runtime `fp32` e a `q8emb32-f16`.
+- **Rápida (p95 ≤ 150 ms):** só o `@johnhenry` WebGPU cumpre. O ONNX Runtime em Wasm fica entre 276 e 344 ms, puxado pelas entradas longas: nas de até 128 tokens, o p95 fica entre 89 e 99 ms.
+- **Aguenta:** cumpre nos dois caminhos que rodaram 200 decisões.
+- **Primeira visita até 25 MB:** nenhuma das configurações que acertam cumpre. O `@johnhenry` baixa 67,48 MB de pesos `f32`, e a `q8emb32-f16` pesa 26,34 MB (seção 3).
+
+**Conclusão:** no iPhone, a única configuração que acerta e é rápida é o WebGPU do `@johnhenry` em `f32`. O que falta a ela é o tamanho dos pesos, que é o trabalho do fork escolhido na [ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md). É evidência a favor das ADRs [0003](../adr/0003-gt-motor-nosso-em-webgpu.md) e 0004, que não mudam.
+
+**O que o laboratório descobriu sobre o Safari do iPhone [MEDIDO]:**
+
+- **A memória do Wasm do ONNX Runtime fica presa no processo do Safari.**
+  - Depois de 2 ou 3 sessões do ONNX Runtime, toda sessão nova falhou logo ao iniciar com `RangeError: Out of memory`, em Wasm e em WebGPU. Nesse mesmo processo, o `@johnhenry` (JavaScript e WebGPU) seguiu rodando.
+  - Não resolveram: iframes (rodada 1), uma página por etapa (rodada 2), uma aba aberta por `window.open` com `noopener` (continua no mesmo processo) e uma aba antiga reaberta.
+  - Só fechar o Safari no seletor de apps devolveu a memória: as três etapas que tinham falhado rodaram em seguida (rodada 3).
+  - Para um produto, isso sugere que uma página com o ONNX Runtime Web aberta 3 ou 4 vezes na mesma sessão do Safari pode parar **[HIPÓTESE: medido só no laboratório]**.
+- **O ONNX Runtime em WebGPU derruba o processo do Safari** na `q8emb32-f16`. O Safari recarregou a página, que caiu de novo, até a tela de erro “ocorreu um problema repetidamente”.
+- **O Wake Lock só é concedido com um toque.** As páginas de etapa receberam `NotAllowedError`, e o dono manteve a tela ligada à mão: nenhuma página ficou oculta durante as medições.
+
+**Transparência:** a rodada 3 ainda não tinha as correções do PR #24, e três registros dela foram feitos à mão a partir dos logs.
+
+- O arquivo da queda (`…-0245-ort-webgpu-q8emb32-f16-17m.json`, com `writtenBy` de operador).
+- O pulo das outras três etapas do ONNX Runtime WebGPU.
+- A volta a pendente das três etapas que pararam em `Out of memory`. As tentativas anteriores ficam em `previous`, no `…-0245-lab.json`.
+
+Hoje o laboratório faz isso sozinho: repete a etapa depois de pedir para reabrir o Safari, e marca `crashed` a página que o Safari recarrega depois de uma queda.

@@ -1,0 +1,179 @@
+{
+  "session": "2026-11-22-iphone-0229",
+  "label": "iphone",
+  "profile": "completo",
+  "mode": "local",
+  "createdAt": "2026-11-22T05:29:05.424230+00:00",
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:30:09.850Z",
+      "endedAt": "2026-11-22T05:30:10.916Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "status": "ok",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:30:12.959Z",
+      "endedAt": "2026-11-22T05:30:13.378Z"
+    },
+    {
+      "id": "ort-wasm-int8-17m",
+      "url": "/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:30:15.391Z",
+      "endedAt": "2026-11-22T05:30:30.792Z"
+    },
+    {
+      "id": "ort-wasm-8bit-17m",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:30:32.810Z",
+      "endedAt": "2026-11-22T05:30:49.667Z"
+    },
+    {
+      "id": "ort-wasm-fp32-17m",
+      "url": "/index.html?engine=ort-wasm&variant=fp32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:30:51.685Z",
+      "endedAt": "2026-11-22T05:31:09.593Z"
+    },
+    {
+      "id": "ort-wasm-q8emb-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:11.613Z",
+      "endedAt": "2026-11-22T05:31:13.835Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:15.856Z",
+      "endedAt": "2026-11-22T05:31:17.890Z"
+    },
+    {
+      "id": "ort-wasm-int8-32m",
+      "url": "/index.html?engine=ort-wasm&variant=int8&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:19.916Z",
+      "endedAt": "2026-11-22T05:31:21.953Z"
+    },
+    {
+      "id": "ort-wasm-8bit-32m",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-32m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:23.973Z",
+      "endedAt": "2026-11-22T05:31:26.008Z"
+    },
+    {
+      "id": "ort-webgpu-fp32-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=fp32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:28.068Z",
+      "endedAt": "2026-11-22T05:31:31.628Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:33.648Z",
+      "endedAt": "2026-11-22T05:31:34.683Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:36.703Z",
+      "endedAt": "2026-11-22T05:31:43.255Z"
+    },
+    {
+      "id": "jh-webgpu-f16-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f16&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:45.274Z",
+      "endedAt": "2026-11-22T05:31:50.338Z"
+    },
+    {
+      "id": "jh-cpu-f32-17m",
+      "url": "/index.html?engine=jh-cpu&variant=f32&model=ts-ettin-17m",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:31:52.474Z",
+      "endedAt": "2026-11-22T05:33:02.771Z"
+    },
+    {
+      "id": "ort-wasm-8bit-17m-debug",
+      "url": "/index.html?engine=ort-wasm&variant=8bit&model=ts-ettin-17m&debug=1&warm=0",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:04.839Z",
+      "endedAt": "2026-11-22T05:33:05.895Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m-resistencia-200",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m&warm=0&endurance=200",
+      "timeout": 600,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:07.918Z",
+      "endedAt": "2026-11-22T05:33:08.954Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m-resistencia-200",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m&warm=0&endurance=200",
+      "timeout": 600,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:10.972Z",
+      "endedAt": "2026-11-22T05:33:18.588Z"
+    },
+    {
+      "id": "ort-webgpu-8bit-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=8bit&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:20.687Z",
+      "endedAt": "2026-11-22T05:33:21.771Z"
+    },
+    {
+      "id": "ort-webgpu-int8-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=int8&model=ts-ettin-17m",
+      "timeout": 150,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:23.792Z",
+      "endedAt": "2026-11-22T05:33:24.849Z"
+    },
+    {
+      "id": "sonda-coi",
+      "url": "/probe.html?coi=1",
+      "coi": true,
+      "timeout": 90,
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-22T05:33:27.052Z",
+      "endedAt": "2026-11-22T05:33:28.083Z"
+    }
+  ],
+  "startedAt": "2026-11-22T05:30:09.850Z",
+  "done": true,
+  "finishedAt": "2026-11-22T05:33:30.101Z"
+}

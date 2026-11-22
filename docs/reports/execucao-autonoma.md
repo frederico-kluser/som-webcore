@@ -29,6 +29,8 @@
 | 2026-11-22 | `T-04` **feito** | Veredito contra os quatro critérios de GT | [relatório, seção 8](teste-mobile.md#8-relatório-e-veredito-t-04) | Acerta igual: cumpre; até 25 MB junto com acertar: **não cumpre**; aguenta: cumpre; rápida: não medido. Veredito: o motor existente **não** é satisfatório | As perguntas sem resposta estão listadas no relatório |
 | 2026-11-22 | `GT` **feito** — ramo (b), motor nosso em WebGPU; `L-01` e `L-02` **descartadas** | Portão decidido pelos critérios escritos e pela regra do dono | [ADR 0003](../adr/0003-gt-motor-nosso-em-webgpu.md) | Decidido por delegação do dono: a `T-10` aponta limitações medidas que um motor nosso resolve, e algo funciona no Android | Próximo: a bifurcação `DP-01` |
 | 2026-11-22 | `DP-01` **feito** — ramo (a), fork do motor leve existente; `P-05` a `P-10` **descartadas** | Licenças lidas na fonte (repositório `johnhenry/laya-js` e `package.json` publicados): MIT e Apache-2.0; o que o fork já resolve e o que falta, medidos | [ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md) | Decidido por delegação do dono: a licença permite e as limitações da janela cabem dentro do fork; também o caminho de menor esforço | Próximo: `K-01` (base do fork) e o tronco comum da PoC |
+| 2026-11-22 | laboratório de aparelho (pedido do dono) | Site local no Mac para o celular do dono: HTTPS na rede de casa com uma CA do Mac, acesso por cookie com token e QR codes. Colhe todos os logs (console, erros, rede, WebGPU, ciclo de vida da página) e analisa sozinho no fim | PRs #21 a #24; skill [`som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md); [MACMINI.md, seção 9](../../bench/spike-mobile/MACMINI.md#9-laboratório-de-aparelho-real-iphone-android) | Local, sem Cloudflare, e endereço fixo (pedidos do dono: token do laboratório no Mac, cookie de 180 dias). Cada etapa é uma navegação da aba; no `Out of memory`, a etapa repete depois de reabrir o Safari | — |
+| 2026-11-22 | iPhone real, três rodadas (complemento; a `T-02` continua descartada) | Safari 26.6.3, WebGPU com `shader-f16`. O `@johnhenry` WebGPU `f32` acerta (1,3e-6) com p95 de 70 e 71 ms. O ONNX Runtime em Wasm faz de 276 a 344 ms no 17M; nele, a `q8emb32-f16` acerta (8,9e-3 · 155/156). O ONNX Runtime WebGPU derruba o processo do Safari | `bench/results/2026-11-22-iphone-*` (60 arquivos, com o relatório automático de cada rodada); [relatório, seção 9](teste-mobile.md#9-iphone-real-pelo-laboratório-de-aparelho-complemento-2026-11-22) | Nenhuma decisão refeita: é evidência a favor das ADRs 0003 e 0004 | Não medido no iPhone: ONNX Runtime WebGPU com `fp32`, `8bit` e `int8` |
 
 ## Incidentes de medição
 
@@ -41,6 +43,17 @@
 - **Chrome do Mac parado antes de criar o perfil.** Aberto pelo LaunchServices (`open -a`), o Chrome rodou com as próprias permissões e não criou o perfil no HD externo, à espera da permissão de volume removível; a primeira sonda de desktop saiu por tempo esgotado. Aberto direto pela sessão SSH, herda o acesso ao disco e abre a janela. Junto, o executor passou a usar `--use-mock-keychain`. As sondas de diagnóstico foram apagadas.
 - **Laço quebrado pelo zsh.** O shell remoto do Mac (zsh) não divide `set -- $c`: uma rodada de resistência no desktop abriu URLs erradas, gravou arquivos com nomes malformados e foi interrompida; os arquivos foram apagados e a rodada refeita em `bash -s`. A rodada seguinte foi refeita mais uma vez para gravar as flags do navegador no resultado.
 - **Progresso antigo no servidor.** O `serve.mjs` guarda o último progresso de cada nome de execução na memória; ao repetir um nome, o progresso da execução interrompida continuava lá e parecia da nova. O executor do iOS grava um marcador antes de abrir a página.
+- **Memória do Wasm presa no processo do Safari (iPhone).** As três rodadas pararam em `Out of memory` depois de 2 ou 3 sessões do ONNX Runtime, cada uma de um jeito:
+  - Rodada 1: com as etapas em iframes, falharam todas as etapas do ONNX Runtime depois da `fp32`.
+  - Rodada 2: com uma página por etapa, aconteceu o mesmo.
+  - Rodada 3: não resolveram nem a aba aberta por `window.open` com `noopener` nem uma aba antiga reaberta. Só fechar o Safari resolveu.
+
+  As execuções que pararam assim não são medição; as repetições, sim. O laboratório agora repete a etapa e pede para reabrir o Safari (PR #24).
+- **Queda do processo do Safari com o ONNX Runtime WebGPU (iPhone).** O Safari recarregou a página da etapa, que caiu de novo. O operador fez à mão, a partir dos logs, o registro da queda (com `writtenBy` no arquivo) e o pulo das outras etapas desse caminho. O laboratório agora detecta a recarga e não repete a etapa.
+- **Código velho no cache do simulador.** Uma rodada de teste no simulador rodou o `lab.js` de uma sessão anterior, que estava em cache. Agora só pesos e dependências vão para o cache, e os scripts do laboratório levam a sessão na URL (PR #22).
+- **Corpus marcado pelo GitGuardian.** A normalização dos finais de linha (PR #25) pôs o `corpus.json` inteiro no diff, e o GitGuardian marcou como segredo a entrada de teste `en-24`, uma chave de API falsa posta de propósito.
+  - O PR foi fechado e refeito em um commit só, sem o corpus (PR #26). O corpus fica com os bytes que tem (`-text` no `.gitattributes`).
+  - O alerta continua aberto no painel do GitGuardian; é falso positivo, e só o dono pode marcá-lo.
 
 ## Achados que mudam o plano
 
@@ -51,12 +64,19 @@
 - **Nem no Safari do simulador de iOS** (iOS 27.0): `navigator.gpu` existe, mas `requestAdapter()` devolve `null`.
 - **O erro de paridade é do artefato, não do motor do navegador.** No Safari, com o mesmo arquivo, o ONNX Runtime Web reproduz o ONNX Runtime nativo em `8bit`, `fp32` e `q8emb-f16` (máx. |Δp| ≤ 1,4e-6); só o `int8` diverge. A fronteira tamanho × paridade medida no nativo vale no navegador.
 - **O runtime do ONNX Runtime Web é 17% da primeira visita** da variante `8bit` do 17M (3,87 MB de 22,17 MB, em gzip); o do motor `@johnhenry` tem 0,1 MB. É um dado para a `T-10`: a variante que cumpre a tolerância Q8 (`q8emb32-f16`) passa de 25 MB por causa do runtime.
+- **No iPhone real há WebGPU**, com adaptador `apple` e `shader-f16`, ao contrário do simulador. **Só o WebGPU do `@johnhenry` em `f32` acerta e cumpre o alvo de 150 ms** (p95 de 70 e 71 ms, em duas rodadas); o ONNX Runtime em Wasm fica entre 276 e 344 ms. O que falta ao `@johnhenry` é o tamanho: 67,48 MB de pesos `f32`, que é o trabalho do fork ([ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md)).
+- **No Safari do iPhone, o ONNX Runtime Web prende a memória do Wasm no processo**: depois de 2 ou 3 sessões vem `Out of memory`, e o caminho WebGPU dele derruba o processo. Pesa contra o ONNX Runtime no iPhone.
 
 ## Estado e próximo passo
 
 **2026-11-22 — marco T fechado.** Feito: `T-01`, `T-03`, `T-04`, `T-05`, `T-06`, `T-07`, `T-08`, `T-09`, `T-10` e `S-01`; a bifurcação `DT-01` (só emulador; `T-02` descartada), a `DT-02` (não se aplica) e o portão `GT` (motor nosso em WebGPU; `L-01` e `L-02` descartadas) — [ADRs 0001 a 0003](../adr/). A medição que parou no Acer em 2026-11-21, por falta de memória, foi refeita no Mac mini a pedido do dono ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)); nada mais roda no Acer.
 
 **Para retomar:** `python3 scripts/roadmap.py waves`. A `DP-01` escolheu o fork do motor leve existente ([ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md)); as próximas são a `K-01` (base do fork) e o tronco comum da PoC (`P-01` a `P-04`). No Mac mini, o servidor da página pode continuar ligado (`/Volumes/Ext2TB/tmp/som-webcore/serve.pid`); emulador, simulador e navegadores ficam desligados entre as rodadas.
+
+**2026-11-22 — laboratório de aparelho e iPhone real** (pedido do dono). O Mac serve a página de teste ao celular do dono e analisa sozinho cada rodada (skill [`som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md)).
+
+- **Rodar de novo:** `bash bench/spike-mobile/lab/start-lab.sh` no Mac. O iPhone do dono já confia na CA e entra direto por `https://192.168.100.84:8390/lab/lab.html`.
+- **O que as três rodadas deram:** a [seção 9 do relatório](teste-mobile.md#9-iphone-real-pelo-laboratório-de-aparelho-complemento-2026-11-22). Nenhuma decisão mudou, e as próximas atividades continuam as mesmas.
 
 ## Relatório desta execução (2026-11-22, pelo Mac mini)
 
