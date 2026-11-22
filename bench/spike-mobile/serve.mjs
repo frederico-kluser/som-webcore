@@ -234,15 +234,18 @@ async function handler(req, res) {
       headers["Cross-Origin-Embedder-Policy"] = "require-corp";
     }
     if (LAB && ext === ".html") {
-      // The log hook first, before any other script of the page.
-      const html = readFileSync(file, "utf8");
-      const tag = '<script src="/lab/hook.js"></script>';
+      // The log hook first, before any other script of the page. The lab's own scripts carry the
+      // session in their URL: a device keeps whatever an earlier session let it cache.
+      const version = `?v=${LAB.session}`;
+      const html = readFileSync(file, "utf8").replace(/(["'])\/lab\/lab\.js\1/g, `$1/lab/lab.js${version}$1`);
+      const tag = `<script src="/lab/hook.js${version}"></script>`;
       const body = Buffer.from(/<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (head) => `${head}\n${tag}`) : `${tag}\n${html}`, "utf8");
       res.writeHead(200, { ...headers, "Content-Length": body.length });
       return res.end(req.method === "HEAD" ? undefined : body);
     }
-    // In the device lab, each file crosses the (tunneled) network once per session.
-    if (LAB) headers["Cache-Control"] = "private, max-age=86400";
+    // In the device lab, the weights and the pinned dependencies cross the network once per session;
+    // the project's own code is never cached (an iPhone ran a stale lab.js from an earlier session).
+    if (LAB && (url.pathname.startsWith("/models/") || url.pathname.startsWith("/node_modules/"))) headers["Cache-Control"] = "private, max-age=86400";
     // Brotli when the browser offers it, gzip otherwise: Safari offers br only over HTTPS, so on
     // http://localhost it gets gzip, as from a CDN that falls back to it.
     const accepts = String(req.headers["accept-encoding"] || "");
