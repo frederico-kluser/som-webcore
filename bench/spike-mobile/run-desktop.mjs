@@ -161,6 +161,9 @@ const flags = [
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--no-first-run", "--no-default-browser-check",
   "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
 ];
+// macOS: a new profile asks the login Keychain for "Chrome Safe Storage", and a browser started from
+// an SSH session can hang on that prompt (seen on the Mac mini, 2026-11-21); automation uses a mock.
+if (process.platform === "darwin") flags.push("--use-mock-keychain");
 if (!flag("no-api")) flags.push("--enable-features=AIDecisionModelAPI");
 if (flag("headless")) flags.push("--headless=new");
 const extra = opt("flags");
