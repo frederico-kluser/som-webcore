@@ -1,3 +1,12 @@
+# Finais de linha: LF no repositório para todo texto. Scripts em Python no Windows
+# gravavam CRLF, e arquivos mistos quebravam diffs; os binários são detectados sozinhos.
+* text=auto eol=lf
+*.png binary
+# O corpus fica com os bytes que tem: a referência e as medições foram feitas sobre ele, e a
+# entrada de teste en-24 (uma chave de API falsa, de propósito) é marcada pelo verificador de
+# segredos quando o arquivo inteiro entra num diff.
+bench/spike-mobile/corpus.json -text
+
 # GitHub linguist: o repositório é documentação nesta fase.
 # A memória CoALA vendorizada e os textos de pesquisa não devem dominar a
 # estatística de linguagens (o `coala.py` tem ~317 KB de Python stdlib).
