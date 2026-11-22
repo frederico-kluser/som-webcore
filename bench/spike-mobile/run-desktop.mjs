@@ -148,6 +148,14 @@ async function attachConsole(collector) {
   writeFileSync(resultFile, JSON.stringify(data, null, 2));
 }
 
+// The browser and the command-line flags of the run, next to the page's own result.
+function attachBrowser() {
+  if (!existsSync(resultFile)) return;
+  const data = JSON.parse(readFileSync(resultFile, "utf8"));
+  data.browser = { name: browser, executable: exe, flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), headless: flag("headless") };
+  writeFileSync(resultFile, JSON.stringify(data, null, 2));
+}
+
 async function closeBrowser() {
   try {
     const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
@@ -161,6 +169,9 @@ const flags = [
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--no-first-run", "--no-default-browser-check",
   "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
 ];
+// macOS: a new profile asks the login Keychain for "Chrome Safe Storage", and a browser started from
+// an SSH session can hang on that prompt (seen on the Mac mini, 2026-11-21); automation uses a mock.
+if (process.platform === "darwin") flags.push("--use-mock-keychain");
 if (!flag("no-api")) flags.push("--enable-features=AIDecisionModelAPI");
 if (flag("headless")) flags.push("--headless=new");
 const extra = opt("flags");
@@ -168,12 +179,11 @@ if (extra) flags.push(...extra.split(/\s+/).filter(Boolean));
 
 const before = mtime();
 console.log(`launch ${exe}\n  ${flags.join(" ")}\n  ${url}`);
-// macOS, with a window: through LaunchServices (`open -n -a`), so a browser started from an SSH
-// session opens in the logged-in user's desktop session. The browser is closed through CDP.
-const app = process.platform === "darwin" && !flag("headless") ? exe.slice(0, exe.indexOf(".app/") + 4) : null;
-const child = app
-  ? spawn("open", ["-n", "-a", app, "--args", ...flags, url], { stdio: "ignore" })
-  : spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
+// The executable itself, also on macOS. Opened through LaunchServices (`open -a`), the browser runs
+// under its own privacy permissions and, with the profile on the Mac mini's external disk, stopped
+// before creating it (waiting for the removable-volume prompt, 2026-11-21); started directly from the
+// SSH session, it inherits the session's disk access and still opens a window on the Mac's desktop.
+const child = spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
 child.on("error", (e) => fail(`não foi possível abrir o navegador (${e.message})`, "confira o caminho"));
 
 const collector = flag("console") ? await collectConsole().catch(() => null) : null;
@@ -193,5 +203,6 @@ if (!ok) {
   console.error(`wrote a failure result (timeout): ${resultFile}`);
 }
 if (collector) { await sleep(500); await attachConsole(collector); collector.cdp.close(); }
+attachBrowser();
 if (!flag("keep")) { await closeBrowser(); await sleep(1500); try { child.kill(); } catch { /* ignore */ } }
 process.exit(ok ? 0 : 1);

@@ -1,0 +1,48 @@
+{
+  "kind": "spike-mobile-run",
+  "schemaVersion": 1,
+  "status": "failed",
+  "writtenBy": "run-desktop.mjs",
+  "page": "http://localhost:8377/index.html?engine=ort-webgpu&variant=8bit&model=ts-ettin-17m&name=2026-11-21-desktop-macmini-chrome157-ort-webgpu-8bit-ts-ettin-17m",
+  "config": {
+    "engine": "ort-webgpu",
+    "variant": "8bit",
+    "model": "ts-ettin-17m",
+    "name": "2026-11-21-desktop-macmini-chrome157-ort-webgpu-8bit-ts-ettin-17m"
+  },
+  "fatal": {
+    "name": "Timeout",
+    "message": "the page did not post a result within 300 s; last stage: first-pass en-02"
+  },
+  "failures": [
+    {
+      "stage": "first-pass",
+      "item": "en-02",
+      "error": {
+        "name": "Timeout",
+        "message": "the page did not post a result within 300 s; last stage: first-pass en-02"
+      }
+    }
+  ],
+  "lastProgress": {
+    "stage": "first-pass",
+    "detail": "en-02",
+    "t": 1226.5,
+    "receivedAt": "2026-11-22T02:25:51.859Z"
+  },
+  "answers": [],
+  "finishedAt": "2026-11-22T02:30:51.069Z",
+  "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "browserConsole": [
+    {
+      "source": "console",
+      "level": "error",
+      "text": "\u001b[0;93m2026-11-21 23:25:51.490298 [W:onnxruntime:, session_state.cc:1598 VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.\u001b[m"
+    },
+    {
+      "source": "console",
+      "level": "error",
+      "text": "\u001b[0;93m2026-11-21 23:25:51.491398 [W:onnxruntime:, session_state.cc:1600 VerifyEachNodeIsAssignedToAnEp] Rerunning with verbose output on a non-minimal build will show node assignments.\u001b[m"
+    }
+  ]
+}

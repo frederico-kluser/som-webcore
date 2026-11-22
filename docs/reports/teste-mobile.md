@@ -26,6 +26,30 @@ Fixado em 2026-11-21, **antes** das medições finais, a partir do texto do port
 
 A tradução de uma pergunta da API para o formato do TS-Ettin está no [README da página](../../bench/spike-mobile/README.md#tradução-para-o-ts-ettin); o script de referência em Python aplica a mesma regra. A forma de cada resposta é conferida contra a [especificação](../spec/decisions-api-surface.md) por `reference/check_shape.py`.
 
+**Validação no Chrome de desktop.** Em 2026-11-21, no Mac mini: Chrome 157.0.8103.79 no macOS 27.2 (Apple M1), com janela, perfil próprio e `--enable-precise-memory-info` ([MACMINI.md, seção 8](../../bench/spike-mobile/MACMINI.md#8-chrome-de-desktop-no-mac-t-01)); a [sonda](../../bench/results/2026-11-21-desktop-macmini-chrome157-probe.json) mostra WebGPU sobre Metal, com `shader-f16`. A mesma página, sem mudar nenhuma chamada, rodou os 15 pares motor × variante do 17M; o que não rodou ficou no JSON como falha, com a mensagem do motor **[MEDIDO; latência de desktop, fora do portão GT]**:
+
+| Execução | Motor | Variante | Modelo | Estado | 1ª resposta (ms) | 1ª passada p50 (ms) | Quente p50 / p95 / p99 (ms) | Quente p50 / p95: ≤ 128 tokens · > 128 (ms) | 1ª visita (MB) | Heap JS máx. (MB) | Memória máx. (MB; PSS no Android, RSS no simulador iOS) | máx. \|Δp\| · top-1 | Falha |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `2026-11-21-desktop-macmini-chrome157-jh-cpu-f32-ts-ettin-17m` | jh-cpu | f32 | ts-ettin-17m | ok | 1,107 | 475.6 | 474.5 / 3,430.6 / 5,091.3 | 474.1 / 982.6 · 3,535.7 / 5,708.6 | 68.06 | 183.4 | — | 1.1e-06 · 156/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-jh-webgpu-f16-ts-ettin-17m` | jh-webgpu | f16 | ts-ettin-17m | ok | 715 | 6.2 | 6.2 / 24.5 / 41.7 | 6.1 / 11.8 · 33.3 / 46.7 | 68.11 | 132.2 | — | 1.7e-03 · 156/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-jh-webgpu-f32-ts-ettin-17m` | jh-webgpu | f32 | ts-ettin-17m | ok | 750 | 6.6 | 6.7 / 26.9 / 40.3 | 6.5 / 11.7 · 35.7 / 45.8 | 68.11 | 131.8 | — | 1.9e-06 · 156/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-wasm-8bit-ts-ettin-17m` | ort-wasm | 8bit | ts-ettin-17m | ok | 794 | 53.1 | 52.8 / 321.6 / 445.5 | 52.7 / 102.5 · 324.4 / 489.8 | 20.63 | 21.7 | — | 4.5e-02 · 151/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-wasm-fp32-ts-ettin-17m` | ort-wasm | fp32 | ts-ettin-17m | ok | 944 | 46.5 | 45.2 / 348.3 / 511.3 | 45.1 / 96.3 · 367.3 / 574.6 | 71.36 | 83.5 | — | 1.6e-06 · 156/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-wasm-int8-ts-ettin-17m` | ort-wasm | int8 | ts-ettin-17m | ok | 859 | 50.0 | 49.6 / 322.9 / 446.8 | 49.5 / 101.0 · 326.2 / 493.2 | 20.16 | 32.5 | — | 4.1e-01 · 93/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-wasm-q8emb-f16-ts-ettin-17m` | ort-wasm | q8emb-f16 | ts-ettin-17m | ok | 686 | 45.4 | 45.1 / 347.9 / 507.5 | 45.0 / 95.8 · 348.4 / 569.7 | 24.93 | 16.7 | — | 2.0e-02 · 153/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-wasm-q8emb32-f16-ts-ettin-17m` | ort-wasm | q8emb32-f16 | ts-ettin-17m | ok | 691 | 45.5 | 45.2 / 348.1 / 508.3 | 45.1 / 95.4 · 352.8 / 569.9 | 26.34 | 38.9 | — | 8.9e-03 · 155/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-8bit-ts-ettin-17m` | ort-webgpu | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | — | — | — | — | the page did not post a result within 300 s; last stage: first-pass en-02 |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-fp32-ts-ettin-17m` | ort-webgpu | fp32 | ts-ettin-17m | ok | 1,774 | 19.6 | 18.9 / 73.8 / 119.2 | 18.2 / 31.1 · 84.8 / 137.9 | 73.24 | 89.2 | — | 4.8e-02 · 154/156 | — |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-int8-ts-ettin-17m` | ort-webgpu | int8 | ts-ettin-17m | failed | — | — | — / — / — | — | — | — | — | — | the page did not post a result within 300 s; last stage: first-pass en-02 |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-jsep-8bit-ts-ettin-17m` | ort-webgpu-jsep | 8bit | ts-ettin-17m | failed | — | — | — / — / — | — | 22.37 | 32.2 | — | — | Can't create a session. ERROR_CODE: 1, ERROR_MESSAGE: /mnt/azure_nvme_temp/_work/1/s/onnxruntime/contrib_ops/js/quantization/matmul_nbits.h: |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-jsep-fp32-ts-ettin-17m` | ort-webgpu-jsep | fp32 | ts-ettin-17m | failed | — | — | — / — / — | — | 73.09 | 41.7 | — | — | [WebGPU] Kernel "[SkipLayerNormalization] SkipLayerNormalization" failed. Error: Beta must be 1D |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-jsep-int8-ts-ettin-17m` | ort-webgpu-jsep | int8 | ts-ettin-17m | failed | — | — | — / — / — | — | 21.89 | 39.6 | — | — | [WebGPU] Kernel "[MultiHeadAttention] /bert/layers.0/attn/MultiHeadAttention" failed. Error: Mask not supported |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-q8emb32-f16-ts-ettin-17m` | ort-webgpu | q8emb32-f16 | ts-ettin-17m | ok | 1,205 | 23.3 | 18.0 / 77.5 / 121.9 | 17.7 / 28.8 · 89.4 / 133.9 | 28.22 | 43.8 | — | 4.8e-02 · 153/156 | — |
+
+- **Rodam:** o ONNX Runtime em Wasm (as cinco variantes) e em WebGPU com `fp32` e `q8emb32-f16`; o `@johnhenry` em CPU e em WebGPU (`f32` e `f16`). A forma de todas as respostas confere (`check_shape.py`).
+- **Não rodam:** o ONNX Runtime em WebGPU com `8bit` e `int8` — a página trava na segunda decisão (`first-pass en-02`) e só sai pelo tempo limite, depois de o ONNX Runtime avisar que parte dos nós não foi atribuída ao WebGPU; e o provedor WebGPU em JavaScript (JSEP), nas três variantes, que falha ao criar ou rodar a sessão: `8bit` — “Only 2b and 4b quantization is supported for MatMulNBits op”; `fp32` — `SkipLayerNormalization`: “Beta must be 1D”; `int8` — `MultiHeadAttention`: “Mask not supported”.
+- A validação da `T-01` está cumprida: a página roda no Chrome de desktop e produz o JSON; trocar de motor não muda nenhuma chamada (o motor vem da URL, por `engines/registry.js`); o que não roda aparece no JSON como falha, com a mensagem de erro.
+
 ## 3. Medição no emulador (`T-08`)
 
 > **No emulador Android do Mac mini** (arm64), não no do Acer: a rodada do Acer foi interrompida pela falta de memória do computador ([diário](execucao-autonoma.md#incidentes-de-medição)), e o dono pediu para seguir testando pelo Mac. Ambiente **[MEDIDO]**: Android Emulator 37.2.12, aparelho virtual `som-webcore-android36` (Pixel 6, Android 16 / API 36, `google_apis` arm64-v8a, 4 GB), GPU por software (`swiftshader_indirect`, como no Acer) e **Chrome 133.0.6943.137**, a mesma versão do emulador do Acer ([MACMINI.md, seção 7](../../bench/spike-mobile/MACMINI.md#7-emulador-android-no-mac-t-08)). O Chrome é zerado antes de cada execução. **Toda latência daqui é de emulador: indicativa, não é latência de celular.**
@@ -103,11 +127,11 @@ Em quatro execuções do `@johnhenry` (r1 e r2, no 17M e no 32M) o motor carrego
 - **Memória** (PSS máximo do Chrome): de 415 a 678 MB nas execuções que rodaram.
 - **Latência quente no emulador** (indicativa): p50 de 67,9 a 96,5 ms no ONNX Runtime 17M e de 366,7 a 408,2 ms no `@johnhenry` 17M. A p95 do ONNX Runtime 17M (de 433,9 a 698,7 ms) cai nas 4 entradas longas (346 a 523 tokens; p50 de 461,8 a 747,5 ms entre elas); só com as entradas de até 128 tokens, a p95 fica entre 142,7 e 228,2 ms.
 
-## 4. Teste do motor existente (`T-09`) — **em curso**
+## 4. Teste do motor existente (`T-09`)
 
 **Referência.** `.venv/Scripts/python.exe -I bench/spike-mobile/reference/run_reference.py ts-ettin-17m` (e `ts-ettin-32m`) regenera [`reference/ts-ettin-17m.json`](../../bench/spike-mobile/reference/ts-ettin-17m.json): o `dinah.py` do modelo, PyTorch FP32 em CPU, uma thread; duas execuções deram arquivos idênticos byte a byte.
 
-**Os artefatos, no ONNX Runtime nativo.** `run_reference.py --onnx <arquivo>` roda cada grafo no ONNX Runtime 1.32 (Python, CPU, uma thread) com as mesmas entradas e grava o resultado em `bench/results/2026-11-21-nativo-onnxruntime-cpu-*.json`. É o que separa o erro do **artefato** do erro do **motor do navegador**: a comparação Web × nativo, com o mesmo arquivo, fica para a retomada. Fronteira entre tamanho e paridade, TS-Ettin-17M (primeira visita ≈ pesos + 2,98 MB de runtime, tokenizador e configuração, pelos bytes medidos na página):
+**Os artefatos, no ONNX Runtime nativo.** `run_reference.py --onnx <arquivo>` roda cada grafo no ONNX Runtime 1.32 (Python, CPU, uma thread) com as mesmas entradas e grava o resultado em `bench/results/2026-11-21-nativo-onnxruntime-cpu-*.json`. É o que separa o erro do **artefato** do erro do **motor do navegador**; a comparação Web × nativo, com o mesmo arquivo, está nas seções 3 e 5 e logo abaixo. Fronteira entre tamanho e paridade, TS-Ettin-17M (no Chrome, primeira visita = pesos + 2.975.831 B de runtime, adaptador, tokenizador e configuração, medidos nas execuções da seção 3):
 
 | Variante | Pesos (B) | máx. \|Δp\| | Vencedora igual | Vencedora igual com margem ≥ 0,01 | Tolerância Q8 (Δp ≤ 0,03 e ≥ 99%) |
 |---|---:|---:|---:|---:|---|
@@ -120,7 +144,7 @@ Em quatro execuções do `@johnhenry` (r1 e r2, no 17M e no 32M) o motor carrego
 | `q8emb32-f16` | 23.368.916 | 8.9e-03 | 155/156 | 138/138 | cumpre |
 | `q8emb32-mm8-s16` | 19.036.424 | 2.7e-02 | 149/156 | 138/138 | não cumpre |
 
-Nenhum artefato testado cabe em 25 MB **e** cumpre a tolerância Q8 ao mesmo tempo: o único que cumpre (`q8emb32-f16`) leva a primeira visita a ≈ 26,3 MB. Em todos os de 8 bits por peso, as vencedoras trocadas são quase-empates — com margem da referência ≥ 0,01 a concordância é 138/138. O critério do portão não tem essa exceção e não foi mudado. No TS-Ettin-32M: `int8` → Δp 7,0e-1 e 105/156; `8bit` → Δp 4,5e-2 e 155/156.
+Nenhum artefato testado cabe em 25 MB **e** cumpre a tolerância Q8 ao mesmo tempo: o único que cumpre (`q8emb32-f16`) leva a primeira visita a 26,34 MB (medido no Chrome do Android, seção 3). Em todos os de 8 bits por peso, as vencedoras trocadas são quase-empates — com margem da referência ≥ 0,01 a concordância é 138/138. O critério do portão não tem essa exceção e não foi mudado. No TS-Ettin-32M: `int8` → Δp 7,0e-1 e 105/156; `8bit` → Δp 4,5e-2 e 155/156.
 
 **Web × nativo, forma e tokens:** no Chrome do Android (seção 3) e no Safari do iOS (seção 5), com o mesmo arquivo, o motor do navegador reproduz o nativo em todas as variantes, menos `int8`; a forma confere em todas as execuções; os tokens são idênticos aos da referência (156/156 com `debug=1`, nos dois motores).
 
@@ -137,20 +161,39 @@ Nenhum artefato testado cabe em 25 MB **e** cumpre a tolerância Q8 ao mesmo tem
 
 Nenhuma falha e nenhuma aba recarregada ou travada nas seis: o critério “aguenta” do portão GT é cumprido por todas. O critério de memória da `T-09` (heap JS no fim ≤ início + 1 MiB, fixado na seção 1) é cumprido pelo ONNX Runtime em todas as variantes (no pior caso, +0,76 MiB no `q8emb-f16`) e **não** pelo `@johnhenry` (+7,88 MiB: o heap subiu de 90,27 para 98,53 MB, passando por 89,45, 96,54 e 96,41 MB a cada 50 decisões). O heap é lido sem forçar coleta de lixo — as quedas grandes do ONNX Runtime (de 152,45 para 15,52 MB no `fp32`) são coletas no meio do caminho, e a subida do `@johnhenry` pode ser coleta ainda não feita —, mas o critério não tem essa exceção e não foi mudado.
 
-**Veredito de corretude da `T-09`**, por variante do 17M **[MEDIDO]**:
+**Os caminhos WebGPU** só existem no desktop (seção 2): no celular, nem o emulador nem o simulador entregam WebGPU. Com o mesmo arquivo, contra o nativo e contra a referência (`web_vs_native.py`):
+
+| Execução | Variante | Modelo | Web × nativo: máx. \|Δp\| · vencedora igual | Nativo × referência | Web × referência |
+|---|---|---|---|---|---|
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-fp32-ts-ettin-17m` | fp32 | ts-ettin-17m | 4.8e-02 · 154/156 | 1.0e-06 · 156/156 | 4.8e-02 · 154/156 |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-q8emb32-f16-ts-ettin-17m` | q8emb32-f16 | ts-ettin-17m | 4.9e-02 · 154/156 | 8.9e-03 · 155/156 | 4.8e-02 · 153/156 |
+
+O provedor WebGPU do ONNX Runtime erra **mesmo com os pesos FP32**: máx. |Δp| 4,8e-2 contra o nativo com o mesmo arquivo, que fica a 1,0e-6 da referência — o erro é do motor, não do artefato. Com os quantizados publicados ele trava, e o JSEP não cria a sessão. O `@johnhenry` em WebGPU acerta com os pesos FP32 (1,9e-6) e, em FP16, fica em 1,7e-3, acima da tolerância de FP16 (1e-3), com a vencedora igual nas 156 perguntas. **200 decisões seguidas no desktop** (`endurance.py`), nos caminhos WebGPU que rodam:
+
+| Execução | Motor | Variante | Estado | Decisões ok / pedidas | Falhas | Heap JS início → fim (MB) | Diferença (MiB) | Sem crescimento (≤ 1 MiB)? | Heap preciso? | PSS máx. (MB) | p50 / p95 (ms) |
+|---|---|---|---|---:|---:|---|---:|---|---|---:|---:|
+| `2026-11-21-desktop-macmini-chrome157-jh-webgpu-f32-ts-ettin-17m-resistencia-200` | jh-webgpu | f32 | ok | 200 / 200 | 0 | 100.70 → 153.22 | +50.09 | **não** | sim | — | 6.8 / 28.5 |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-fp32-ts-ettin-17m-resistencia-200` | ort-webgpu | fp32 | ok | 200 / 200 | 0 | 92.36 → 16.52 | -72.32 | sim | sim | — | 17.9 / 80.0 |
+| `2026-11-21-desktop-macmini-chrome157-ort-webgpu-q8emb32-f16-ts-ettin-17m-resistencia-200` | ort-webgpu | q8emb32-f16 | ok | 200 / 200 | 0 | 40.52 → 51.40 | +10.38 | **não** | sim | — | 17.8 / 79.8 |
+
+**Veredito de corretude da `T-09`**, por variante do 17M — Wasm e CPU no emulador Android, WebGPU no desktop **[MEDIDO]**:
 
 | Motor e variante | Acerta igual (tolerância da variante)? | Forma | 200 decisões sem falha | Sem crescimento de memória |
 |---|---|---|---|---|
-| ONNX Runtime `fp32` | **sim** — máx. \|Δp\| 1,6e-6, 156/156 | igual à especificação | sim | sim |
-| ONNX Runtime `q8emb32-f16` | **sim** — 8,9e-3 e 155/156 (99,4%) | igual | sim | sim |
-| ONNX Runtime `q8emb-f16` | não — 153/156 (98,1% < 99%) | igual | sim | sim |
-| ONNX Runtime `8bit` (publicado) | não — 4,5e-2 > 0,03 | igual | sim | sim |
-| ONNX Runtime `int8` (publicado) | não — 4,1e-1 | igual | sim | sim |
-| `@johnhenry` `f32` | **sim** — 1,1e-6, 156/156 | igual | sim | **não** (+7,88 MiB) |
+| ONNX Runtime Wasm `fp32` | **sim** — máx. \|Δp\| 1,6e-6, 156/156 | igual à especificação | sim | sim |
+| ONNX Runtime Wasm `q8emb32-f16` | **sim** — 8,9e-3 e 155/156 (99,4%) | igual | sim | sim |
+| ONNX Runtime Wasm `q8emb-f16` | não — 153/156 (98,1% < 99%) | igual | sim | sim |
+| ONNX Runtime Wasm `8bit` (publicado) | não — 4,5e-2 > 0,03 | igual | sim | sim |
+| ONNX Runtime Wasm `int8` (publicado) | não — 4,1e-1 | igual | sim | sim |
+| `@johnhenry` CPU `f32` | **sim** — 1,1e-6, 156/156 | igual | sim | **não** (+7,88 MiB) |
+| ONNX Runtime WebGPU `fp32` (desktop) | **não** — 4,8e-2; o mesmo arquivo dá 1,0e-6 no nativo | igual | sim | sim |
+| ONNX Runtime WebGPU `q8emb32-f16` (desktop) | **não** — 4,8e-2 | igual | sim | **não** (+10,38 MiB) |
+| ONNX Runtime WebGPU `8bit` e `int8` (desktop) | não roda — trava na segunda decisão | — | — | — |
+| ONNX Runtime WebGPU JSEP, as três (desktop) | não roda — a sessão falha | — | — | — |
+| `@johnhenry` WebGPU `f32` (desktop) | **sim** — 1,9e-6, 156/156 | igual | sim | **não** (+50,09 MiB) |
+| `@johnhenry` WebGPU `f16` (desktop) | não — 1,7e-3 > 1e-3 (156/156) | igual | não medido | não medido |
 
-**Em uma frase:** o ONNX Runtime Web responde certo no navegador quando o artefato é bom — em `fp32` e na `q8emb32-f16`, com forma idêntica e sem falhas nem crescimento de memória em 200 decisões —, e o erro das variantes publicadas é do artefato, não do motor; mas a única variante de 8 bits que acerta leva a primeira visita a 26,34 MB no Chrome do Android, acima dos 25 MB do portão, e a que cabe (`q8emb-f16`, 24,93 MB) erra a vencedora em 3 das 156 perguntas.
-
-**Falta:** as mesmas medidas nos caminhos WebGPU, que só existem no desktop (Chrome do macOS, com a `T-01`).
+**Em uma frase:** o ONNX Runtime Web responde certo no navegador quando o artefato é bom — em `fp32` e na `q8emb32-f16`, com forma idêntica e sem falhas nem crescimento de memória em 200 decisões —, e o erro das variantes publicadas é do artefato, não do motor; mas a única variante de 8 bits que acerta leva a primeira visita a 26,34 MB no Chrome do Android, acima dos 25 MB do portão, e a que cabe (`q8emb-f16`, 24,93 MB) erra a vencedora em 3 das 156 perguntas. No WebGPU, que só existe no desktop, o provedor do ONNX Runtime erra mesmo com os pesos FP32 e trava com os quantizados; o `@johnhenry` acerta em FP32, com 68 MB de pesos.
 
 ## 5. Safari do iOS no simulador (complemento da `T-08`)
 

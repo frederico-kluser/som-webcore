@@ -6,7 +6,8 @@ at the end of the N decisions, and the criterion fixed in docs/reports/teste-mob
     python bench/spike-mobile/reference/endurance.py bench/results/<run>-resistencia-200-r1.json [...]
 
 The heap is exact only with Chrome's --enable-precise-memory-info (otherwise Chrome rounds it); the
-runner records that flag in device.chromeFlags. Markdown table; no number is typed by hand.
+runners record the flags (Android: device.chromeFlags; desktop: browser.flags). Markdown table; no number
+is typed by hand.
 """
 
 from __future__ import annotations
@@ -47,8 +48,9 @@ def main(argv: list[str]) -> int:
             diff_cell = f"{diff:+.2f}"
         else:
             heap, verdict, diff_cell = "—", "não medido", "—"
-        flags = ((run.get("device") or {}).get("chromeFlags") or "")
-        precise = "sim" if "--enable-precise-memory-info" in flags else "não"
+        # Android runner: device.chromeFlags (a string); desktop runner: browser.flags (a list).
+        flags = ((run.get("device") or {}).get("chromeFlags") or "") + " " + " ".join((run.get("browser") or {}).get("flags") or [])
+        precise = "sim" if "--enable-precise-memory-info" in flags else "não registrado"
         samples = (run.get("androidMemory") or {}).get("samples") or []
         pss = max((sum(s["pss"].values()) for s in samples), default=None)
         status = run.get("status", "—")
