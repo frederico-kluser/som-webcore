@@ -5,8 +5,9 @@
 //   node bench/spike-mobile/run-desktop.mjs --browser canary --result 2026-11-21-surface-canary \
 //        --url "http://localhost:8377/surface.html?name=2026-11-21-surface-canary" [--click "#go"]
 //
-// --browser   stable | canary | edge | <path to the executable>          (default: canary)
-// --profile   user-data-dir (default: %TEMP%/som-decisions-<browser>) — never the everyday profile
+// --browser   stable | canary | edge | edge-canary | <path to the executable> (default: canary);
+//             Windows paths, or on macOS the apps in /Volumes/Ext2TB/Applications or /Applications
+// --profile   user-data-dir (default: <tmpdir>/som-decisions-<browser>) — never the everyday profile
 // --fresh     delete the profile first
 // --headless  run headless (default: a real, visible window)
 // --flags     extra command-line flags (default adds --enable-features=AIDecisionModelAPI)
@@ -30,7 +31,17 @@ const opt = (name, fallback) => { const i = argv.indexOf(`--${name}`); return i 
 const flag = (name) => argv.includes(`--${name}`);
 
 const LOCAL = process.env.LOCALAPPDATA || "";
-const BROWSERS = {
+// macOS: apps in /Applications, or on the Mac mini's external disk (MACMINI.md: everything new lives there).
+const macApp = (name, binary = name) => {
+  const app = [join("/Volumes/Ext2TB/Applications", `${name}.app`), join("/Applications", `${name}.app`)].find(existsSync) ?? join("/Applications", `${name}.app`);
+  return join(app, "Contents", "MacOS", binary);
+};
+const BROWSERS = process.platform === "darwin" ? {
+  stable: macApp("Google Chrome"),
+  canary: macApp("Google Chrome Canary"),
+  edge: macApp("Microsoft Edge"),
+  "edge-canary": macApp("Microsoft Edge Canary"),
+} : {
   stable: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   canary: join(LOCAL, "Google", "Chrome SxS", "Application", "chrome.exe"),
   edge: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -148,7 +159,7 @@ async function closeBrowser() {
 
 const flags = [
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--no-first-run", "--no-default-browser-check",
-  "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
 ];
 if (!flag("no-api")) flags.push("--enable-features=AIDecisionModelAPI");
 if (flag("headless")) flags.push("--headless=new");
@@ -157,7 +168,12 @@ if (extra) flags.push(...extra.split(/\s+/).filter(Boolean));
 
 const before = mtime();
 console.log(`launch ${exe}\n  ${flags.join(" ")}\n  ${url}`);
-const child = spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
+// macOS, with a window: through LaunchServices (`open -n -a`), so a browser started from an SSH
+// session opens in the logged-in user's desktop session. The browser is closed through CDP.
+const app = process.platform === "darwin" && !flag("headless") ? exe.slice(0, exe.indexOf(".app/") + 4) : null;
+const child = app
+  ? spawn("open", ["-n", "-a", app, "--args", ...flags, url], { stdio: "ignore" })
+  : spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
 child.on("error", (e) => fail(`não foi possível abrir o navegador (${e.message})`, "confira o caminho"));
 
 const collector = flag("console") ? await collectConsole().catch(() => null) : null;
