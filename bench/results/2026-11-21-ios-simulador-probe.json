@@ -1,0 +1,93 @@
+{
+  "kind": "environment-probe",
+  "startedAt": "2026-11-22T01:07:30.712Z",
+  "page": "http://localhost:8377/probe.html?name=2026-11-21-ios-simulador-probe",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
+    "platform": "iPhone",
+    "language": "en-GB",
+    "hardwareConcurrency": 8,
+    "deviceMemory": null,
+    "isSecureContext": true,
+    "crossOriginIsolated": false,
+    "screen": {
+      "width": 402,
+      "height": 874,
+      "devicePixelRatio": 3
+    },
+    "connection": null,
+    "hasDecisionModel": false,
+    "wasm": {
+      "simd": true,
+      "threads": false,
+      "relaxedSimd": false,
+      "jspi": true,
+      "sharedArrayBuffer": false
+    },
+    "float16Array": true,
+    "performanceMemory": null,
+    "measureUserAgentSpecificMemory": false,
+    "webgl": {
+      "vendor": "Apple Inc.",
+      "renderer": "Apple GPU"
+    },
+    "webgpu": {
+      "hasNavigatorGpu": true,
+      "preferredCanvasFormat": "bgra8unorm",
+      "wgslLanguageFeatures": [
+        "packed_4x8_integer_dot_product",
+        "pointer_composite_access",
+        "readonly_and_readwrite_storage_textures",
+        "texture_formats_tier1",
+        "unrestricted_pointer_parameters"
+      ],
+      "high-performance": {
+        "adapter": false
+      },
+      "low-power": {
+        "adapter": false
+      }
+    }
+  },
+  "finishedAt": "2026-11-22T01:07:30.752Z",
+  "device": {
+    "simulator": {
+      "name": "som-webcore iPhone 18 Pro",
+      "udid": "4890F8D2-CE61-44D4-8758-F50E213389B3",
+      "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-0",
+      "runtimeVersion": "27.0",
+      "runtimeBuild": "24A434"
+    },
+    "mobileSafari": {
+      "version": "27.0",
+      "build": "8625.1.29.10.29"
+    },
+    "xcode": "Xcode 27.1 Build version 27A9269",
+    "macOS": "27.2",
+    "hostModel": "Macmini9,1",
+    "dataErased": true,
+    "attempts": [
+      {
+        "attempt": 1,
+        "readyPageOpens": 2,
+        "pageStarted": true
+      }
+    ]
+  },
+  "iosMemory": {
+    "method": "RSS on the Mac of the device's com.apple.WebKit WebContent, GPU and Networking processes (ps; matched by SIMULATOR_UDID in their environment), bytes",
+    "samples": [
+      {
+        "t": 0,
+        "rss": {
+          "WebContent#76304": 204226560,
+          "GPU#76305": 140083200,
+          "Networking#76306": 129499136,
+          "WebContent#76331": 228933632,
+          "WebContent#76391": 127008768
+        }
+      }
+    ]
+  }
+}

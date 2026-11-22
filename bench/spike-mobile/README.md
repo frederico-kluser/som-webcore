@@ -50,6 +50,9 @@ Probabilidades: `softmax(logits / temperatura)`, com a temperatura do `config.js
 | [`export_onnx.py`](reference/export_onnx.py) | exporta o ONNX FP32 do checkpoint (para medir o motor sem erro de quantização) |
 | [`compare.py`](reference/compare.py) | identidade dos tokens, maior \|Δp\|, concordância da vencedora, \|Δ expectedScore\| e \|Δ confidence\| |
 | [`check_shape.py`](reference/check_shape.py) | forma de cada resposta contra a [especificação](../../docs/spec/decisions-api-surface.md) |
+| [`summarize.py`](reference/summarize.py) | tabela das execuções: estado, tempos, bytes, memória e paridade, direto dos JSON |
+| [`repeatability.py`](reference/repeatability.py) | p50 quente de cada repetição de uma configuração e a maior diferença entre elas (limite de 10% da `T-08`) |
+| [`web_vs_native.py`](reference/web_vs_native.py) | o ONNX Runtime Web contra o ONNX Runtime nativo com o mesmo arquivo de pesos: separa o erro do artefato do erro do motor do navegador |
 
 ```bash
 .venv/Scripts/python.exe -I bench/spike-mobile/reference/run_reference.py ts-ettin-17m
@@ -66,6 +69,7 @@ python bench/spike-mobile/reference/check_shape.py bench/results/<execução>.js
 | [`serve.mjs`](serve.mjs) | servidor local em `http://localhost:8377`: arquivos, modelos do cache, `POST /api/results` grava em `bench/results/` |
 | [`surface.html`](surface.html) | captura da superfície nativa (membros, validação, `availability()`, forma do resultado) |
 | [`probe.html`](probe.html) · [`env.js`](env.js) | sonda do ambiente: WebGPU, WebAssembly, isolamento de origem |
-| [`run-desktop.mjs`](run-desktop.mjs) | abre uma página no Chrome de desktop com perfil próprio (`%TEMP%\som-decisions-<navegador>`) e espera o resultado |
-| [`run-android.mjs`](run-android.mjs) · [`EMULADOR.md`](EMULADOR.md) | o mesmo no Chrome do emulador Android, com amostras de memória |
-| [`MACMINI.md`](MACMINI.md) | plano e procedimento no Mac mini: Safari do simulador de iPhone e do macOS |
+| [`run-desktop.mjs`](run-desktop.mjs) · [`matrix-desktop.sh`](matrix-desktop.sh) | abre uma página no Chrome de desktop (Windows ou macOS) com perfil próprio (`<tmpdir>/som-decisions-<navegador>`) e espera o resultado |
+| [`run-android.mjs`](run-android.mjs) · [`matrix-emulador.sh`](matrix-emulador.sh) · [`EMULADOR.md`](EMULADOR.md) | o mesmo no Chrome do emulador Android, com amostras de memória |
+| [`run-ios.mjs`](run-ios.mjs) · [`matrix-ios.sh`](matrix-ios.sh) · [`ready.html`](ready.html) | o mesmo no Safari do simulador de iOS (macOS), com o aparelho apagado antes de cada execução |
+| [`MACMINI.md`](MACMINI.md) | plano e procedimento no Mac mini: Safari do simulador de iPhone, emulador Android e Chrome do macOS |

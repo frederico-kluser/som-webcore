@@ -65,13 +65,20 @@ function chromeMemory() {
   return processes;
 }
 
-// Command line of the emulator process on this computer (Windows), to record the GPU mode in use.
+// Command line of the emulator process on this computer, to record the GPU mode in use.
 function emulatorCommandLine() {
-  if (process.platform !== "win32" || !serial.startsWith("emulator-")) return null;
+  if (!serial.startsWith("emulator-")) return null;
   try {
-    const out = execFileSync("powershell", ["-NoProfile", "-Command",
-      "Get-CimInstance Win32_Process -Filter \"name like 'qemu-system%'\" | Select-Object -ExpandProperty CommandLine"], { encoding: "utf8", timeout: 30000 }).trim();
-    return out || null;
+    if (process.platform === "win32") {
+      const out = execFileSync("powershell", ["-NoProfile", "-Command",
+        "Get-CimInstance Win32_Process -Filter \"name like 'qemu-system%'\" | Select-Object -ExpandProperty CommandLine"], { encoding: "utf8", timeout: 30000 }).trim();
+      return out || null;
+    }
+    // macOS and Linux: the qemu process of this serial's virtual device (`adb emu avd name`).
+    const avd = adb("emu", "avd", "name").split(/\r?\n/)[0].trim();
+    const lines = execFileSync("ps", ["-axww", "-o", "command="], { encoding: "utf8", timeout: 30000 }).split("\n")
+      .filter((line) => line.includes("qemu-system") && line.includes(avd));
+    return lines.join("\n") || null;
   } catch { return null; }
 }
 
