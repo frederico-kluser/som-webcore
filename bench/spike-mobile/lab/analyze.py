@@ -234,6 +234,13 @@ def main(argv: list[str]) -> int:
         # The lab reopening itself cross-origin isolated also hides the page for a moment: not the user.
         reopen = [when(e) for e in logs if e.get("kind") == "console" and "isolamento de origem" in str(e.get("text"))]
         hidden = [e for e in hidden if not any(r and when(e) and 0 <= (when(e) - r).total_seconds() <= 10 for r in reopen)]
+        # Each step is a navigation: a page that goes away is hidden first. Hidden followed by the
+        # page's own pagehide within 3 s is the lab moving on, not the screen going off.
+        leaving = defaultdict(list)
+        for e in logs:
+            if e.get("kind") == "lifecycle" and e.get("text") == "pagehide" and when(e):
+                leaving[e.get("source")].append(when(e))
+        hidden = [e for e in hidden if not any(when(e) and -3 <= (t - when(e)).total_seconds() <= 3 for t in leaving[e.get("source")])]
         say(f"**Ciclo de vida:** a página ficou oculta {len(hidden)} vez(es)" + (" — as medições dessas etapas podem ter sido estranguladas pelo navegador" if hidden else "") + ".")
         for e in hidden[:10]:
             say(f"- {e.get('at')} em `{e.get('source')}`")

@@ -2,7 +2,7 @@
 # Device lab: serves the test page to a real device (iPhone, Android) and prints the QR codes to open it.
 # Runs on the Mac mini (MACMINI.md, section 9), from the repository clone on the external disk.
 #
-#   bash bench/spike-mobile/lab/start-lab.sh [--label iphone] [--perfil completo|rapido|extra] [--modo local|local-http|tunel] [--porta 8390]
+#   bash bench/spike-mobile/lab/start-lab.sh [--label iphone] [--perfil completo|rapido|onnx|extra] [--modo local|local-http|tunel] [--porta 8390]
 #
 # --modo local (default): HTTPS on the Mac's LAN address, with a certificate from a local CA kept on
 #   the Mac (/Volumes/Ext2TB/State/som-webcore/lab-ca; its key never enters the repository). The
@@ -30,7 +30,7 @@ while [ $# -gt 0 ]; do
     *) echo "Erro: opção desconhecida $1 — Solução: use --label, --perfil, --modo ou --porta" >&2; exit 2 ;;
   esac
 done
-case "$PROFILE" in rapido|completo|extra) ;; *) echo "Erro: perfil $PROFILE — Solução: rapido, completo ou extra" >&2; exit 2 ;; esac
+case "$PROFILE" in rapido|completo|onnx|extra) ;; *) echo "Erro: perfil $PROFILE — Solução: rapido, completo, onnx ou extra" >&2; exit 2 ;; esac
 case "$MODE" in local|local-http|tunel) ;; *) echo "Erro: modo $MODE — Solução: local, local-http ou tunel" >&2; exit 2 ;; esac
 LABEL="$(echo "$LABEL" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed 's/-*$//')"
 SESSION="$(date +%F)-$LABEL-$(date +%H%M)"

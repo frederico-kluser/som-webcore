@@ -54,6 +54,21 @@ const PLANS = {
     { id: "sonda-coi", url: "/probe.html?coi=1", timeout: 90 },
   ],
 };
+// Only the ONNX Runtime steps after the third of `completo` (on the iPhone they hit the tab's Wasm
+// memory ceiling before the new-tab pause existed), the q8emb32-f16 ones first.
+PLANS.onnx = [
+  { id: "sonda", url: "/probe.html", timeout: 90 },
+  { id: "ort-wasm-q8emb32-f16-17m", url: PAGE("ort-wasm", "q8emb32-f16") },
+  { id: "ort-webgpu-q8emb32-f16-17m", url: PAGE("ort-webgpu", "q8emb32-f16") },
+  { id: "ort-webgpu-fp32-17m", url: PAGE("ort-webgpu", "fp32") },
+  { id: "ort-wasm-q8emb32-f16-17m-resistencia-200", url: PAGE("ort-wasm", "q8emb32-f16", "ts-ettin-17m", "&warm=0&endurance=200"), timeout: 600 },
+  { id: "ort-wasm-q8emb-f16-17m", url: PAGE("ort-wasm", "q8emb-f16") },
+  { id: "ort-wasm-8bit-17m-debug", url: PAGE("ort-wasm", "8bit", "ts-ettin-17m", "&debug=1&warm=0") },
+  { id: "ort-wasm-int8-32m", url: PAGE("ort-wasm", "int8", "ts-ettin-32m") },
+  { id: "ort-wasm-8bit-32m", url: PAGE("ort-wasm", "8bit", "ts-ettin-32m") },
+  { id: "ort-webgpu-8bit-17m", url: PAGE("ort-webgpu", "8bit"), timeout: HANG },
+  { id: "ort-webgpu-int8-17m", url: PAGE("ort-webgpu", "int8"), timeout: HANG },
+];
 PLANS.extra = [
   ...PLANS.completo.slice(0, -1),
   { id: "ort-webgpu-jsep-fp32-17m", url: PAGE("ort-webgpu-jsep", "fp32"), timeout: HANG },
@@ -133,6 +148,41 @@ function goToStep(step) {
   location.href = `${step.url}${step.url.includes("?") ? "&" : "?"}${query}`;
 }
 
+// On the iPhone (Safari 26.6.3, 2026-11-22) the 4th ONNX Runtime session in the same tab failed with
+// "RangeError: Out of memory" — in iframes and in pages of their own alike, Wasm and WebGPU alike
+// (both run the Wasm runtime); the @johnhenry engine, plain JavaScript, kept working. The tab's
+// process does not give the Wasm memory of earlier pages back. So after ORT_PER_TAB such sessions the
+// lab asks for a tap and continues in a new tab (noopener: a new browsing context group, which Safari
+// can put in a new process); the tap also renews the screen wake lock. `?ortPorAba=N` overrides it.
+const ORT_PER_TAB = Number(params.get("ortPorAba") || 3);
+const usesWasmRuntime = (step) => /engine=ort-/.test(step.url || "");
+function ortSessionsInTab() {
+  try { return Number(sessionStorage.getItem("somLabOrtInTab") || 0); } catch { return 0; }
+}
+function countOrtSessionInTab() {
+  try { sessionStorage.setItem("somLabOrtInTab", String(ortSessionsInTab() + 1)); } catch { /* private mode: no limit */ }
+}
+function askForNewTab(step) {
+  running = false;
+  log(`pausa antes de ${step.id}: ${ortSessionsInTab()} sessões do ONNX Runtime nesta aba`);
+  console.warn(`[lab] new tab needed before ${step.id} (${ortSessionsInTab()} ONNX Runtime sessions in this tab)`);
+  $("status").textContent = "Toque para continuar numa aba nova (o Safari precisa de memória nova)";
+  const button = $("start");
+  button.textContent = "Continuar numa aba nova";
+  button.hidden = false;
+  const next = `/lab/lab.html?continue=1${auto ? "&auto=1" : ""}${params.has("ortPorAba") ? `&ortPorAba=${ORT_PER_TAB}` : ""}`;
+  button.onclick = () => {
+    window.open(next, "_blank", "noopener");
+    button.hidden = true;
+    $("status").textContent = "Continua na aba nova: esta aba pode ser fechada.";
+  };
+  // Automatic runs (simulator tests) have no tap for a pop-up: they go on in this tab, with a fresh count.
+  if (auto) {
+    try { sessionStorage.removeItem("somLabOrtInTab"); } catch { /* ignore */ }
+    location.href = next;
+  }
+}
+
 // Back from a step page: what did it leave on the server?
 async function settleRunningStep() {
   const step = state.steps.find((s) => s.status === "running");
@@ -174,6 +224,11 @@ async function run() {
   state.startedAt ??= new Date().toISOString();
   for (const step of state.steps) {
     if (step.status !== "pending") continue;
+    if (usesWasmRuntime(step) && ortSessionsInTab() >= ORT_PER_TAB) {
+      askForNewTab(step);
+      return;
+    }
+    if (usesWasmRuntime(step)) countOrtSessionInTab();
     current = { step };
     step.status = "running";
     step.startedAt = new Date().toISOString();
