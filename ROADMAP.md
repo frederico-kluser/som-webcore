@@ -64,8 +64,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 80 (14 feitos) · **arestas:** 124.
-- **Esforço relativo:** 29/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 80 (17 feitos) · **arestas:** 124.
+- **Esforço relativo:** 31/279 pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro (117 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-08` → `DT-01` → `T-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `P-07` → `P-08` → `P-09` → `P-10` → `P-13` → `P-14` → `G1` → `A-03` → `A-05` → `A-10` → `G2` → `B-01` → `B-02` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -322,9 +322,9 @@ Uma **bifurcação** é um ponto em que o caminho se divide e a escolha é do us
 | `DT-02` | **Bifurcação DT-02** — o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo? | `T-03` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; se o modelo ficar disponível, fecha como “não se aplica” | — | feito |
 | `DT-01` | **Bifurcação DT-01** — o emulador basta, ou medimos em aparelho real? | `T-08`, `T-09` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | feito |
 | `T-02` | **Medição em celulares reais** — rodar a página em pelo menos um Android intermediário, um Android de entrada e um iPhone | `DT-01` (se aparelho real) | `bench/results/` | pelo menos 3 aparelhos; modelos de 17M e de 32M; cada medição repetida duas vezes; aparelho, sistema e navegador declarados | S | descartada |
-| `T-10` | **Análise da janela** — listar as limitações do motor existente com modelos de decisão, e as dos próprios modelos, e dizer quais um motor nosso resolveria | `DT-02`, `DT-01`, `T-02` | seção do relatório | cada limitação com evidência medida, causa provável e se um fork ou um motor próprio a resolve; limitações de modelo separadas das de motor | S | a fazer |
-| `T-04` | **Relatório e veredito** — o motor existente é satisfatório? Anotar o veredito, os limites e a janela | `T-10` | `docs/reports/teste-mobile.md` | veredito explícito contra cada critério de GT; dados brutos publicados; todo número rotulado; o que não se sabe, listado | S | a fazer |
-| `GT` | **Portão GT** — motor existente ou motor nosso? | `T-04` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; critérios de [GT](#gt) | — | a fazer |
+| `T-10` | **Análise da janela** — listar as limitações do motor existente com modelos de decisão, e as dos próprios modelos, e dizer quais um motor nosso resolveria | `DT-02`, `DT-01`, `T-02` | seção do relatório | cada limitação com evidência medida, causa provável e se um fork ou um motor próprio a resolve; limitações de modelo separadas das de motor | S | feito |
+| `T-04` | **Relatório e veredito** — o motor existente é satisfatório? Anotar o veredito, os limites e a janela | `T-10` | `docs/reports/teste-mobile.md` | veredito explícito contra cada critério de GT; dados brutos publicados; todo número rotulado; o que não se sabe, listado | S | feito |
+| `GT` | **Portão GT** — motor existente ou motor nosso? | `T-04` | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida; critérios de [GT](#gt) | — | feito |
 
 <!-- dag:begin:T -->
 ```mermaid
@@ -340,8 +340,8 @@ flowchart LR
     DT01{"DT-01 · o emulador basta, ou medimos em aparelho real?"}:::fork
     DT02{"DT-02 · o modelo embutido do Chrome não fica disponível nesta máquina: como comparar com o nativo?"}:::fork
     T02["T-02 · Medição em celulares reais"]:::off
-    T10["T-10 · Análise da janela"]:::todo
-    T04["T-04 · Relatório e veredito"]:::todo
+    T10["T-10 · Análise da janela"]:::done
+    T04["T-04 · Relatório e veredito"]:::done
     GT{{"GT · motor existente ou motor nosso?"}}:::gate
     G0 -.-> T05
     G0 -.-> T06
@@ -717,8 +717,8 @@ Cada decisão abaixo vira uma ADR em `docs/adr/` quando a atividade corresponden
 | `P-08` | **Kernels WGSL v0** — normalização, GEMM, atenção com RoPE e janela local, GeGLU, residual e coleta dos `[OPT]` | `P-07` | `shaders/*.wgsl` e um teste de paridade por kernel | cada kernel com erro ≤ 1e-4 contra `som-ref`; aprovado em ≥ 2 backends nativos e num adaptador de software na CI; usa só WebGPU core | L | a fazer |
 | `P-09` | **Motor nativo ponta a ponta** — device, buffers pré-alocados, pipelines, agendamento por camada, readback e CLI | `P-08` | crates `som-core` e `som-cli` | `Δp` ≤ 1e-4 contra `som-ref` em todo o corpus; nenhum buffer ou bind group criado por decisão depois do aquecimento; 100 execuções repetidas idênticas bit a bit no mesmo dispositivo | M | a fazer |
 | `P-10` | **Alvo web** — `wasm32` + WebGPU em Web Worker; API mínima `load()` e `decide()` | `P-05`, `P-09` | crate `som-web`, `packages/core` (mínimo) | `Δp` ≤ 1e-3 contra a referência no Chrome estável; decisões não bloqueiam a thread principal; teste automatizado em navegador na CI | M | a fazer |
-| `L-01` | **Integração do motor existente** — `DecisionModel` idêntico ao do Chrome, com o motor escolhido por baixo | `GT` (se motor existente), `P-02`, `P-04` | `packages/core` | paridade com a referência; a página de conformidade roda sem alteração; não substitui a API nativa quando ela existe | M | a fazer |
-| `L-02` | **Carga leve em celular** — Worker, cache dos pesos e download mínimo sobre o motor existente | `L-01` | `packages/core` | primeira visita dentro do limite de download de GT; segunda visita sem rede; decisões fora da thread principal | M | a fazer |
+| `L-01` | **Integração do motor existente** — `DecisionModel` idêntico ao do Chrome, com o motor escolhido por baixo | `GT` (se motor existente), `P-02`, `P-04` | `packages/core` | paridade com a referência; a página de conformidade roda sem alteração; não substitui a API nativa quando ela existe | M | descartada |
+| `L-02` | **Carga leve em celular** — Worker, cache dos pesos e download mínimo sobre o motor existente | `L-01` | `packages/core` | primeira visita dentro do limite de download de GT; segunda visita sem rede; decisões fora da thread principal | M | descartada |
 | `DP-01` | **Bifurcação DP-01** — o motor nosso nasce de um fork do motor leve existente ou do zero? | `GT` (se motor nosso) | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | a fazer |
 | `K-01` | **Base do fork** — licença, o que sai e o que muda no motor leve existente | `DP-01` (se fork) | `docs/reports/base-do-fork.md` | a licença permite o fork e a redistribuição; lista do que será removido e do que fecha a janela de `T-10`; plano para acompanhar o projeto original | S | a fazer |
 | `K-02` | **Fork enxuto para modelos de decisão** — remover o que esses modelos não usam e corrigir a limitação que abriu a janela | `K-01`, `P-04` | fork publicado, com testes de paridade | paridade com a referência nas tolerâncias de G1; a limitação apontada em `T-10` está resolvida e medida; os critérios de GT são cumpridos | L | a fazer |
@@ -742,11 +742,11 @@ flowchart LR
     P06["P-06 · Contêiner de pesos v0"]:::opt
     K01["K-01 · Base do fork"]:::opt
     P05["P-05 · Tokenizador e empacotamento"]:::opt
-    L01["L-01 · Integração do motor existente"]:::opt
+    L01["L-01 · Integração do motor existente"]:::off
     P12["P-12 · Baseline ONNX Runtime Web"]:::todo
     P07["P-07 · Referência CPU em Rust"]:::todo
     K02["K-02 · Fork enxuto para modelos de decisão"]:::todo
-    L02["L-02 · Carga leve em celular"]:::todo
+    L02["L-02 · Carga leve em celular"]:::off
     P08["P-08 · Kernels WGSL v0"]:::todo
     P09["P-09 · Motor nativo ponta a ponta"]:::todo
     P10["P-10 · Alvo web"]:::todo

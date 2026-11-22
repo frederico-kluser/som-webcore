@@ -290,3 +290,53 @@ O que essas tabelas mostram **[MEDIDO]**:
 O modelo nativo é outro (EmbeddingGemma, backend `embedding-gemma-v1`), então não há paridade a medir, só concordância: a vencedora do nativo é a da referência do TS-Ettin em 67 das 156 perguntas (43/80 em inglês, 24/76 em português; `compare.py`). A primeira visita é só a página: o modelo já está no navegador.
 
 **Forma: a nossa superfície contra a nativa** (`compare_surface.py`). O polyfill ([`…-surface-macmini-polyfill-ort-wasm-8bit.json`](../../bench/results/2026-11-21-surface-macmini-polyfill-ort-wasm-8bit.json), no Chrome 157) contra o nativo depois do download: membros estáticos e do protótipo, `length` 0 e `toStringTag` iguais; 72 resultados de validação comparados, **2 diferenças**, as duas na opção `devTrialBackend` — `"language-model"` dá `"unavailable"` no nativo e o polyfill ignora a opção; um valor inválido dá `TypeError` no nativo. É a opção que só existe no Canary 160, marcada como *Dev Trial Only* e “not slated for the final API shape”, deixada **de fora** da especificação e das declarações de propósito na `T-05`: a diferença está justificada, e nada na especificação precisou mudar. Entre o Canary do Windows e o do macOS, 0 diferenças em 72, antes e depois do download.
+
+## 7. Análise da janela (`T-10`)
+
+**Limitações dos motores existentes** — o ONNX Runtime Web 1.31.1, o motor que roda no Android, e o `@johnhenry`, o motor leve da `T-06`. Cada uma aponta para um dado medido; a causa leva **[HIPÓTESE]** quando não foi confirmada:
+
+| # | Limitação **[MEDIDO]** | Evidência | Causa provável | Um fork do motor leve existente (`@johnhenry`) resolve? | Um motor próprio em WebGPU resolve? |
+|---|---|---|---|---|---|
+| 1 | **O runtime do ONNX Runtime Web pesa 2.483.259 B** (brotli; 4.362.190 B no ponto de entrada WebGPU) e leva a única variante de 8 bits que acerta (`q8emb32-f16`) a **26,34 MB** na primeira visita — sem o runtime, 23,86 MB, abaixo dos 25 MB do portão | `2026-11-21-emulador-macmini-chrome133-ort-wasm-q8emb32-f16-ts-ettin-17m-r1.json` (`bytes.byCategory`) | runtime genérico, com os operadores e kernels de todo o ONNX **[HIPÓTESE]** | sim: o runtime do `@johnhenry` tem 86.798 B (brotli), em `…-jh-cpu-f32-ts-ettin-17m-r3.json` | sim, se o runtime ficar nessa ordem de tamanho |
+| 2 | **No WebGPU, o ONNX Runtime erra mesmo com os pesos FP32**: máx. \|Δp\| 4,8e-2 contra o nativo com o mesmo arquivo, fora da tolerância de FP32 (1e-3) e da de 8 bits (0,03) | `2026-11-21-desktop-macmini-chrome157-ort-webgpu-fp32-ts-ettin-17m.json` | precisão de algum kernel WebGPU do provedor **[HIPÓTESE]** | o `@johnhenry` em WebGPU já acerta com FP32 (1,9e-6), em `…-jh-webgpu-f32-ts-ettin-17m.json` | sim |
+| 3 | **No WebGPU, os quantizados publicados travam** a página na segunda decisão (`8bit`, `int8`), e o **provedor JSEP não cria a sessão** em nenhuma variante (“Only 2b and 4b quantization is supported for MatMulNBits op”; `SkipLayerNormalization`: “Beta must be 1D”; `MultiHeadAttention`: “Mask not supported”) | `…-desktop-macmini-chrome157-ort-webgpu-8bit-…`, `…-int8-…` e `…-ort-webgpu-jsep-*` | operadores sem kernel WebGPU; o ONNX Runtime avisa que parte dos nós não foi para o WebGPU **[HIPÓTESE para o travamento]** | sim, acrescentando ao fork o produto de matrizes com pesos de 8 bits em WGSL | sim |
+| 4 | **O `int8` do Wasm não reproduz o nativo**: máx. \|Δp\| 1,7e-1 com o mesmo arquivo, no Chrome e no Safari | `…-ort-wasm-int8-…-r1.json` (seções 3 e 5) | quantização dinâmica das ativações feita de outro jeito **[HIPÓTESE]** | não se aplica: o caminho não usaria `int8` dinâmico | não se aplica |
+| 5 | **Sem WebGPU nos ambientes móveis medidos**: o Chrome do emulador Android não entrega dispositivo WebGPU, e o Safari do simulador de iOS não entrega adaptador | `2026-11-21-emulador-macmini-probe-*.json`, `2026-11-21-ios-simulador-probe*.json` | GPU emulada **[HIPÓTESE]** | **não** | **não** — um motor só WebGPU nem roda ali |
+| 6 | O `@johnhenry` **só baixa pesos FP32**: 68,06 MB na primeira visita, também no caminho `f16` | `…-jh-cpu-f32-ts-ettin-17m-r3.json`, `…-jh-webgpu-f16-ts-ettin-17m.json` | o motor lê o `model.safetensors` publicado e converte no aparelho | sim: pesos de 8 bits como os da `q8emb32-f16` (23.368.916 B) | sim |
+| 7 | O **heap do `@johnhenry` cresce** nas 200 decisões: +7,88 MiB em CPU (emulador) e +50,09 MiB em WebGPU (desktop) | `…-jh-cpu-f32-…-resistencia-200-r1.json`, `…-jh-webgpu-f32-…-resistencia-200.json` | memória não devolvida entre decisões **[HIPÓTESE]** | sim | sim |
+| 8 | O **`@johnhenry` em CPU é lento**: p50 quente de 366,7 a 408,2 ms no emulador, contra 67,9 a 96,5 ms do ONNX Runtime | seção 3 | kernels em JavaScript **[HIPÓTESE]** | em parte | não: o motor próprio é WebGPU |
+
+**Custo** (tamanhos do roadmap, **[ALVO]**): o fork é `K-01` (S) e `K-02` (L); o motor do zero é `P-05` a `P-10`. A alternativa de encolher o próprio ONNX Runtime (um build só com os operadores do TS-Ettin) esbarra num achado da `T-06`: o repositório-fonte devolveu 404 em 2026-11-21.
+
+**Limitações dos modelos** — essas um motor novo não resolve:
+
+- **As quantizações publicadas do TS-Ettin não cumprem a tolerância de 8 bits** (`int8`: 4,1e-1; `8bit`: 4,5e-2, no nativo e no navegador) **[MEDIDO]**. O conserto é outro artefato — a `q8emb32-f16`, derivada dos pesos fixados, cumpre —, não outro motor.
+- **Tamanho:** 76% dos parâmetros do 17M são a tabela de embeddings (seção 6.1 do roadmap); em FP32 os pesos têm 67.484.624 B e, no menor artefato de 8 bits que acerta, 23.368.916 B — sobra pouco, dentro de 25 MB, para runtime e tokenizador (483.663 B em brotli) **[MEDIDO]**.
+- **Entradas longas:** acima de 128 tokens (a janela de atenção local), a latência quente no emulador vai a 461,8–747,5 ms de p50, contra 67,9–96,5 ms no conjunto **[MEDIDO, indicativo]** — é da arquitetura, não do motor.
+- **Calibração e qualidade:** o checkpoint é publicado sem calibração e com acurácia de 0,529 em decisões reservadas **[REPORTADO pelo autor]**; a qualidade em português não foi medida (não há gabarito, só paridade com o próprio modelo).
+- **Licença:** Apache-2.0, nos dois tamanhos — sem limitação.
+
+**Conclusão: há janela.** Duas limitações **medidas** do motor existente são resolvidas por um motor próprio: (1) o peso do runtime, que é o que tira do limite de 25 MB a única configuração que acerta, no Chrome do Android; e (2) o caminho WebGPU, em que o ONNX Runtime erra mesmo com FP32 e trava com os quantizados, enquanto um motor dedicado ao ModernBERT (o `@johnhenry`) acerta em FP32 — medido no desktop. A janela **não** cobre os ambientes móveis sem WebGPU (limitação 5): neles, um motor só WebGPU não roda, e o ONNX Runtime em Wasm continua sendo o caminho que funciona.
+
+## 8. Relatório e veredito (`T-04`)
+
+Junta as seções 2 a 7: a página (`T-01`), o emulador (`T-08`), o teste do motor (`T-09`), a API nativa (`T-03`), o simulador de iOS (complemento) e a janela (`T-10`); a `T-02` foi descartada pela `DT-01` ([ADR 0002](../adr/0002-dt-01-seguir-com-o-emulador.md)). Os critérios do portão GT, com o modelo de 17M, no melhor caminho que cada ambiente oferece — no Chrome do Android, o ONNX Runtime Web em Wasm:
+
+| Critério de GT | Resposta | Dado **[MEDIDO]** |
+|---|---|---|
+| **Acerta igual?** | **cumpre** | com os artefatos `q8emb32-f16` (máx. \|Δp\| 8,9e-3; vencedora igual em 155/156) e `fp32` (1,6e-6; 156/156); os publicados `int8` e `8bit` não cumprem (seção 4) |
+| **A primeira visita é leve?** (até 25 MB) | **não cumpre** junto com o critério anterior | a configuração que acerta pesa 26,34 MB (`q8emb32-f16`) ou 71,36 MB (`fp32`); as que cabem — `int8` 20,16 MB, `8bit` 20,63 MB, `q8emb-f16` 24,93 MB — não acertam (seção 3) |
+| **Aguenta?** (200 decisões sem recarregar nem travar) | **cumpre** | 200/200 decisões, sem falha, nas cinco variantes do ONNX Runtime em Wasm, no emulador (seção 4) |
+| **A decisão é rápida?** | **não medido** | só vale em aparelho real, e a `T-02` foi descartada; no emulador, indicativo: p95 quente de 433,9 a 698,7 ms no 17M, puxado pelas 4 entradas longas (seção 3) |
+
+**Veredito: não.** O motor existente — o ONNX Runtime Web em Wasm — funciona no Chrome do Android, responde certo com o artefato certo e aguenta 200 decisões seguidas, mas **nenhuma configuração cumpre ao mesmo tempo “acerta igual” e “primeira visita até 25 MB”**: a que acerta pesa 26,34 MB, 2,48 MB dos quais são o runtime. A latência em celular não foi medida.
+
+**O que continua sem resposta:**
+
+- Latência em celular real (Android intermediário, Android de entrada, iPhone): a `T-02` foi descartada por falta de aparelhos.
+- WebGPU em celular real (Android com GPU que o Chrome aceita; iPhone com Safari 26 ou mais novo).
+- O Chrome atual no Android: o emulador tem o 133 da imagem, e atualizá-lo exige uma conta Google.
+- A qualidade das decisões em português: só há paridade com o próprio modelo.
+- Por que o provedor WebGPU do ONNX Runtime erra, e por que trava com os quantizados (as causas não foram confirmadas).
+- Se um build reduzido do ONNX Runtime caberia em 25 MB com a `q8emb32-f16` (o repositório-fonte estava indisponível).
+- Por que o Chrome do emulador não registrou o download dos pesos em 4 execuções do `@johnhenry`.

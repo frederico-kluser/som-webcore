@@ -25,6 +25,9 @@
 | 2026-11-21 | `T-03` **feito** (no Mac mini) | Chrome Canary 160.0.8176.2 instalado no HD externo do Mac (assinatura da Google conferida); perfil novo → `unavailable`; com “On-device AI” ligado no perfil de teste → `downloadable`; clique pelo protocolo de depuração → modelo baixado, `available`; a página de teste inteira sobre o nativo; superfície do polyfill comparada à nativa | `2026-11-21-surface-macmini-*.json`, `2026-11-21-desktop-macmini-chrome160-native.json`; [relatório, seção 6](teste-mobile.md#6-api-nativa-t-03) | 2 diferenças de forma, as duas na opção `devTrialBackend` (só no Canary 160, fora da especificação de propósito): justificadas, nada a corrigir na especificação | — |
 | 2026-11-21 | `DT-02` **feito** — não se aplica | O modelo nativo ficou disponível sem uma pessoa, no Windows e no macOS | [ADR 0001](../adr/0001-dt-02-modelo-nativo-disponivel.md), agora aceita | Decidido por delegação do dono, pelo critério escrito no prompt da `DT-02` | — |
 | 2026-11-21 | `DT-01` **feito** — ramo (a), só emulador; `T-02` **descartada** | Nenhum celular real nem iPhone disponível; a evidência é a do emulador arm64 do Mac e do simulador de iOS | [ADR 0002](../adr/0002-dt-01-seguir-com-o-emulador.md), agora aceita | Decidido por delegação do dono, pela regra dada: sem aparelho real, seguir só com o emulador e tratar toda latência como indicativa | **Pendência externa:** latência e WebGPU em celular real ficam sem dado até haver aparelhos |
+| 2026-11-22 | `T-10` **feito** | Oito limitações dos motores existentes, cada uma com o arquivo medido, e as dos modelos em lista separada | [relatório, seção 7](teste-mobile.md#7-análise-da-janela-t-10) | Conclusão: **há janela** — o peso do runtime do ONNX Runtime Web (o que tira de 25 MB a única configuração que acerta) e o caminho WebGPU dele (erra mesmo com FP32, trava com os quantizados); a janela não cobre aparelhos sem WebGPU | — |
+| 2026-11-22 | `T-04` **feito** | Veredito contra os quatro critérios de GT | [relatório, seção 8](teste-mobile.md#8-relatório-e-veredito-t-04) | Acerta igual: cumpre; até 25 MB junto com acertar: **não cumpre**; aguenta: cumpre; rápida: não medido. Veredito: o motor existente **não** é satisfatório | As perguntas sem resposta estão listadas no relatório |
+| 2026-11-22 | `GT` **feito** — ramo (b), motor nosso em WebGPU; `L-01` e `L-02` **descartadas** | Portão decidido pelos critérios escritos e pela regra do dono | [ADR 0003](../adr/0003-gt-motor-nosso-em-webgpu.md) | Decidido por delegação do dono: a `T-10` aponta limitações medidas que um motor nosso resolve, e algo funciona no Android | Próximo: a bifurcação `DP-01` |
 
 ## Incidentes de medição
 
@@ -50,17 +53,9 @@
 
 ## Estado e próximo passo
 
-**Execução interrompida em 2026-11-21, por volta das 20h.** O Claude Code encerrou, por falta de memória no computador, o servidor da página (`serve.mjs`) e a rodada da `T-08`; a orientação do ambiente é não religá-los sem o dono pedir, e o agente não religou. O emulador foi desligado pela skill para liberar memória (estava com 5,6 GB). Nada está rodando.
+**2026-11-22 — marco T fechado.** Feito: `T-01`, `T-03`, `T-04`, `T-05`, `T-06`, `T-07`, `T-08`, `T-09`, `T-10` e `S-01`; a bifurcação `DT-01` (só emulador; `T-02` descartada), a `DT-02` (não se aplica) e o portão `GT` (motor nosso em WebGPU; `L-01` e `L-02` descartadas) — [ADRs 0001 a 0003](../adr/). A medição que parou no Acer em 2026-11-21, por falta de memória, foi refeita no Mac mini a pedido do dono ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)); nada mais roda no Acer.
 
-Feito: `T-05`, `T-06`, `T-07` (PR #9) e `S-01`. Nenhuma execução da página no emulador nem no desktop está versionada ainda. Em curso: `T-01`, `T-08`, `T-09`, `T-03`. ADRs das bifurcações `DT-01` e `DT-02` propostas.
-
-**Para retomar**, nesta ordem (os comandos estão no [README da página](../../bench/spike-mobile/README.md) e no [EMULADOR.md](../../bench/spike-mobile/EMULADOR.md)):
-
-1. `node bench/spike-mobile/serve.mjs` e o emulador pela skill (`android.ps1 avd start -Name jev_playstore_36`).
-2. `T-08`: a matriz inteira — `bash bench/spike-mobile/matrix-emulador.sh "1 2"` (20 execuções, o Chrome é zerado antes de cada uma). Se o p50 de uma configuração variar mais de 10% entre as repetições, repetir de novo.
-3. `T-09`: 200 decisões seguidas no emulador, com o heap preciso — `EXTRA="&warm=0&endurance=200" SUFFIX=-resistencia-200` e `FLAGS=--enable-precise-memory-info` para `ort-wasm 8bit`, `ort-wasm int8`, `ort-wasm q8emb-f16` e `jh-cpu f32`, 17M.
-4. `T-01` e `T-03`: `bash bench/spike-mobile/matrix-desktop.sh` (todas as variantes no Chrome 157 e a página sobre o nativo no Canary 160), uma execução com `debug=1` para versionar a identidade dos tokens, e a captura da superfície do polyfill (`surface.html?engine=ort-wasm&variant=8bit`) para `reference/compare_surface.py`.
-5. Fechar `DT-02` e `DT-01` (ADRs 0001 e 0002 passam a aceitas; `T-02` descartada), depois `T-10`, `T-04` e `GT`.
+**Para retomar:** `python3 scripts/roadmap.py waves`. A próxima é a bifurcação `DP-01` (fork do motor leve existente ou do zero), junto com o tronco comum da PoC (`P-01` a `P-04`). No Mac mini, o servidor da página pode continuar ligado (`/Volumes/Ext2TB/tmp/som-webcore/serve.pid`); emulador, simulador e navegadores ficam desligados entre as rodadas.
 
 ## Retomada pelo Mac mini (pedido do dono, 2026-11-21)
 
