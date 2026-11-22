@@ -125,7 +125,7 @@
               try {
                 const device = await requestDevice(descriptor);
                 push("webgpu", "info", { text: `requestDevice → ok; features: ${[...device.features].sort().join(", ")}` });
-                device.lost.then((lost) => push("webgpu", "error", { text: `device lost: ${lost.reason} ${lost.message}` }));
+                device.lost.then((lost) => push("webgpu", lost.reason === "destroyed" ? "info" : "error", { text: `device lost: ${lost.reason} ${lost.message}` }));
                 device.addEventListener("uncapturederror", (event) => push("webgpu", "error", { text: `uncaptured ${event.error && event.error.constructor && event.error.constructor.name}: ${event.error && event.error.message}` }));
                 return device;
               } catch (error) {
@@ -167,6 +167,30 @@
         navigation: navigation ? { type: navigation.type, domContentLoaded: Math.round(navigation.domContentLoadedEventEnd), load: Math.round(navigation.loadEventEnd), transferSize: navigation.transferSize } : null,
       });
     } catch { /* ignore */ }
+  }
+
+  // A lab step is a page of its own (lab.js navigates to it with ?labstep=): keep the screen on, and
+  // go back to the lab once the page has posted its result, or when the step's time is up.
+  const labStep = params.get("labstep");
+  if (labStep && isTop) {
+    const limit = Number(params.get("labtimeout") || 420) * 1000;
+    let leaving = false;
+    const backToLab = (extra) => {
+      if (leaving) return;
+      leaving = true;
+      flush();
+      setTimeout(() => location.replace(`/lab/lab.html?continue=1${extra}`), 400);
+    };
+    try {
+      if (navigator.wakeLock) navigator.wakeLock.request("screen").then(() => push("lab", "info", { text: "wake lock on" }), (error) => push("lab", "warn", { text: `wake lock: ${error.name}` }));
+    } catch { /* not available */ }
+    setInterval(() => {
+      if (document.title === "posted" || document.title === "post failed") backToLab("");
+    }, 500);
+    setTimeout(() => {
+      push("lab", "warn", { text: `step ${labStep} reached its time limit (${limit / 1000} s)` });
+      backToLab(`&labtimedout=${encodeURIComponent(labStep)}`);
+    }, limit);
   }
 
   window.__somLab = { push, flush, source };

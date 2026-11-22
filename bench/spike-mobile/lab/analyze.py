@@ -139,7 +139,8 @@ def main(argv: list[str]) -> int:
     say("## Etapas\n")
     say("| Etapa | Estado | Tentativas | Início | Fim | Nota |\n|---|---|---:|---|---|---|")
     for s in steps:
-        say(f"| `{s['id']}` | {s.get('status')} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {s.get('note') or '—'} |")
+        status = s.get("status") + (f" ({s['outcome']})" if s.get("outcome") else "")
+        say(f"| `{s['id']}` | {status} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {s.get('note') or '—'} |")
     say("")
 
     # Page runs.
@@ -206,7 +207,9 @@ def main(argv: list[str]) -> int:
     else:
         by_kind = Counter((e.get("kind"), e.get("level")) for e in logs)
         say(f"{len(logs)} entradas. Por tipo e nível: " + "; ".join(f"`{k}`/{lvl} {n}" for (k, lvl), n in sorted(by_kind.items(), key=lambda x: -x[1])) + ".\n")
-        errors = Counter((e.get("source"), str(e.get("text", "")).split("\n")[0][:220]) for e in logs if e.get("level") == "error")
+        # "device lost: destroyed" is a device the page destroyed itself (the probe does): not an error.
+        errors = Counter((e.get("source"), str(e.get("text", "")).split("\n")[0][:220]) for e in logs
+                         if e.get("level") == "error" and not str(e.get("text", "")).startswith("device lost: destroyed"))
         if errors:
             say("**Erros** (os mais frequentes):\n")
             say("| Origem | Mensagem | Vezes |\n|---|---|---:|")
