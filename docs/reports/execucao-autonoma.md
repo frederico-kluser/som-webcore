@@ -75,7 +75,7 @@
 
 **2026-11-22 — laboratório de aparelho e iPhone real** (pedido do dono). O Mac serve a página de teste ao celular do dono e analisa sozinho cada rodada (skill [`som-webcore-device-lab`](../../.agents/som-webcore-device-lab/SKILL.md)).
 
-- **Rodar de novo:** `bash bench/spike-mobile/lab/start-lab.sh` no Mac. O iPhone do dono já confia na CA e entra direto por `https://192.168.100.84:8390/lab/lab.html`.
+- **Rodar de novo:** `bash bench/spike-mobile/lab/start-lab.sh` no Mac. O iPhone do dono já confia na CA, mas o cookie dele é de um token de sessão anterior ao token fixo do laboratório. Na próxima rodada, ele escaneia o QR do laboratório uma vez; dali em diante, por 180 dias, entra direto por `https://192.168.100.84:8390/lab/lab.html`.
 - **O que as três rodadas deram:** a [seção 9 do relatório](teste-mobile.md#9-iphone-real-pelo-laboratório-de-aparelho-complemento-2026-11-22). Nenhuma decisão mudou, e as próximas atividades continuam as mesmas.
 
 ## Relatório desta execução (2026-11-22, pelo Mac mini)
