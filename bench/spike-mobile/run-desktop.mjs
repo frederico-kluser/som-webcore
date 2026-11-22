@@ -171,12 +171,11 @@ if (extra) flags.push(...extra.split(/\s+/).filter(Boolean));
 
 const before = mtime();
 console.log(`launch ${exe}\n  ${flags.join(" ")}\n  ${url}`);
-// macOS, with a window: through LaunchServices (`open -n -a`), so a browser started from an SSH
-// session opens in the logged-in user's desktop session. The browser is closed through CDP.
-const app = process.platform === "darwin" && !flag("headless") ? exe.slice(0, exe.indexOf(".app/") + 4) : null;
-const child = app
-  ? spawn("open", ["-n", "-a", app, "--args", ...flags, url], { stdio: "ignore" })
-  : spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
+// The executable itself, also on macOS. Opened through LaunchServices (`open -a`), the browser runs
+// under its own privacy permissions and, with the profile on the Mac mini's external disk, stopped
+// before creating it (waiting for the removable-volume prompt, 2026-11-21); started directly from the
+// SSH session, it inherits the session's disk access and still opens a window on the Mac's desktop.
+const child = spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
 child.on("error", (e) => fail(`não foi possível abrir o navegador (${e.message})`, "confira o caminho"));
 
 const collector = flag("console") ? await collectConsole().catch(() => null) : null;
