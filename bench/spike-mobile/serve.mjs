@@ -149,11 +149,20 @@ const server = createServer(async (req, res) => {
         return res.end();
       }
       if (!labCookie(req)) return send(res, 404, { ok: false, error: "not found" });
+      // A proxy in front (the Cloudflare tunnel) must pass the bodies as they are: it was sending
+      // the brotli Wasm decompressed (14.8 MB instead of 2.5 MB) to a client that accepts brotli.
+      const writeHead = res.writeHead;
+      res.writeHead = function (status, headers = {}) {
+        headers["Cache-Control"] = `${headers["Cache-Control"] || "no-store"}, no-transform`;
+        res.labHeaders = headers;
+        return writeHead.call(this, status, headers);
+      };
       if (!QUIET.has(url.pathname)) {
         const started = Date.now();
         res.on("finish", () => {
           const path = url.pathname + url.search.replace(/([?&])t=[^&]*/g, "$1t=…");
-          appendFileSync(LAB_FILE("requests.jsonl"), JSON.stringify({ at: new Date().toISOString(), method: req.method, path, status: res.statusCode, bytes: Number(res.getHeader("Content-Length")) || null, encoding: res.getHeader("Content-Encoding") || null, ms: Date.now() - started }) + "\n");
+          const sent = res.labHeaders || {};
+          appendFileSync(LAB_FILE("requests.jsonl"), JSON.stringify({ at: new Date().toISOString(), method: req.method, path, status: res.statusCode, bytes: Number(sent["Content-Length"]) || null, encoding: sent["Content-Encoding"] || null, ms: Date.now() - started }) + "\n");
         });
       }
       if (url.pathname === "/api/lab/state") return await labState(req, res);
