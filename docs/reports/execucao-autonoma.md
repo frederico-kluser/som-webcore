@@ -28,6 +28,7 @@
 | 2026-11-22 | `T-10` **feito** | Oito limitações dos motores existentes, cada uma com o arquivo medido, e as dos modelos em lista separada | [relatório, seção 7](teste-mobile.md#7-análise-da-janela-t-10) | Conclusão: **há janela** — o peso do runtime do ONNX Runtime Web (o que tira de 25 MB a única configuração que acerta) e o caminho WebGPU dele (erra mesmo com FP32, trava com os quantizados); a janela não cobre aparelhos sem WebGPU | — |
 | 2026-11-22 | `T-04` **feito** | Veredito contra os quatro critérios de GT | [relatório, seção 8](teste-mobile.md#8-relatório-e-veredito-t-04) | Acerta igual: cumpre; até 25 MB junto com acertar: **não cumpre**; aguenta: cumpre; rápida: não medido. Veredito: o motor existente **não** é satisfatório | As perguntas sem resposta estão listadas no relatório |
 | 2026-11-22 | `GT` **feito** — ramo (b), motor nosso em WebGPU; `L-01` e `L-02` **descartadas** | Portão decidido pelos critérios escritos e pela regra do dono | [ADR 0003](../adr/0003-gt-motor-nosso-em-webgpu.md) | Decidido por delegação do dono: a `T-10` aponta limitações medidas que um motor nosso resolve, e algo funciona no Android | Próximo: a bifurcação `DP-01` |
+| 2026-11-22 | `DP-01` **feito** — ramo (a), fork do motor leve existente; `P-05` a `P-10` **descartadas** | Licenças lidas na fonte (repositório `johnhenry/laya-js` e `package.json` publicados): MIT e Apache-2.0; o que o fork já resolve e o que falta, medidos | [ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md) | Decidido por delegação do dono: a licença permite e as limitações da janela cabem dentro do fork; também o caminho de menor esforço | Próximo: `K-01` (base do fork) e o tronco comum da PoC |
 
 ## Incidentes de medição
 
@@ -55,7 +56,7 @@
 
 **2026-11-22 — marco T fechado.** Feito: `T-01`, `T-03`, `T-04`, `T-05`, `T-06`, `T-07`, `T-08`, `T-09`, `T-10` e `S-01`; a bifurcação `DT-01` (só emulador; `T-02` descartada), a `DT-02` (não se aplica) e o portão `GT` (motor nosso em WebGPU; `L-01` e `L-02` descartadas) — [ADRs 0001 a 0003](../adr/). A medição que parou no Acer em 2026-11-21, por falta de memória, foi refeita no Mac mini a pedido do dono ([MACMINI.md](../../bench/spike-mobile/MACMINI.md)); nada mais roda no Acer.
 
-**Para retomar:** `python3 scripts/roadmap.py waves`. A próxima é a bifurcação `DP-01` (fork do motor leve existente ou do zero), junto com o tronco comum da PoC (`P-01` a `P-04`). No Mac mini, o servidor da página pode continuar ligado (`/Volumes/Ext2TB/tmp/som-webcore/serve.pid`); emulador, simulador e navegadores ficam desligados entre as rodadas.
+**Para retomar:** `python3 scripts/roadmap.py waves`. A `DP-01` escolheu o fork do motor leve existente ([ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md)); as próximas são a `K-01` (base do fork) e o tronco comum da PoC (`P-01` a `P-04`). No Mac mini, o servidor da página pode continuar ligado (`/Volumes/Ext2TB/tmp/som-webcore/serve.pid`); emulador, simulador e navegadores ficam desligados entre as rodadas.
 
 ## Retomada pelo Mac mini (pedido do dono, 2026-11-21)
 
