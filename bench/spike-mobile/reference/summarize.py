@@ -80,6 +80,10 @@ def row(path: Path) -> str:
         failure = (run.get("fatal") or {}).get("message") or ((run.get("failures") or [{}])[0].get("error") or {}).get("message", "")
         failure = failure.replace("|", "/")[:140]
     bytes_ = (run.get("bytes") or {}).get("firstVisitEncoded")
+    # The engine loaded weights, but Resource Timing has no entry for them (seen on 2026-11-21 in 4
+    # @johnhenry runs in Chrome 133 on the emulator): the total would leave the weights out.
+    weights_missing = bool(info.get("modelBytes")) and "weights" not in ((run.get("bytes") or {}).get("byCategory") or {})
+    first_visit = fmt(bytes_ / MB if bytes_ else None, 2) + (" ⚠ sem o registro dos pesos" if weights_missing else "")
     short, long_ = warm_by_length(run, model)
     split = "—"
     if short:
@@ -90,7 +94,7 @@ def row(path: Path) -> str:
         f"`{path.stem}`", cfg.get("engine", "—"), str(variant), model, run.get("status", "—"),
         fmt((run.get("timings") or {}).get("firstAnswerMs"), 0), fmt(first.get("p50")),
         f"{fmt(warm.get('p50'))} / {fmt(warm.get('p95'))} / {fmt(warm.get('p99'))}", split,
-        fmt(bytes_ / MB if bytes_ else None, 2), fmt(heap / MB if heap else None), fmt(pss / MB if pss else None, 0),
+        first_visit, fmt(heap / MB if heap else None), fmt(pss / MB if pss else None, 0),
         parity, failure or "—",
     ])
 
