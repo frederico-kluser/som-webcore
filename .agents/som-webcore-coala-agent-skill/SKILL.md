@@ -1,6 +1,6 @@
 ---
 name: som-webcore-coala-agent-skill
-description: "Memória e catálogo CoALA/SQLite LOCAIS do projeto som-webcore — o que já se decidiu, como se faz aqui e ONDE está cada coisa: notas (decisões, factos, procedimentos), documentos ingeridos e mapa do código (símbolos com ficheiro:linha), puxados por níveis (map → recall → search/symbols → get) em vez de despejados no contexto. Use SEMPRE que trabalhar em som-webcore: no início de uma tarefa não trivial para recuperar contexto, quando precisar de 'o que sabemos sobre…', 'porque decidimos…', 'como se faz isto aqui', 'onde está definido…', 'que ficheiros usam…', e no fim para registar o que for durável e verificado. Não usar para segredos nem para estado volátil da tarefa."
+description: "Memória e catálogo CoALA/SQLite LOCAIS do projeto som-webcore: decisões, factos e procedimentos, documentos ingeridos e mapa do código (símbolos com ficheiro:linha), puxados por níveis (map → recall → search/symbols → get). Use ao começar tarefas não triviais em som-webcore ('o que sabemos sobre…', 'porque decidimos…', 'onde está definido…') e no fim para registar o que for durável e verificado. Sem segredos nem estado volátil."
 metadata:
   type: coala-project-memory
   technique: coala
@@ -76,6 +76,11 @@ Fontes em `ingest.json` (é teu: o instalador nunca o reescreve):
 - `pesquisa-arquitetura` — `research/01-*.txt` → text · semantic · origem `untrusted` · tags `research,webgpu,wasm32,arquitetura,pdf-fonte,{stem}`
 - `pesquisa-runtime` — `research/02-*.txt` → text · semantic · origem `untrusted` · tags `research,wgpu,wgsl,runtime,sombin,pdf-fonte,{stem}`
 - `governanca` — `CONTRIBUTING.md`, `GOVERNANCE.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md` → markdown · semantic · origem `agent` · tags `docs,governanca,{stem}`
+- `decisoes` — `docs/adr/*.md` → markdown · semantic · origem `agent` · tags `docs,adr,decisao,bifurcacao,{stem}`
+- `relatorios` — `docs/reports/*.md` → markdown · semantic · origem `agent` · tags `docs,relatorio,medicao,{stem}`
+- `especificacao` — `docs/spec/*.md` → markdown · semantic · origem `agent` · tags `docs,spec,decisions-api,{stem}`
+- `padronizacao` — `docs/standards/*.md` → markdown · semantic · origem `agent` · tags `docs,padronizacao,prior-art,{stem}`
+- `bancada` — `bench/spike-mobile/*.md` → markdown · procedural · origem `agent` · tags `bench,bancada,procedimento,{stem}`
 - chaves de supersessão: `som/<ficheiro>#<segmento>` (estáveis → re-ingestão idempotente)
 - `código` — automático: todos os ficheiros de código do repositório (respeita o .gitignore) → um cartão por ficheiro + símbolos com linha
 

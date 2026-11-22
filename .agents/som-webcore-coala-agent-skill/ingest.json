@@ -66,6 +66,56 @@
       "type": "semantic",
       "origin": "agent",
       "tags": "docs,governanca,{stem}"
+    },
+    {
+      "name": "decisoes",
+      "include": [
+        "docs/adr/*.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,adr,decisao,bifurcacao,{stem}"
+    },
+    {
+      "name": "relatorios",
+      "include": [
+        "docs/reports/*.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,relatorio,medicao,{stem}"
+    },
+    {
+      "name": "especificacao",
+      "include": [
+        "docs/spec/*.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,spec,decisions-api,{stem}"
+    },
+    {
+      "name": "padronizacao",
+      "include": [
+        "docs/standards/*.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "agent",
+      "tags": "docs,padronizacao,prior-art,{stem}"
+    },
+    {
+      "name": "bancada",
+      "include": [
+        "bench/spike-mobile/*.md"
+      ],
+      "mode": "markdown",
+      "type": "procedural",
+      "origin": "agent",
+      "tags": "bench,bancada,procedimento,{stem}"
     }
   ],
   "code": {
@@ -130,6 +180,22 @@
       {
         "name": "Von-1.3",
         "kind": "modelo"
+      },
+      {
+        "name": "Decisions API",
+        "kind": "padrao"
+      },
+      {
+        "name": "motor @johnhenry (laya-js)",
+        "kind": "motor"
+      },
+      {
+        "name": "ONNX Runtime Web",
+        "kind": "motor"
+      },
+      {
+        "name": "TS-Ettin-17M",
+        "kind": "modelo"
       }
     ],
     "edges": [
@@ -192,6 +258,26 @@
         "SOM WebCore",
         "descontinuou",
         "Von-1.3"
+      ],
+      [
+        "SOM WebCore",
+        "segue a API de",
+        "Decisions API"
+      ],
+      [
+        "SOM WebCore",
+        "nasce de um fork de (DP-01, ADR 0004)",
+        "motor @johnhenry (laya-js)"
+      ],
+      [
+        "SOM WebCore",
+        "nao usa como motor (GT, ADR 0003)",
+        "ONNX Runtime Web"
+      ],
+      [
+        "SOM WebCore",
+        "testa e mede com",
+        "TS-Ettin-17M"
       ]
     ]
   }
