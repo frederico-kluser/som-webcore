@@ -5,6 +5,7 @@
 //
 //   node bench/spike-mobile/lab/run-lab.mjs --session <SESSION> [--browser stable] [--apenas <tag>]
 //        [--teto <MiB>] [--timeout 3600] [--tls spki|ignore] [--keep-profile] [--flags "<extra flags>"]
+//        [--simular-queda <step>:<seconds>[,…]]   (test of the crash path: renderer crash + reload)
 //
 // - Trust: the lab serves HTTPS with a certificate from its own CA. The dedicated profile accepts only
 //   that server's key (--ignore-certificate-errors-spki-list, which Chrome honours only with
@@ -170,7 +171,7 @@ function write(extraFields = {}) {
   const report = {
     kind: "device-lab-desktop-run", schemaVersion: 1, session, runner: "lab/run-lab.mjs", writtenAt: new Date().toISOString(),
     browser: { name: browser, executable: exe, version: browserVersion, versions: [...new Set(segments.map((s) => s.browserVersion))], flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), tls: tlsNote, profile: "dedicado (apagado no fim, salvo --keep-profile)" },
-    base, restarts, browserExits,
+    base, restarts, browserExits, simulatedCrashes: simulated,
     desktopMemory: { segments: segments.map(({ samples, footprint, ...rest }) => ({ ...rest, samples: samples || [], footprint: footprint || null })), peaks: peaks(all), peaksByStep: Object.fromEntries(steps.map((step) => [step, peaks(all, step)])) },
     ...extraFields,
   };
@@ -179,6 +180,27 @@ function write(extraFields = {}) {
 
 const restarts = [];
 const browserExits = [];
+// --simular-queda <step>:<seconds>[,…]: crash the renderer that many seconds into the step (CDP
+// Page.crash), then reload the tab (Page.reload) — a test of the lab's crash path only.
+const crashPlan = new Map((opt("simular-queda") || "").split(",").filter(Boolean).map((item) => { const [id, seconds] = item.split(":"); return [id, Number(seconds || 5)]; }));
+const crashed = new Set();
+const simulated = [];
+async function simulateCrash(stepId) {
+  const list = await cdpJson("/json/list");
+  const page = list.find((t) => t.type === "page" && t.url.includes(`labstep=${encodeURIComponent(stepId)}`));
+  if (!page) { console.log(`[run-lab] queda simulada: página de ${stepId} não encontrada`); return; }
+  const cdp = await Cdp.connect(page.webSocketDebuggerUrl);
+  cdp.send("Page.crash").catch(() => {});
+  await sleep(1500);
+  cdp.close();
+  const again = (await cdpJson("/json/list")).find((t) => t.id === page.id);
+  if (!again) { console.log(`[run-lab] queda simulada: a aba de ${stepId} sumiu depois do Page.crash`); return; }
+  const next = await Cdp.connect(again.webSocketDebuggerUrl);
+  await next.send("Page.reload").catch(() => {});
+  next.close();
+  simulated.push({ step: stepId, at: new Date().toISOString() });
+  console.log(`[run-lab] queda simulada em ${stepId} (Page.crash e Page.reload)`);
+}
 rmSync(profile, { recursive: true, force: true });
 mkdirSync(profile, { recursive: true });
 console.log(`[run-lab] sessão ${session}; ${base}; perfil dedicado ${profile}; TLS: ${tlsNote}`);
@@ -218,6 +240,15 @@ for (;;) {
     await saveSegment();
     await launch("auto=1&reinicio=1", `o navegador saiu durante ${runningStep ?? "—"}`);
     write();
+  }
+  // Test of the crash path: the renderer dies mid-step and the tab is reloaded, as Safari does after a
+  // jetsam kill (on desktop, under the caps, nothing dies by itself).
+  if (running && crashPlan.has(running.id) && !crashed.has(running.id)) {
+    const started = Date.parse(running.startedAt || "") || Date.now();
+    if (Date.now() - started >= crashPlan.get(running.id) * 1000) {
+      crashed.add(running.id);
+      await simulateCrash(running.id);
+    }
   }
 }
 runningStep = null;
