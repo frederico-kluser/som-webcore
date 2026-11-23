@@ -34,3 +34,7 @@ __pycache__/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Saídas locais da skill de pesquisa (a cópia versionada vai para research/NN-*.md)
+/research_notes/
+/reports/

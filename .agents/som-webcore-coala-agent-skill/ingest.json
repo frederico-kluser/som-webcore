@@ -54,6 +54,16 @@
       "tags": "research,wgpu,wgsl,runtime,sombin,pdf-fonte,{stem}"
     },
     {
+      "name": "pesquisa-capacidade",
+      "include": [
+        "research/03-*.md"
+      ],
+      "mode": "markdown",
+      "type": "semantic",
+      "origin": "untrusted",
+      "tags": "research,memoria,webgpu,decisions-api,modelos,capacidade,{stem}"
+    },
+    {
       "name": "governanca",
       "include": [
         "CONTRIBUTING.md",

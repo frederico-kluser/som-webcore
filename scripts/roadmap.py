@@ -48,6 +48,7 @@ GROUPS = OrderedDict(
         ("M0", "Marco M0 — Fundação e auditoria"),
         ("T", "Marco T — API igual à do Chrome e teste do motor existente"),
         ("M1", "Marco M1 — Prova de conceito (v0.1.0)"),
+        ("C", "Trilha C — Capacidade: modelos maiores sem travas de memória"),
         ("M2", "Marco M2 — Alpha"),
         ("M3", "Marco M3 — Beta"),
         ("M4", "Marco M4 — v1.0.0"),
@@ -55,8 +56,10 @@ GROUPS = OrderedDict(
         ("M5", "Marco M5 — Pós-1.0"),
     ]
 )
-PREFIX_GROUP = {"F": "M0", "T": "T", "P": "M1", "L": "M1", "K": "M1", "A": "M2", "B": "M3", "V": "M4",
-                "S": "S", "X": "M5", "DT": "T", "DP": "M1"}  # DT e DP: bifurcações dos marcos T e M1
+PREFIX_GROUP = {"F": "M0", "T": "T", "P": "M1", "L": "M1", "K": "M1", "C": "C", "A": "M2", "B": "M3", "V": "M4",
+                "S": "S", "X": "M5", "DT": "T", "DP": "M1", "DC": "C", "DA": "M2"}  # D?: bifurcações de cada grupo
+# Grupos em execução: toda atividade deles precisa de prompt (além das desbloqueadas e das bifurcações).
+EM_EXECUCAO = {"M1"}
 GATE_GROUP = {"G0": "M0", "GT": "T", "G1": "M1", "G2": "M2", "G3": "M3", "G4": "M4"}
 # Ordem dos portões no tempo (GT vem entre G0 e G1; IDs nunca são renumerados).
 GATE_ORDER = ["G0", "GT", "G1", "G2", "G3", "G4"]
@@ -138,7 +141,7 @@ def validate(nodes):
     errors = []
     for node in nodes.values():
         if node.group == "?":
-            errors.append(f"`{node.id}`: prefixo desconhecido (use F, T, P, A, B, V, S, X, G0–G4 ou GT)")
+            errors.append(f"`{node.id}`: prefixo desconhecido (use {', '.join(PREFIX_GROUP)}, G0–G4 ou GT)")
         if node.size not in SIZES:
             errors.append(f"`{node.id}`: tamanho inválido {node.size!r} (use S, M, L, XL ou —)")
         if node.state not in STATES:
@@ -224,10 +227,16 @@ def waves_for(nodes, order, group):
 
 
 def critical_path(nodes, order):
-    """Caminho de maior esforço relativo (pontos de tamanho) até o último portão."""
+    """Caminho de maior esforço relativo (pontos de tamanho) até o último portão.
+
+    Atividades descartadas não acontecem: ficam fora do caminho. Nas bifurcações
+    ainda abertas, o caminho segue o ramo mais caro.
+    """
     best = {}
     back = {}
     for nid in order:
+        if nodes[nid].state == "descartada":
+            continue
         weight = SIZES.get(nodes[nid].size, 0)
         deps = [d for d in nodes[nid].deps if d in best]
         if deps:
@@ -307,14 +316,15 @@ def render_group(nodes, order, group):
 def render_critical(nodes, order):
     path, points = critical_path(nodes, order)
     chain = " → ".join(f"`{nid}`" for nid in path)
-    total = sum(SIZES.get(n.size, 0) for n in nodes.values())
+    total = sum(SIZES.get(n.size, 0) for n in nodes.values() if n.state != "descartada")
     done = sum(SIZES.get(n.size, 0) for n in nodes.values() if n.state == "feito")
     count_done = sum(1 for n in nodes.values() if n.state == "feito")
+    count_off = sum(1 for n in nodes.values() if n.state == "descartada")
     return "\n".join(
         [
-            f"- **Nós:** {len(nodes)} ({count_done} feitos) · **arestas:** {sum(len(n.deps) for n in nodes.values())}.",
-            f"- **Esforço relativo:** {done}/{total} pontos concluídos (S=1, M=3, L=8, XL=13; portões=0).",
-            f"- **Caminho mais longo possível até o último portão**, se cada bifurcação escolher o ramo mais caro ({points} pontos): {chain}.",
+            f"- **Nós:** {len(nodes)} ({count_done} feitos, {count_off} descartados) · **arestas:** {sum(len(n.deps) for n in nodes.values())}.",
+            f"- **Esforço relativo:** {done}/{total} pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).",
+            f"- **Caminho mais longo até o último portão**, sem as atividades descartadas e com o ramo mais caro em cada bifurcação aberta ({points} pontos): {chain}.",
         ]
     )
 
@@ -371,10 +381,12 @@ def cmd_check():
         rendered, unknown = regenerate(text, nodes, order)
         for key in unknown:
             errors.append(f"bloco gerado desconhecido: dag:begin:{key}")
-        # Atividades do marco em execução (T) e toda bifurcação precisam de prompt e validação.
+        # Precisam de prompt e validação: toda atividade dos grupos em execução (EM_EXECUCAO), toda
+        # atividade desbloqueada (dependências feitas ou descartadas) e toda bifurcação — se ainda abertas.
         prompts = set(PROMPT_RE.findall(text))
         for node in nodes.values():
-            needs = (node.group == "T" or node.is_fork) and node.state not in ("feito", "descartada")
+            unblocked = all(nodes[d].state in ("feito", "descartada") for d in node.deps if d in nodes)
+            needs = (node.group in EM_EXECUCAO or unblocked or node.is_fork) and node.state not in ("feito", "descartada")
             if needs and node.id not in prompts:
                 errors.append(f"`{node.id}` não tem prompt — acrescente `<!-- prompt:{node.id} -->` com o prompt e a validação")
         present = {match[1] for match in BLOCK_RE.findall(text)}
