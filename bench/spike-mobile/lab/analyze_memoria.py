@@ -110,10 +110,11 @@ def section(session: str, state: dict, results: Path, say, margin: float = 0.5) 
                 say(f"| `{s['id']}` | {s.get('epoch', '—')} | {s.get('status')} (sem resultado) | — | — | — | — | — | — |")
                 continue
             largest = _largest_ok(run) if run.get("experiment") in ("gpu-rampa", "host-rampa") else None
+            floor = "≥ " if largest and run.get("outcome") == "completou" else ""
             gpu_peak, wasm_peak = _ledger_peaks(run)
             cap = (run.get("teto") or {})
             cap_text = _mib(cap.get("bytes")) if cap.get("bytes") else ("sem teto" if cap else "—")
-            say(f"| `{s['id']}` | {s.get('epoch', '—')} | **{run.get('outcome') or '—'}** | {_mib(largest) if largest else '—'} | {_cell(_where(run))[:160]} | "
+            say(f"| `{s['id']}` | {s.get('epoch', '—')} | **{run.get('outcome') or '—'}** | {floor + _mib(largest) if largest else '—'} | {_cell(_where(run))[:160]} | "
                 f"{_cell(run.get('erro'))[:160]} | {cap_text} | {gpu_peak} · {wasm_peak} | `{files[s['id']]}` |")
         say("")
         say("**Resumo de cada etapa** (o `resumo` que a página gravou):\n")
@@ -231,8 +232,10 @@ def section(session: str, state: dict, results: Path, say, margin: float = 0.5) 
     if desktop and (desktop.get("desktopMemory") or {}).get("peaksByStep"):
         dm = desktop["desktopMemory"]
         say(f"### Memória dos processos do navegador (`{session}-desktop.json`)\n")
-        say(f"{_cell(desktop.get('browser', {}).get('version'))}; {len(desktop.get('restarts') or [])} reinício(s) do navegador pedidos pelo laboratório. "
-            "RSS amostrado a cada 500 ms; `phys_footprint` (inclui a memória de GPU que o processo possui) a cada 2 s.\n")
+        browser = desktop.get("browser") or {}
+        versions = browser.get("versions") or [browser.get("version")]
+        method = ((dm.get("segments") or [{}])[0] or {}).get("method") or "—"
+        say(f"{', '.join(_cell(v) for v in versions)}; {len(desktop.get('restarts') or [])} reinício(s) do navegador pedidos pelo laboratório. Método: {_cell(method)}.\n")
         say("| Etapa | RSS GPU | RSS renderer | footprint GPU | footprint renderer |\n|---|---:|---:|---:|---:|")
         for step, p in dm["peaksByStep"].items():
             say(f"| `{step}` | {_mib(p['rss'].get('gpu'))} | {_mib(p['rss'].get('renderer'))} | {_mib(p['footprint'].get('gpu'))} | {_mib(p['footprint'].get('renderer'))} |")
@@ -253,9 +256,10 @@ def section(session: str, state: dict, results: Path, say, margin: float = 0.5) 
         return _largest_ok(run), run, files[s["id"]]
     gpu, gpu_run, gpu_file = best("gpu-rampa", "simples")
     host, host_run, host_file = best("host-rampa")
-    ab, _, ab_file = best("gpu-rampa", "ab256")
-    wm, _, wm_file = best("gpu-rampa", "wasm256")
-    stream = next((r for (e, _), (_, r) in by_exp.items() if e == "opfs-streaming"), None)
+    ab, ab_run, ab_file = best("gpu-rampa", "ab256")
+    wm, wm_run, wm_file = best("gpu-rampa", "wasm256")
+    stream_step, stream = next(((s, r) for (e, _), (s, r) in by_exp.items() if e == "opfs-streaming"), (None, None))
+    stream_file = files[stream_step["id"]] if stream_step else "—"
     stream_1g = None
     if stream:
         sizes = sorted((k for k in (stream.get("phases") or {}) if k.endswith("MiB")), key=lambda k: int(k[:-3]))
@@ -265,15 +269,21 @@ def section(session: str, state: dict, results: Path, say, margin: float = 0.5) 
                 stream_1g = f"{sizes[-1]}: {passes[-1].get('mbpsPassada')} MB/s por passada"
     if gpu or host:
         env = (gpu_run or host_run or {}).get("environment") or {}
-        capped = lambda run: run and run.get("outcome") == "completou"
+        capped = lambda run: bool(run) and run.get("outcome") == "completou"
+        def value(v, run):
+            if v:
+                return ("≥ " if capped(run) else "") + _mib(v)
+            return "morreu sem passo confirmado" if run and run.get("outcome") == "morreu" else "—"
+        info = ((env.get("webgpu") or {}).get("adapter") or {}).get("info") or {}
+        adapter = " ".join(str(info.get(k)) for k in ("vendor", "architecture", "device", "description") if info.get(k)) or None
         say("### Faixas para a `C-08`\n")
-        say(f"Aparelho: `{_cell(env.get('userAgent'))}`; adaptador {_cell(((env.get('webgpu') or {}).get('adapter') or {}).get('info'))}.\n")
+        say(f"Aparelho: `{_cell(env.get('userAgent'))}`; adaptador WebGPU: {_cell(adapter)}.\n")
         say("| Medida | Valor | Arquivo |\n|---|---:|---|")
-        say(f"| Maior total de GPU que funcionou (rampa simples) | {('≥ ' if capped(gpu_run) else '') + _mib(gpu)} **[MEDIDO]** | `{gpu_file}` |")
-        say(f"| … depois de 256 MiB num ArrayBuffer | {_mib(ab)} **[MEDIDO]** | `{ab_file}` |")
-        say(f"| … depois de 256 MiB numa memória Wasm | {_mib(wm)} **[MEDIDO]** | `{wm_file}` |")
-        say(f"| Maior total de ArrayBuffer que funcionou | {('≥ ' if capped(host_run) else '') + _mib(host)} **[MEDIDO]** | `{host_file}` |")
-        say(f"| Streaming OPFS → GPU, anel de 3 × 64 MiB, última passada | {_cell(stream_1g)} **[MEDIDO]** | — |")
+        say(f"| Maior total de GPU que funcionou (rampa simples) | {value(gpu, gpu_run)} **[MEDIDO]** | `{gpu_file}` |")
+        say(f"| … depois de 256 MiB num ArrayBuffer | {value(ab, ab_run)} **[MEDIDO]** | `{ab_file}` |")
+        say(f"| … depois de 256 MiB numa memória Wasm | {value(wm, wm_run)} **[MEDIDO]** | `{wm_file}` |")
+        say(f"| Maior total de ArrayBuffer que funcionou | {value(host, host_run)} **[MEDIDO]** | `{host_file}` |")
+        say(f"| Streaming OPFS → GPU, anel de 3 × 64 MiB, última passada | {_cell(stream_1g)} **[MEDIDO]** | `{stream_file}` |")
         base = min(v for v in (gpu, host) if v)
         say(f"| Faixa candidata de pesos + ativações residentes | {_mib(base * margin)} **[HIPÓTESE: {margin:.0%} do menor máximo medido; a regra é desta tabela, a decisão é da C-08]** | — |")
         if capped(gpu_run) or capped(host_run):
