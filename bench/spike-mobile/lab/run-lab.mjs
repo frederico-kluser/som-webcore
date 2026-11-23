@@ -6,6 +6,8 @@
 //   node bench/spike-mobile/lab/run-lab.mjs --session <SESSION> [--browser stable] [--apenas <tag>]
 //        [--teto <MiB>] [--timeout 3600] [--tls spki|ignore] [--keep-profile] [--flags "<extra flags>"]
 //        [--simular-queda <step>:<seconds>[,…]]   (test of the crash path: renderer crash + reload)
+//   node bench/spike-mobile/lab/run-lab.mjs --session <SESSION> --browser simulador --apenas vagas
+//        (Safari on the project's iOS Simulator; no WebGPU there; erased at the end)
 //
 // - Trust: the lab serves HTTPS with a certificate from its own CA. The dedicated profile accepts only
 //   that server's key (--ignore-certificate-errors-spki-list, which Chrome honours only with
@@ -19,9 +21,9 @@
 // - Memory: RSS of the browser, GPU and renderer processes every 500 ms, and on macOS their
 //   phys_footprint every second (desktop-memory.mjs), labelled with the running step:
 //   bench/results/<SESSION>-desktop.json (desktopMemory.segments, one per browser launch).
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash, X509Certificate } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,8 +60,13 @@ const BROWSERS = process.platform === "darwin"
   ? { stable: macApp("Google Chrome"), canary: macApp("Google Chrome Canary") }
   : { stable: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" };
 const browser = opt("browser", "stable");
-const exe = BROWSERS[browser] || browser;
-if (!existsSync(exe)) fail(`navegador não encontrado: ${exe}`, "instale-o ou passe o caminho em --browser");
+// --browser simulador: Safari on the project's own iOS Simulator (MACMINI.md, section 4). No WebGPU
+// there, so it serves the Wasm slot steps (--apenas vagas). A restart is `simctl terminate` of
+// MobileSafari and a new openurl; the lab's CA goes into the simulator's keychain first.
+const SIMULATOR = browser === "simulador";
+const SIM_NAME = opt("device", "som-webcore iPhone 18 Pro");
+const exe = SIMULATOR ? "xcrun simctl (MobileSafari)" : BROWSERS[browser] || browser;
+if (!SIMULATOR && !existsSync(exe)) fail(`navegador não encontrado: ${exe}`, "instale-o ou passe o caminho em --browser");
 const cdpPort = Number(opt("port", "9334"));
 const timeoutMs = Number(opt("timeout", "3600")) * 1000;
 const profile = opt("profile", join(existsSync(EXT) ? join(EXT, "tmp", "som-webcore") : tmpdir(), `chrome-lab-${session}`));
@@ -122,7 +129,48 @@ let sampler = null;
 let browserVersion = null;
 let exited = false;
 
+// The iOS Simulator path. Errors are reported without the command line: the entry URL carries the token.
+let sim = null;
+let lastQuery = null;
+function simctl(...args) {
+  try { return execFileSync("xcrun", ["simctl", ...args], { encoding: "utf8", timeout: 300000, stdio: ["ignore", "pipe", "pipe"] }).trim(); } catch (error) {
+    throw new Error(`simctl ${args[0]} falhou (${String(error.stderr || error.message).split("\n")[0].replace(/t=[0-9a-f]+/gi, "t=…").slice(0, 200)})`);
+  }
+}
+function simPrepare() {
+  const runtimes = JSON.parse(simctl("list", "runtimes", "-j")).runtimes.filter((r) => r.isAvailable !== false && r.identifier.includes("iOS"));
+  const runtime = runtimes.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
+  if (!runtime) fail("nenhum runtime de iOS instalado", "instale um pelo Xcode");
+  const device = (JSON.parse(simctl("list", "devices", "-j")).devices[runtime.identifier] || []).find((d) => d.name === SIM_NAME && d.isAvailable !== false);
+  if (!device) fail(`simulador dedicado "${SIM_NAME}" não encontrado`, "crie-o com bench/spike-mobile/run-ios.mjs (MACMINI.md, seção 4)");
+  if (device.state !== "Booted") simctl("boot", device.udid);
+  simctl("bootstatus", device.udid, "-b");
+  // The simulator's services do not read the external disk: the CA goes through /tmp.
+  const caPem = join(dirname(info.tlsCert || ""), "ca.pem");
+  if (scheme === "https") {
+    if (!existsSync(caPem)) fail("CA do laboratório não encontrada", "suba a sessão com --modo local");
+    const tmpPem = join("/tmp", `som-lab-ca-${process.pid}.pem`);
+    copyFileSync(caPem, tmpPem);
+    try { simctl("keychain", device.udid, "add-root-cert", tmpPem); } finally { rmSync(tmpPem, { force: true }); }
+  }
+  const plist = join(runtime.runtimeRoot || "", "Applications", "MobileSafari.app", "Info.plist");
+  let safari = null;
+  try { safari = execFileSync("plutil", ["-extract", "CFBundleShortVersionString", "raw", plist], { encoding: "utf8" }).trim(); } catch { /* unknown */ }
+  sim = { udid: device.udid, name: SIM_NAME, runtime: runtime.identifier, runtimeVersion: runtime.version, safari: safari ? `Mobile Safari ${safari} (simulador ${runtime.version})` : `simulador ${runtime.version}` };
+  // The cookie: the entry page, once (the token goes to simctl, never to the output).
+  simctl("openurl", device.udid, `${base}/lab/enter?t=${token}`);
+}
+
 async function launch(query, why) {
+  lastQuery = query;
+  if (SIMULATOR) {
+    if (!sim) { simPrepare(); await sleep(5000); }
+    browserVersion = sim.safari;
+    simctl("openurl", sim.udid, `${base}/lab/lab.html?${query}`);
+    segments.push({ launch: segments.length + 1, why, startedAt: new Date().toISOString(), query, browserVersion });
+    console.log(`[run-lab] Safari ${segments.length} (${why}): ${browserVersion}, lab.html?${query}`);
+    return;
+  }
   exited = false;
   child = spawn(exe, [...flags, "about:blank"], { stdio: "ignore", detached: false });
   child.on("exit", () => { exited = true; });
@@ -147,6 +195,12 @@ async function launch(query, why) {
 }
 
 async function closeBrowser() {
+  if (SIMULATOR) {
+    try { simctl("terminate", sim.udid, "com.apple.mobilesafari"); } catch { /* not running */ }
+    await sleep(2000);
+    if (segments.length) segments[segments.length - 1].endedAt = new Date().toISOString();
+    return;
+  }
   try {
     const version = await (await fetch(`http://127.0.0.1:${cdpPort}/json/version`)).json();
     const cdp = await Cdp.connect(version.webSocketDebuggerUrl);
@@ -170,8 +224,10 @@ function write(extraFields = {}) {
   const steps = [...new Set(all.samples.map((s) => s.label).filter(Boolean))];
   const report = {
     kind: "device-lab-desktop-run", schemaVersion: 1, session, runner: "lab/run-lab.mjs", writtenAt: new Date().toISOString(),
-    browser: { name: browser, executable: exe, version: browserVersion, versions: [...new Set(segments.map((s) => s.browserVersion))], flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), tls: tlsNote, profile: "dedicado (apagado no fim, salvo --keep-profile)" },
-    base, restarts, browserExits, simulatedCrashes: simulated,
+    browser: SIMULATOR
+      ? { name: "simulador", executable: exe, version: browserVersion, versions: [...new Set(segments.map((s) => s.browserVersion))], device: sim ? { name: sim.name, runtime: sim.runtime, runtimeVersion: sim.runtimeVersion } : null, tls: "CA do laboratório no keychain do simulador dedicado" }
+      : { name: browser, executable: exe, version: browserVersion, versions: [...new Set(segments.map((s) => s.browserVersion))], flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), tls: tlsNote, profile: "dedicado (apagado no fim, salvo --keep-profile)" },
+    base, restarts, browserExits, simulatedCrashes: simulated, reopens,
     desktopMemory: { segments: segments.map(({ samples, footprint, ...rest }) => ({ ...rest, samples: samples || [], footprint: footprint || null })), peaks: peaks(all), peaksByStep: Object.fromEntries(steps.map((step) => [step, peaks(all, step)])) },
     ...extraFields,
   };
@@ -201,9 +257,14 @@ async function simulateCrash(stepId) {
   simulated.push({ step: stepId, at: new Date().toISOString() });
   console.log(`[run-lab] queda simulada em ${stepId} (Page.crash e Page.reload)`);
 }
-rmSync(profile, { recursive: true, force: true });
-mkdirSync(profile, { recursive: true });
-console.log(`[run-lab] sessão ${session}; ${base}; perfil dedicado ${profile}; TLS: ${tlsNote}`);
+const reopens = [];
+if (SIMULATOR) {
+  console.log(`[run-lab] sessão ${session}; ${base}; simulador ${SIM_NAME}`);
+} else {
+  rmSync(profile, { recursive: true, force: true });
+  mkdirSync(profile, { recursive: true });
+  console.log(`[run-lab] sessão ${session}; ${base}; perfil dedicado ${profile}; TLS: ${tlsNote}`);
+}
 const firstQuery = new URLSearchParams({ auto: "1", reinicio: "1" });
 if (opt("apenas")) firstQuery.set("apenas", opt("apenas"));
 if (opt("teto")) firstQuery.set("teto", opt("teto"));
@@ -213,11 +274,23 @@ const deadline = Date.now() + timeoutMs;
 let handled = null;
 const printed = new Map(); // step id -> status last printed
 let outcome = "timeout";
+let lastSeen = "";
+let lastChange = Date.now();
 for (;;) {
   await sleep(1000);
   const state = labState();
   const running = state?.steps?.find((s) => s.status === "running") ?? null;
   runningStep = running?.id ?? null;
+  const seen = JSON.stringify(state);
+  if (seen !== lastSeen) { lastSeen = seen; lastChange = Date.now(); }
+  // Right after a boot or a restart, the simulator's Safari can sit on a navigation that never reaches
+  // the server (MACMINI.md, section 4): open the lab again.
+  if (SIMULATOR && !running && !state?.done && !(state?.needsRestart && state.needsRestart.at !== handled) && Date.now() - lastChange > 45000 && reopens.length < 6) {
+    reopens.push({ at: new Date().toISOString(), query: lastQuery });
+    console.log(`[run-lab] o Safari do simulador não andou em 45 s: abrindo o laboratório de novo (${reopens.length})`);
+    simctl("openurl", sim.udid, `${base}/lab/lab.html?${lastQuery}`);
+    lastChange = Date.now();
+  }
   for (const s of state?.steps || []) {
     if (printed.get(s.id) === s.status || (s.status === "pending" && !printed.has(s.id))) continue;
     printed.set(s.id, s.status);
@@ -254,7 +327,12 @@ for (;;) {
 runningStep = null;
 await closeBrowser();
 write({ outcome });
-if (!flag("keep-profile")) rmSync(profile, { recursive: true, force: true });
+if (SIMULATOR) {
+  // The simulator keeps its data on the Mac's internal disk: shut it down and erase it (the CA and the
+  // lab cookie go with it), unless --keep-profile.
+  try { simctl("shutdown", sim.udid); } catch { /* already down */ }
+  if (!flag("keep-profile")) { try { simctl("erase", sim.udid); } catch { /* keep going */ } }
+} else if (!flag("keep-profile")) rmSync(profile, { recursive: true, force: true });
 const total = peaks({ samples: segments.flatMap((s) => s.samples || []), footprint: segments.flatMap((s) => s.footprint || []) });
 const mb = (x) => (x ? `${(x / 2 ** 20).toFixed(0)} MiB` : "—");
 console.log(`[run-lab] ${outcome === "done" ? "pronto" : "tempo esgotado"}; ${restarts.length} reinício(s), ${browserExits.length} saída(s) inesperada(s)`);
