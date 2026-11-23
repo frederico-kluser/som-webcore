@@ -163,7 +163,7 @@ function enterEpoch(step) {
 }
 // Why the current process does not suit a step, or null.
 function unmet(step, epoch) {
-  if (step.precisa === "novo" && epoch.used) return `precisa de um processo novo do Safari (neste já rodaram: ${epoch.steps.filter((id) => !(state.steps.find((s) => s.id === id) || {}).limpa).join(", ")})`;
+  if (step.precisa === "novo" && epoch.used) return `precisa de um processo novo do navegador (neste já rodaram: ${epoch.steps.filter((id) => !(state.steps.find((s) => s.id === id) || {}).limpa).join(", ")})`;
   if (step.precisa === "limpo" && epoch.residuo) return `precisa de um processo sem memória presa (neste já rodaram: ${epoch.steps.join(", ")})`;
   if (isOrt(step) && APPLE_MOBILE && epoch.ort >= 3) return `o ONNX Runtime já iniciou ${epoch.ort} vezes neste processo do Safari, e a 4ª falha com "Out of memory"`;
   return null;

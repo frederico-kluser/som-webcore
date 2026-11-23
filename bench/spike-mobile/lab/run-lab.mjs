@@ -16,7 +16,7 @@
 //   ?reaberto=1 — the desktop stand-in for the owner closing Safari. An unexpected browser exit gets
 //   a relaunch too, and the lab takes the running step as a crash.
 // - Memory: RSS of the browser, GPU and renderer processes every 500 ms, and on macOS their
-//   phys_footprint every 2 s (desktop-memory.mjs), labelled with the running step:
+//   phys_footprint every second (desktop-memory.mjs), labelled with the running step:
 //   bench/results/<SESSION>-desktop.json (desktopMemory.segments, one per browser launch).
 import { spawn } from "node:child_process";
 import { createHash, X509Certificate } from "node:crypto";
@@ -126,7 +126,7 @@ async function launch(query, why) {
   child = spawn(exe, [...flags, "about:blank"], { stdio: "ignore", detached: false });
   child.on("exit", () => { exited = true; });
   child.on("error", (e) => fail(`não foi possível abrir o navegador (${e.message})`, "confira o caminho"));
-  sampler = startDesktopMemorySampler({ rootPid: child.pid, label: () => runningStep });
+  sampler = startDesktopMemorySampler({ rootPid: child.pid, footprintEveryMs: 1000, label: () => runningStep });
   const version = await cdpJson("/json/version");
   browserVersion = version.Browser;
   const list = await cdpJson("/json/list");
@@ -139,7 +139,9 @@ async function launch(query, why) {
   await cdp.send("Page.enable");
   await cdp.send("Page.navigate", { url: `${base}/lab/lab.html?${query}` });
   cdp.close();
-  segments.push({ launch: segments.length + 1, why, startedAt: new Date().toISOString(), rootPid: child.pid, query });
+  // The version of each launch: Chrome's updater can swap the app between two launches of one session
+  // (seen on the Mac mini, 2026-11-23: 157 before the first restart, 158 after).
+  segments.push({ launch: segments.length + 1, why, startedAt: new Date().toISOString(), rootPid: child.pid, query, browserVersion });
   console.log(`[run-lab] navegador ${segments.length} (${why}): ${browserVersion}, lab.html?${query}`);
 }
 
@@ -167,7 +169,7 @@ function write(extraFields = {}) {
   const steps = [...new Set(all.samples.map((s) => s.label).filter(Boolean))];
   const report = {
     kind: "device-lab-desktop-run", schemaVersion: 1, session, runner: "lab/run-lab.mjs", writtenAt: new Date().toISOString(),
-    browser: { name: browser, executable: exe, version: browserVersion, flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), tls: tlsNote, profile: "dedicado (apagado no fim, salvo --keep-profile)" },
+    browser: { name: browser, executable: exe, version: browserVersion, versions: [...new Set(segments.map((s) => s.browserVersion))], flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), tls: tlsNote, profile: "dedicado (apagado no fim, salvo --keep-profile)" },
     base, restarts, browserExits,
     desktopMemory: { segments: segments.map(({ samples, footprint, ...rest }) => ({ ...rest, samples: samples || [], footprint: footprint || null })), peaks: peaks(all), peaksByStep: Object.fromEntries(steps.map((step) => [step, peaks(all, step)])) },
     ...extraFields,

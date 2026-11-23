@@ -17,7 +17,14 @@ const run = (cmd, args) => new Promise((resolve) => {
 function kindOf(command, isRoot) {
   if (isRoot) return "browser";
   const type = command.match(/--type=([a-z-]+)/);
-  if (!type) return /crashpad/i.test(command) ? "crashpad" : "other";
+  if (!type) {
+    // macOS helpers carry their role in the app name too: "Google Chrome Helper (GPU)", "(Renderer)".
+    const helper = command.match(/Helper \((GPU|Renderer|Plugin|Alerts)\)/);
+    if (helper) return helper[1] === "GPU" ? "gpu" : helper[1].toLowerCase();
+    if (/crashpad/i.test(command)) return "crashpad";
+    const name = (command.split(" --")[0].split("/").pop() || "other").replace(/\s+/g, "-").slice(0, 40);
+    return `other:${name}`;
+  }
   if (type[1] === "gpu-process") return "gpu";
   if (type[1] === "utility") {
     const sub = command.match(/--utility-sub-type=([\w.]+)/);
@@ -28,7 +35,8 @@ function kindOf(command, isRoot) {
 
 // Every process under rootPid (rootPid included), with its kind and RSS in bytes.
 async function tree(rootPid) {
-  const out = await run("ps", ["-axo", "pid=,ppid=,rss=,command="]);
+  // -ww: never truncate the command line (the --type= switch comes after a long path).
+  const out = await run("ps", ["-axww", "-o", "pid=,ppid=,rss=,command="]);
   const rows = [];
   for (const line of out.split("\n")) {
     const m = line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/);
