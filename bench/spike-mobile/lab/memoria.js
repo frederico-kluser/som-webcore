@@ -57,19 +57,21 @@ function log(line) {
 }
 const status = (text) => { const el = $("status"); if (el) el.textContent = text; };
 
+// Every marker also checkpoints the report: if the step that follows kills the tab, the lab writes
+// the result with everything measured until then.
 function mark(data, options = {}) {
+  checkpoint();
   const payload = { exp: EXP, variante: VARIANT, ...data };
   if (lab) return lab.mark(payload, options);
   try { localStorage.setItem("somLab.marker", JSON.stringify({ step: null, at: new Date().toISOString(), data: payload })); } catch { /* blocked */ }
   return null;
 }
-// What the lab keeps if the tab dies: everything measured so far, in localStorage.
+// What the lab keeps if the tab dies: the whole report so far (without the ledger snapshots, which
+// the last marker carries in short), in localStorage.
 function checkpoint() {
-  lab?.checkpoint({
-    kind: report.kind, experiment: EXP, variant: VARIANT, params: report.params, epoch: report.epoch, aparelho: report.aparelho, teto: report.teto,
-    environment: report.environment, steps: report.steps.slice(-200), phases: report.phases, timings: report.timings, erro: report.erro,
-    maiorAlocacaoOkBytes: report.maiorAlocacaoOkBytes ?? null, startedAt: report.startedAt,
-  });
+  if (!lab) return;
+  const { ledger, ...rest } = report;
+  lab.checkpoint({ ...rest, steps: report.steps.slice(-200) });
 }
 
 // Incompressible filler. iOS and macOS compress memory, and pages of a constant compress to almost
@@ -290,7 +292,7 @@ function countMemories(descriptor, label, max = 16) {
   const attempts = [];
   let error = null;
   for (let k = 1; k <= max; k++) {
-    mark({ fase: label, k }, { ledger: k === 1 });
+    mark({ fase: label, k }, { ledger: k === 1, text: `${label}: memória ${k} de até ${max} (${held.length} criadas)` });
     const t0 = performance.now();
     try {
       held.push(new WebAssembly.Memory(descriptor));
