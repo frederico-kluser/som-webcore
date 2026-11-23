@@ -25,8 +25,11 @@ import { createFetcher } from "/engines/fetch.js";
 
 const params = new URLSearchParams(location.search);
 const lab = window.__somLab ?? null;
-const EXP = params.get("exp") || "";
-const VARIANT = params.get("variante") || null;
+// One experiment at a time: the step page (memoria.html) runs the one in its URL; the single page
+// (memoria-unica.js) runs several in sequence through runExperiment().
+let EXP = params.get("exp") || "";
+let VARIANT = params.get("variante") || null;
+let STEP = lab?.step ?? null;
 const MiB = 1 << 20;
 const GiB = 1 << 30;
 const CHUNK = 4 * MiB;
@@ -42,13 +45,16 @@ const errorText = (error) => `${error?.name ?? typeof error}: ${error?.message ?
 const ua = navigator.userAgent;
 const PHONE = navigator.userAgentData?.mobile === true || /iPhone|iPad|iPod|Android/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 
-const report = {
+let report = newReport();
+function newReport(epoch = undefined) {
+  return {
   kind: "device-lab-memoria", schemaVersion: 1, experiment: EXP, variant: VARIANT, status: "running", outcome: null, erro: null, resumo: null,
   startedAt: new Date().toISOString(), page: location.pathname + location.search, params: Object.fromEntries(params),
-  epoch: params.get("epoch") !== null ? { n: Number(params.get("epoch")), reason: params.get("epocamotivo"), before: (params.get("antes") || "").split(",").filter(Boolean) } : null,
+  epoch: epoch !== undefined ? epoch : params.get("epoch") !== null ? { n: Number(params.get("epoch")), reason: params.get("epocamotivo"), before: (params.get("antes") || "").split(",").filter(Boolean) } : null,
   aparelho: PHONE ? "celular" : "desktop", teto: null, environment: null, steps: [], phases: {}, timings: {},
   ledger: lab ? { method: "lab/hook.js (WebGPU and WebAssembly prototypes wrapped)", start: lab.ledger.snapshot(32) } : null,
-};
+  };
+}
 
 function log(line) {
   console.info(`[memoria] ${line}`);
@@ -62,7 +68,7 @@ const status = (text) => { const el = $("status"); if (el) el.textContent = text
 function mark(data, options = {}) {
   checkpoint();
   const payload = { exp: EXP, variante: VARIANT, ...data };
-  if (lab) return lab.mark(payload, options);
+  if (lab) return lab.mark(payload, { ...options, step: STEP });
   try { localStorage.setItem("somLab.marker", JSON.stringify({ step: null, at: new Date().toISOString(), data: payload })); } catch { /* blocked */ }
   return null;
 }
@@ -71,7 +77,7 @@ function mark(data, options = {}) {
 function checkpoint() {
   if (!lab) return;
   const { ledger, ...rest } = report;
-  lab.checkpoint({ ...rest, steps: report.steps.slice(-200) });
+  lab.checkpoint({ ...rest, steps: report.steps.slice(-200) }, STEP);
 }
 
 // Incompressible filler. iOS and macOS compress memory, and pages of a constant compress to almost
@@ -748,8 +754,22 @@ async function post() {
   document.title = response.ok ? "posted" : "post failed";
 }
 
+// Runs one experiment and returns its report (the single page posts it itself).
+export async function runExperiment({ exp, variant = null, step, epoch = null, name = null }) {
+  EXP = exp; VARIANT = variant; STEP = step;
+  report = newReport(epoch);
+  Object.assign(report, { experiment: exp, variant, page: location.pathname, params: { ...Object.fromEntries(params), exp, variante: variant, name, unica: "1" } });
+  await execute();
+  return report;
+}
+
 async function main() {
   $("exp").textContent = `${EXP}${VARIANT ? ` · ${VARIANT}` : ""}`;
+  await execute();
+  await post();
+}
+
+async function execute() {
   const run = EXPERIMENTS[EXP];
   const started = performance.now();
   try {
@@ -776,7 +796,6 @@ async function main() {
   }
   status(`${report.outcome}: ${report.resumo ?? ""}`);
   log(`fim: ${report.outcome} — ${report.resumo ?? ""}`);
-  await post();
 }
 
-main();
+if (document.body?.dataset.modo === "etapa") main();

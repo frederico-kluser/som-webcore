@@ -53,7 +53,7 @@ const BR_CACHE = join(tmpdir(), "som-spike-br");
 const PROGRESS = new Map();
 
 const LAB = process.env.SOM_LAB_TOKEN && process.env.SOM_LAB_SESSION
-  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0, results: {}, markers: {} }
+  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0, results: {}, markers: {}, guard: {} }
   : null;
 const LAB_FILE = (suffix) => join(RESULTS, `${LAB.session}-${suffix}`);
 const QUIET = new Set(["/api/lab/log", "/api/progress", "/api/log"]); // too frequent for the request log
@@ -198,6 +198,14 @@ async function handler(req, res) {
       // What each step page posted in this session; the lab reads it when the tab comes back to it.
       if (url.pathname === "/api/lab/results") return send(res, 200, LAB.results);
       if (url.pathname === "/api/lab/markers") return send(res, 200, LAB.markers);
+      // Loop guard of the step pages (lab/hook.js): how many times this step and attempt started.
+      if (url.pathname === "/api/lab/guard") {
+        const key = String(url.searchParams.get("key") || "").slice(0, 200);
+        const navigationType = (await readBody(req, 1024)).toString("utf8").slice(0, 40);
+        const starts = (LAB.guard[key] = (LAB.guard[key] || 0) + 1);
+        if (starts > 1) console.log(`[lab] ${LAB.session} guard: ${key} started ${starts} times (navigation ${navigationType || "?"}): taken as a crash`);
+        return send(res, 200, { starts });
+      }
       if (req.method === "POST" && url.pathname === "/api/lab/log") {
         const entries = JSON.parse((await readBody(req, 4 << 20)).toString("utf8"));
         appendLabLogs(Array.isArray(entries) ? entries : [entries]);

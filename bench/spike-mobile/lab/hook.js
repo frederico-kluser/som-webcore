@@ -505,7 +505,7 @@
   function mark(data = {}, options = {}) {
     try {
       const entry = {
-        seq: seq++, t: now(), at: new Date().toISOString(), source, kind: "marker", level: "info", step: labStep, attempt: labAttempt, page: pageId,
+        seq: seq++, t: now(), at: new Date().toISOString(), source, kind: "marker", level: "info", step: options.step || labStep, attempt: options.step ? null : labAttempt, page: pageId,
         n: ++markerCount, text: options.text || text(data).slice(0, 300), data, ledger: options.ledger === false ? undefined : summary(),
       };
       if (options.announce) entry.announce = true;
@@ -518,8 +518,8 @@
     } catch { return null; }
   }
   // A page's partial result, so a step that dies still reports what it measured before.
-  function checkpoint(report) {
-    try { localStorage.setItem(PARTIAL_KEY, JSON.stringify({ step: labStep, attempt: labAttempt, page: pageId, at: new Date().toISOString(), report })); } catch { /* too big or blocked */ }
+  function checkpoint(report, step) {
+    try { localStorage.setItem(PARTIAL_KEY, JSON.stringify({ step: step || labStep, attempt: step ? null : labAttempt, page: pageId, at: new Date().toISOString(), report })); } catch { /* too big or blocked */ }
   }
   function readStored(key) {
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; }
@@ -604,14 +604,34 @@
   // A lab step is a page of its own (lab.js navigates to it with ?labstep=): keep the screen on, and
   // go back to the lab once the page has posted its result, or when the step's time is up.
   let reloaded = false;
-  try { reloaded = performance.getEntriesByType("navigation")[0]?.type === "reload"; } catch { /* no Navigation Timing */ }
-  if (labStep && isTop && reloaded) {
+  let navigationType = null;
+  try { navigationType = performance.getEntriesByType("navigation")[0]?.type ?? null; reloaded = navigationType === "reload"; } catch { /* no Navigation Timing */ }
+  // Loop guard. On the iPhone (2026-11-23) a page killed by jetsam came back with a navigation type
+  // that was not "reload" and ran its ramp again, ~200 times. So a step page counts its own starts:
+  // on the server (a synchronous request, before any other script of the page runs) and in
+  // localStorage. A second start of the same step and attempt is a crash: back to the lab, never again.
+  let startedBefore = false;
+  if (labStep && isTop) {
+    const key = `${labStep}#${labAttempt}`;
+    try {
+      const stored = JSON.parse(localStorage.getItem("somLab.stepRun") || "null");
+      if (stored && stored.key === key && !stored.finished) startedBefore = true;
+      localStorage.setItem("somLab.stepRun", JSON.stringify({ key, at: new Date().toISOString(), finished: false, starts: (stored && stored.key === key ? stored.starts : 0) + 1 }));
+    } catch { /* no storage */ }
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/api/lab/guard?key=${encodeURIComponent(key)}`, false);
+      xhr.send(navigationType || "");
+      if (xhr.status === 200 && JSON.parse(xhr.responseText).starts > 1) startedBefore = true;
+    } catch { /* server without the guard: localStorage decides */ }
+  }
+  if (labStep && isTop && (reloaded || startedBefore)) {
     // A step page is never reloaded on purpose; Safari reloads a page whose web process crashed (ONNX
     // Runtime WebGPU on the iPhone did that twice in a row; the memory pages die on purpose). Stop
     // before the page's own scripts run the step again and tell the lab, with the last marker.
     const marker = readStored(MARKER_KEY);
     const own = marker && marker.step === labStep ? marker : null;
-    push("lab", "warn", { text: `step ${labStep}: the page came back as a reload (the web process crashed); back to the lab without running it again${own ? `; last marker: ${own.text}` : ""}`, lastMarker: own });
+    push("lab", "warn", { navigationType, startedBefore, text: `step ${labStep}: the page came back (${navigationType}; started before: ${startedBefore}) (the web process crashed); back to the lab without running it again${own ? `; last marker: ${own.text}` : ""}`, lastMarker: own });
     try { window.stop(); } catch { /* keep going */ }
     flush();
     location.replace(`/lab/lab.html?continue=1&labcrashed=${encodeURIComponent(labStep)}`);
@@ -628,7 +648,10 @@
       if (navigator.wakeLock) navigator.wakeLock.request("screen").then(() => push("lab", "info", { text: "wake lock on" }), (error) => push("lab", "warn", { text: `wake lock: ${error.name}` }));
     } catch { /* not available */ }
     setInterval(() => {
-      if (document.title === "posted" || document.title === "post failed") backToLab("");
+      if (document.title === "posted" || document.title === "post failed") {
+        try { const stored = JSON.parse(localStorage.getItem("somLab.stepRun") || "null"); if (stored) localStorage.setItem("somLab.stepRun", JSON.stringify({ ...stored, finished: true })); } catch { /* ignore */ }
+        backToLab("");
+      }
     }, 500);
     setTimeout(() => {
       push("lab", "warn", { text: `step ${labStep} reached its time limit (${limit / 1000} s)` });

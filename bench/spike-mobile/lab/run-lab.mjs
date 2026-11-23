@@ -6,6 +6,7 @@
 //   node bench/spike-mobile/lab/run-lab.mjs --session <SESSION> [--browser stable] [--apenas <tag>]
 //        [--teto <MiB>] [--timeout 3600] [--tls spki|ignore] [--keep-profile] [--flags "<extra flags>"]
 //        [--simular-queda <step>:<seconds>[,…]]   (test of the crash path: renderer crash + reload)
+//        [--pagina /lab/memoria-unica.html]   (opens that page instead of the lab and taps its Começar)
 //   node bench/spike-mobile/lab/run-lab.mjs --session <SESSION> --browser simulador --apenas vagas
 //        (Safari on the project's iOS Simulator; no WebGPU there; erased at the end)
 //
@@ -64,6 +65,7 @@ const browser = opt("browser", "stable");
 // there, so it serves the Wasm slot steps (--apenas vagas). A restart is `simctl terminate` of
 // MobileSafari and a new openurl; the lab's CA goes into the simulator's keychain first.
 const SIMULATOR = browser === "simulador";
+const PAGE = opt("pagina", null);
 const SIM_NAME = opt("device", "som-webcore iPhone 18 Pro");
 const exe = SIMULATOR ? "xcrun simctl (MobileSafari)" : BROWSERS[browser] || browser;
 if (!SIMULATOR && !existsSync(exe)) fail(`navegador não encontrado: ${exe}`, "instale-o ou passe o caminho em --browser");
@@ -186,7 +188,12 @@ async function launch(query, why) {
   // The lab cookie, as /lab/enter would set it (token never in a URL).
   await cdp.send("Network.setCookie", { name: "som_lab", value: token, url: base, path: "/", httpOnly: true, secure: scheme === "https", sameSite: "Lax", expires: Math.floor(Date.now() / 1000) + 24 * 3600 });
   await cdp.send("Page.enable");
-  await cdp.send("Page.navigate", { url: `${base}/lab/lab.html?${query}` });
+  await cdp.send("Page.navigate", { url: PAGE ? `${base}${PAGE}` : `${base}/lab/lab.html?${query}` });
+  if (PAGE && segments.length === 0) {
+    // The page waits for a tap: a click with user activation, as the owner's.
+    await sleep(4000);
+    await cdp.send("Runtime.evaluate", { expression: 'document.getElementById("start").click()', userGesture: true }).catch(() => {});
+  }
   cdp.close();
   // The version of each launch: Chrome's updater can swap the app between two launches of one session
   // (seen on the Mac mini, 2026-11-23: 157 before the first restart, 158 after).
@@ -243,7 +250,7 @@ const crashed = new Set();
 const simulated = [];
 async function simulateCrash(stepId) {
   const list = await cdpJson("/json/list");
-  const page = list.find((t) => t.type === "page" && t.url.includes(`labstep=${encodeURIComponent(stepId)}`));
+  const page = list.find((t) => t.type === "page" && (t.url.includes(`labstep=${encodeURIComponent(stepId)}`) || (PAGE && t.url.includes(PAGE))));
   if (!page) { console.log(`[run-lab] queda simulada: página de ${stepId} não encontrada`); return; }
   const cdp = await Cdp.connect(page.webSocketDebuggerUrl);
   cdp.send("Page.crash").catch(() => {});
@@ -252,10 +259,12 @@ async function simulateCrash(stepId) {
   const again = (await cdpJson("/json/list")).find((t) => t.id === page.id);
   if (!again) { console.log(`[run-lab] queda simulada: a aba de ${stepId} sumiu depois do Page.crash`); return; }
   const next = await Cdp.connect(again.webSocketDebuggerUrl);
-  await next.send("Page.reload").catch(() => {});
+  // The page comes back as a plain navigation to the same URL, not a "reload": that is what the iPhone
+  // did after jetsam (2026-11-23), and the loop guards must not depend on the navigation type.
+  await next.send("Page.navigate", { url: page.url }).catch(() => {});
   next.close();
   simulated.push({ step: stepId, at: new Date().toISOString() });
-  console.log(`[run-lab] queda simulada em ${stepId} (Page.crash e Page.reload)`);
+  console.log(`[run-lab] queda simulada em ${stepId} (Page.crash e nova navegação à mesma URL)`);
 }
 const reopens = [];
 if (SIMULATOR) {
