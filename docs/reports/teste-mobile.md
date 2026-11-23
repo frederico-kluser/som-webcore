@@ -397,11 +397,11 @@ Depois do veredito da `T-04`, o dono abriu no próprio iPhone a página de teste
 **O que o laboratório descobriu sobre o Safari do iPhone [MEDIDO]:**
 
 - **A memória do Wasm do ONNX Runtime fica presa no processo do Safari.**
-  - Depois de 2 ou 3 sessões do ONNX Runtime, toda sessão nova falhou logo ao iniciar com `RangeError: Out of memory`, em Wasm e em WebGPU. Nesse mesmo processo, o `@johnhenry` (JavaScript e WebGPU) seguiu rodando.
+  - Em cada processo do Safari, as 3 primeiras inicializações do ONNX Runtime passaram e todas a partir da 4ª falharam logo ao iniciar com `RangeError: Out of memory`, em Wasm e em WebGPU (15 de 15 e 26 de 26; corrigido em 2026-11-23 — a primeira versão deste relatório dizia “2 ou 3 sessões” porque não contou uma visita a `/`, que roda o ONNX Runtime por padrão). A exceção sai da criação da memória Wasm compartilhada (16 MiB iniciais, 4 GiB de máximo), antes de o `.wasm` ser buscado: o tamanho do modelo não entra. Nesse mesmo processo, o `@johnhenry` (JavaScript e WebGPU, sem Wasm) seguiu rodando o `f32` de 67,48 MB, inclusive 200 decisões. Detalhes na [análise forense de 2026-11-23](forense-iphone-2026-11-22.md).
   - Não resolveram: iframes (rodada 1), uma página por etapa (rodada 2), uma aba aberta por `window.open` com `noopener` (continua no mesmo processo) e uma aba antiga reaberta.
   - Só fechar o Safari no seletor de apps devolveu a memória: as três etapas que tinham falhado rodaram em seguida (rodada 3).
   - Para um produto, isso sugere que uma página com o ONNX Runtime Web aberta 3 ou 4 vezes na mesma sessão do Safari pode parar **[HIPÓTESE: medido só no laboratório]**.
-- **O ONNX Runtime em WebGPU derruba o processo do Safari** na `q8emb32-f16`. O Safari recarregou a página, que caiu de novo, até a tela de erro “ocorreu um problema repetidamente”.
+- **O ONNX Runtime em WebGPU derruba o processo do Safari** na `q8emb32-f16` (23,37 MB). O Safari recarregou a página uma vez, que caiu de novo, até a tela de erro “ocorreu um problema repetidamente”. As duas quedas vieram no meio da inferência, depois de 40 e de 128 decisões, em entradas diferentes; a causa (limite de memória do iOS ou queda do WebKit) não está determinada, porque o Safari não dá à página nenhuma medida de memória ([análise forense](forense-iphone-2026-11-22.md), seção 6.1).
 - **O Wake Lock só é concedido com um toque.** As páginas de etapa receberam `NotAllowedError`, e o dono manteve a tela ligada à mão: nenhuma página ficou oculta durante as medições.
 
 **Transparência:** a rodada 3 ainda não tinha as correções do PR #24, e três registros dela foram feitos à mão a partir dos logs.

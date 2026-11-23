@@ -485,7 +485,7 @@ arquitetura e tetos da API WebGPU / Nativa nos três perfis de hardware alvo6.
                                                                                            perguntas/s
                                                                                            em batch12.
 
-(Nota de calibração de fontes: Os limites de memória WebGPU e tetos por aba de navegador
+[ERRATA E-53] (Nota de calibração de fontes: Os limites de memória WebGPU e tetos por aba de navegador
 provêm de análises técnicas da arquitetura W3C/Dawn/ORT Web6, e as latências de
 d1-omni-600M, Von e Laya provêm dos relatórios de benchmark das respetivas equipas de
 engenharia e repositórios Hugging Face5; as faixas de largura de banda física em GB/s nas
@@ -565,7 +565,7 @@ acumula no registo f32 multiplicando por scale_act * scale_weight20. Para pesos 
 extraímos os nibbles inferiores e superiores de 4 bits usando máscaras bit-a-bit ((w_packed &
 0x0F0F0F0Fu) e ((w_packed >> 4u) & 0x0F0F0F0Fu)) e passamos diretamente ao
 dot4I8Packed / dot4U8Packed sem nunca desempacotar para f32 na memória20.
-Em segundo lugar, combinamos enable f16; e enable subgroups;6. O uso de enable f16; reduz
+Em segundo lugar, combinamos enable f16; e enable subgroups; [ERRATA E-52]6. O uso de enable f16; reduz
 pela metade o consumo de registos (VGPRs) e de memória partilhada (var<workgroup>) para
 matrizes de atenção, enquanto enable subgroups; (Chrome 134+) disponibiliza subgroupAdd,
 subgroupMax, subgroupBroadcastFirst e subgroupShuffleXor, gerando ganhos medidos de
@@ -601,7 +601,7 @@ documentadas em produção:
       nosso carregador de shaders em Rust resolve isto removendo ou mantendo a linha
       enable subgroups; em tempo de carregamento consoante cfg!(target_arch =
       "wasm32")68.
-Streaming Direto para VRAM no Wasm32 (Contornando as Paredes de 2 GB e 4
+[ERRATA E-51] Streaming Direto para VRAM no Wasm32 (Contornando as Paredes de 2 GB e 4
 GB)
 No navegador, o motor enfrenta duas barreiras severas de memória da CPU: o Chrome limita
 qualquer alocação de ArrayBuffer em JavaScript a 0x7fe00000 (~2 GiB), fazendo com que
@@ -630,7 +630,7 @@ Streaming via OPFS em quatro passos6:
   4.   Orquestração Leve no Wasm: Dessa forma, os pesos de 200 MB a 800 MB transitam
        diretamente do disco (OPFS) para os buffers da GPU, enquanto o módulo Wasm32 retém
        apenas handles leves (~150 bytes por buffer) e mantém o consumo de memória linear
-       abaixo de 16 MiB durante todo o ciclo de vida da aplicação6.
+       abaixo de 16 MiB durante todo o ciclo de vida da aplicação [ERRATA E-50]6.
 2. PERFIL 2: SEM LIMITES DO BROWSER (wgpu Nativo em Vulkan,
 Metal e DirectX 12)
 Quando o motor executa nativamente em desktops, servidores ou dispositivos móveis (via

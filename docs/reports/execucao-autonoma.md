@@ -43,7 +43,7 @@
 - **Chrome do Mac parado antes de criar o perfil.** Aberto pelo LaunchServices (`open -a`), o Chrome rodou com as próprias permissões e não criou o perfil no HD externo, à espera da permissão de volume removível; a primeira sonda de desktop saiu por tempo esgotado. Aberto direto pela sessão SSH, herda o acesso ao disco e abre a janela. Junto, o executor passou a usar `--use-mock-keychain`. As sondas de diagnóstico foram apagadas.
 - **Laço quebrado pelo zsh.** O shell remoto do Mac (zsh) não divide `set -- $c`: uma rodada de resistência no desktop abriu URLs erradas, gravou arquivos com nomes malformados e foi interrompida; os arquivos foram apagados e a rodada refeita em `bash -s`. A rodada seguinte foi refeita mais uma vez para gravar as flags do navegador no resultado.
 - **Progresso antigo no servidor.** O `serve.mjs` guarda o último progresso de cada nome de execução na memória; ao repetir um nome, o progresso da execução interrompida continuava lá e parecia da nova. O executor do iOS grava um marcador antes de abrir a página.
-- **Memória do Wasm presa no processo do Safari (iPhone).** As três rodadas pararam em `Out of memory` depois de 2 ou 3 sessões do ONNX Runtime, cada uma de um jeito:
+- **Memória do Wasm presa no processo do Safari (iPhone).** As três rodadas pararam em `Out of memory` na 4ª inicialização do ONNX Runtime no mesmo processo (corrigido em 2026-11-23; antes dizia “depois de 2 ou 3 sessões”, sem contar uma visita a `/` — ver `docs/reports/forense-iphone-2026-11-22.md`), cada uma de um jeito:
   - Rodada 1: com as etapas em iframes, falharam todas as etapas do ONNX Runtime depois da `fp32`.
   - Rodada 2: com uma página por etapa, aconteceu o mesmo.
   - Rodada 3: não resolveram nem a aba aberta por `window.open` com `noopener` nem uma aba antiga reaberta. Só fechar o Safari resolveu.
@@ -65,7 +65,7 @@
 - **O erro de paridade é do artefato, não do motor do navegador.** No Safari, com o mesmo arquivo, o ONNX Runtime Web reproduz o ONNX Runtime nativo em `8bit`, `fp32` e `q8emb-f16` (máx. |Δp| ≤ 1,4e-6); só o `int8` diverge. A fronteira tamanho × paridade medida no nativo vale no navegador.
 - **O runtime do ONNX Runtime Web é 17% da primeira visita** da variante `8bit` do 17M (3,87 MB de 22,17 MB, em gzip); o do motor `@johnhenry` tem 0,1 MB. É um dado para a `T-10`: a variante que cumpre a tolerância Q8 (`q8emb32-f16`) passa de 25 MB por causa do runtime.
 - **No iPhone real há WebGPU**, com adaptador `apple` e `shader-f16`, ao contrário do simulador. **Só o WebGPU do `@johnhenry` em `f32` acerta e cumpre o alvo de 150 ms** (p95 de 70 e 71 ms, em duas rodadas); o ONNX Runtime em Wasm fica entre 276 e 344 ms. O que falta ao `@johnhenry` é o tamanho: 67,48 MB de pesos `f32`, que é o trabalho do fork ([ADR 0004](../adr/0004-dp-01-fork-do-motor-leve.md)).
-- **No Safari do iPhone, o ONNX Runtime Web prende a memória do Wasm no processo**: depois de 2 ou 3 sessões vem `Out of memory`, e o caminho WebGPU dele derruba o processo. Pesa contra o ONNX Runtime no iPhone.
+- **No Safari do iPhone, o ONNX Runtime Web prende a memória do Wasm no processo**: a partir da 4ª inicialização no mesmo processo vem `Out of memory`, e o caminho WebGPU dele derruba o processo. Pesa contra o ONNX Runtime no iPhone.
 
 ## Estado e próximo passo
 

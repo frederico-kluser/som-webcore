@@ -56,7 +56,8 @@
     {
       "name": "pesquisa-capacidade",
       "include": [
-        "research/03-*.md"
+        "research/03-*.md",
+        "research/04-*.md"
       ],
       "mode": "markdown",
       "type": "semantic",
