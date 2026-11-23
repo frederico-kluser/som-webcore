@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Device lab report: reads one session's files in bench/results/ and writes a Markdown report.
 
-    python3 bench/spike-mobile/lab/analyze.py <session> [--out <file>]
+    python3 bench/spike-mobile/lab/analyze.py <session> [--out <file>] [--margem 0.5]
 
 Inputs, all written during the session: <session>-lab.json (the steps and their status),
 <session>-<step>.json (the probe, the environment check and each page run), <session>-logs.jsonl
 (everything the pages logged, through lab/hook.js) and <session>-requests.jsonl (every request the
 server answered). Default output: bench/results/<session>-relatorio.md. Latencies are the device's
 own, but the GT thresholds are targets of the roadmap: the report labels them. No number is typed
-by hand. Standard library only.
+by hand. Standard library only. Sessions of the `memoria` profile (C-01) also get the memory section
+of analyze_memoria.py (--margem: the margin of its tier table, default 0.5).
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from check_shape import check as check_shape  # noqa: E402
 from compare import compare  # noqa: E402
 from summarize import row as summary_row  # noqa: E402
 from web_vs_native import as_reference, cell  # noqa: E402
+from analyze_memoria import section as memory_section  # noqa: E402
 
 MB = 1_000_000
 Q8 = {"int8", "8bit", "q8emb-f16", "q8emb32-f16"}
@@ -78,12 +80,13 @@ def tolerance(variant: str, comparison: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
-    args = [a for a in argv if not a.startswith("--")]
+    args = [a for i, a in enumerate(argv) if not a.startswith("--") and (i == 0 or argv[i - 1] not in ("--out", "--margem"))]
     if not args:
         print(__doc__, file=sys.stderr)
         return 2
     session = args[0]
     out_path = Path(argv[argv.index("--out") + 1]) if "--out" in argv else RESULTS / f"{session}-relatorio.md"
+    margin = float(argv[argv.index("--margem") + 1]) if "--margem" in argv else 0.5
     state = load(RESULTS / f"{session}-lab.json")
     if state is None:
         print(f"Erro: {session}-lab.json não existe em {RESULTS} — Solução: confira o nome da sessão", file=sys.stderr)
@@ -138,12 +141,14 @@ def main(argv: list[str]) -> int:
 
     # Steps.
     say("## Etapas\n")
-    say("| Etapa | Estado | Tentativas | Início | Fim | Nota | Tentativas anteriores |\n|---|---|---:|---|---|---|---|")
+    say("| Etapa | Estado | Processo | Tentativas | Início | Fim | Nota | Tentativas anteriores |\n|---|---|---:|---:|---|---|---|---|")
     for s in steps:
         status = s.get("status") + (f" ({s['outcome']})" if s.get("outcome") else "")
         before = "; ".join(f"{p.get('outcome') or '—'}: {str(p.get('note') or '')[:90]}" + (f" ({p['where']})" if p.get("where") else "")
                            for p in s.get("previous") or []) or "—"
-        say(f"| `{s['id']}` | {status} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {s.get('note') or '—'} | {before.replace('|', '/')} |")
+        ahead = f" — adiantada antes de `{s['aheadOf']['before']}` para ganhar um processo novo" if isinstance(s.get("aheadOf"), dict) else ""
+        note = (str(s.get("note") or "—") + ahead).replace("|", "/")
+        say(f"| `{s['id']}` | {status} | {s.get('epoch', '—')} | {s.get('attempts', 0)} | {s.get('startedAt') or '—'} | {s.get('endedAt') or '—'} | {note} | {before.replace('|', '/')} |")
     say("")
 
     # Page runs.
@@ -202,6 +207,9 @@ def main(argv: list[str]) -> int:
             holds = f"{n}/{asked}, falhas {endurance.get('failures')} — {'sim' if n == asked and not endurance.get('failures') else 'não'}"
         say(f"| `{s['id']}` | {acerta} | {size} | {fast} | {holds} |")
     say("")
+
+    # The memory profile (C-01).
+    memory_section(session, state, RESULTS, say, margin)
 
     # Logs.
     say("## Logs\n")
