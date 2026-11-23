@@ -1862,10 +1862,11 @@ O planejamento completo — atividades em DAG, critérios de aceite, portões e 
 |---|---|---|
 | **M0 — Fundação e auditoria** | documentação | Plano e pesquisa conferidos em fontes primárias ([errata](research/ERRATA.md)). **Concluído em 2026-11-21.** |
 | **Marco T — API igual à do Chrome e teste do motor existente** | — | Fixa a API idêntica à Decisions API, testa os motores que já existem (emulador Android, simulador de iOS, desktop e, depois, um iPhone real) e analisa se há uma janela para um motor nosso em WebGPU. **Concluído em 2026-11-22.** O motor existente (ONNX Runtime Web) não cumpre ao mesmo tempo a paridade e os 25 MB da primeira visita; o portão GT escolheu um motor nosso em WebGPU, e a bifurcação DP-01, um fork do motor leve `@johnhenry` ([ADRs 0001 a 0004](docs/adr/), [relatório](docs/reports/teste-mobile.md)). |
-| **M1 — Prova de conceito** | `v0.1.0` | Um modelo de 17M (TS-Ettin-17M) decide no navegador com as mesmas probabilidades da referência, sobre o motor nosso que nasce do fork. **É o próximo passo:** a base do fork (`K-01`) e o tronco comum da PoC (`P-01` a `P-04`). |
-| **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, fallback CPU em Wasm SIMD, recuperação de falhas, três motores de navegador, pacote npm alpha. |
-| **M3 — Beta** | `v0.5`–`v0.9` | Escada de modelos (32M, 68M, 150M), análise do dispositivo e escolha automática ([4.5](#analise-dispositivo)), API candidata. |
-| **M4 — v1.0.0** | `v1.0.0` | API estável, catálogo auditado, `model: 'auto'` nos três motores. |
+| **M1 — Prova de conceito** | `v0.1.0` | O TS-Ettin-17M decide pelo `DecisionModel` da biblioteca, no iPhone e no desktop, com as mesmas probabilidades da referência, sobre o fork do motor leve — sem prender memória: pesos em streaming para a GPU, memória fixa por sessão e `destroy()` devolvendo tudo ([revisão de 2026-11-23](docs/adr/0005-replanejamento-capacidade-e-memoria.md)). **É o próximo passo:** a base do fork (`K-01`) e o tronco comum da PoC (`P-01` a `P-04`). |
+| **Trilha C — Capacidade** | até o G3 | O modelo de decisão mais forte que cada aparelho comporta, pela mesma API (`preference: "capability"`); o teto é o orçamento medido de cada aparelho, não um número de parâmetros. Começa pelo orçamento de memória no laboratório (`C-01`) e pela avaliação em português (`C-09`). |
+| **M2 — Alpha** | `v0.2`–`v0.4` | Offline com OPFS, caminho decidido para aparelhos sem WebGPU (`DA-01`), recuperação de falhas — inclusive da aba morta por falta de memória —, três motores de navegador, pacote npm alpha. |
+| **M3 — Beta** | `v0.5`–`v0.9` | Escolha automática do modelo pela API padrão (`preference`), análise do dispositivo ([4.5](#analise-dispositivo)), API candidata, conformidade. |
+| **M4 — v1.0.0** | `v1.0.0` | Biblioteca estável, catálogo auditado, `preference: "auto"` nos três motores de navegador. |
 | **Trilha S — Padronização** | contínua | Alinhamento com a Decisions API, polyfill, evidências e testes de conformidade. |
 | **M5 — Pós-1.0** | `v1.x` | WebNN, multilíngue, multimodal (d1-omni), SDKs nativos, modelos próprios. |
 
@@ -1875,7 +1876,7 @@ O roadmap não promete datas: promete critérios. Como se trabalha está em [doc
 
 - Geração de texto, chat, RAG ou agentes autônomos.
 - Treino ou fine-tuning no navegador.
-- Modelos > 1B no browser.
+- Um teto fixo de parâmetros: o teto é o orçamento medido de cada aparelho, e o que não cabe nele responde `"unavailable"` — nunca trava a aba.
 - Substituir ONNX Runtime/transformers.js para todas as arquiteturas.
 - Rodar em WebGL2.
 - Fallback remoto: nenhum dado do usuário vai a servidores.
