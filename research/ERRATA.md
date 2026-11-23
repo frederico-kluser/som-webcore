@@ -100,3 +100,18 @@ Não é o mesmo que falso. Ficam rotulados como **[REPORTADO]** e não sustentam
 - os detalhes internos de Laya, Von, Kev e Bespoke Nimble além de existência, tamanho e licença.
 
 Para acrescentar ou contestar um item, abra uma issue com o modelo “Research erratum”.
+
+---
+
+## 7. Auditoria de 2026-11-23: o limite da aba
+
+Esta seção confere os relatórios 2 e 3 contra a [análise forense dos logs do iPhone](../docs/reports/forense-iphone-2026-11-22.md) e contra o [relatório 4](04-streaming-de-pesos-e-o-limite-da-aba.md), ambos de 2026-11-23. Os trechos afetados estão marcados nos próprios relatórios.
+
+| ID | Onde | O que estava escrito | O que é verdade | Fonte primária | Impacto |
+|---|---|---|---|---|---|
+| E-48 ⚠️ | Relatório 3 (Safari e Wasm); `docs/reports/teste-mobile.md`; ADR 0005 | “Depois de 2 ou 3 sessões do ONNX Runtime”, toda sessão nova falha | Em cada processo do Safari, as 3 primeiras inicializações passam (15 de 15) e todas a partir da 4ª falham (26 de 26). Uma visita a `/`, que roda o ONNX Runtime por padrão, não tinha sido contada | análise forense, seções 2 e 4.1 **[MEDIDO]** | Documentos vivos corrigidos. A regra “3 por processo” bate com o teto de 3 memórias Wasm rápidas do iOS |
+| E-49 ⚠️ | Relatório 3 | O Safari “recarrega a página duas vezes” antes da tela de erro | No nosso caso, uma recarga e depois a tela de erro | análise forense, seção 4.2 **[MEDIDO]** | Nenhum: o marcador de queda (`C-08`, `A-04`) não depende do número de recargas |
+| E-50 ⚠️ | Relatório 2 (Pilar 2, perfil do navegador) | Memória linear do Wasm abaixo de 16 MiB como proteção da aba | Reduz só a RAM cobrada. Cada memória Wasm rápida reserva 4 GiB + 8 MiB de endereços qualquer que seja o tamanho declarado, e o iOS admite 3 por processo | `BufferMemoryHandle.cpp`, `OptionsList.h` e `Gigacage.h` do WebKit; commit 5247798c3d0e (relatório 4) | O perfil de navegador do relatório 2, em Rust → wasm32, esbarraria na mesma trava no iPhone. O fork em JavaScript não usa Wasm |
+| E-51 ⚠️ | Relatório 2 (Pilar 2, perfil do navegador) | O streaming do OPFS para *slabs* de VRAM contorna as “paredes” de memória do navegador | Contorna o pico da carga e os limites por *buffer*. No Safari do iOS, toda `GPUBuffer` é cobrada da aba (teto de ~1,5 a 2 GB, que não sobe por *entitlement*), então o modelo residente continua limitado pela aba | commit 276332@main do WebKit; bugs 277848 e 274637 (relatório 4) | Passar do teto exige execução fora do núcleo (`C-07`) |
+| E-52 ⚠️ | Relatório 2 (Pilar 2, intrínsecos do WGSL) | `enable subgroups;` (`subgroupAdd`, `subgroupMax`) nos kernels do perfil de navegador | O iPhone do laboratório (Safari 26.6.3) não expõe `subgroups`. Expõe `shader-f16` e `packed_4x8_integer_dot_product` | `bench/results/2026-11-22-iphone-0229-sonda.json` **[MEDIDO]** | Kernels com redução em memória de *workgroup* por padrão; `subgroups` só como caminho opcional |
+| E-53 ❓ | Relatório 2 (tabela 2) | Orçamentos por aba de 3 a 4 GB no Chrome do macOS e de ~4 GB no Chrome do Windows | Sem verificação. Uma afirmação sobre a contabilidade de memória do Chrome não se sustentou na verificação do relatório 4 | relatório 4, seção 6 | Os orçamentos de desktop saem da medição (`C-01`) |

@@ -10,7 +10,7 @@
 **O que os nossos logs mostram** **[MEDIDO]** ([relatório do marco T](../reports/teste-mobile.md), seção 9; `bench/results/2026-11-22-iphone-*`):
 
 - No iPhone (Safari 26.6.3), a única configuração que acerta e cumpre o p95 de 150 ms é o motor `@johnhenry` em WebGPU, com pesos `f32`: p95 de 70 ms, máx. |Δp| de 1,3e-6. Em CPU, o mesmo motor tem p95 de 1,5 s.
-- A memória do Wasm do ONNX Runtime fica presa no processo do Safari: depois de 2 ou 3 sessões, `RangeError: Out of memory` até o Safari ser fechado; iframes, uma página por etapa e `window.open` não resolvem. O motor em JS + WebGPU seguiu rodando no mesmo processo. O ONNX Runtime em WebGPU derrubou o processo duas vezes seguidas.
+- A memória do Wasm do ONNX Runtime fica presa no processo do Safari: depois de 2 ou 3 sessões, `RangeError: Out of memory` até o Safari ser fechado (corrigido em 2026-11-23: as 3 primeiras inicializações por processo passam e a 4ª falha — [análise forense](../reports/forense-iphone-2026-11-22.md)); iframes, uma página por etapa e `window.open` não resolvem. O motor em JS + WebGPU seguiu rodando no mesmo processo. O ONNX Runtime em WebGPU derrubou o processo duas vezes seguidas.
 - O adaptador do iPhone aceita buffers e bindings de 1 GiB; a origem tem 41,2 GB de quota.
 - O `@johnhenry` baixa só pesos `f32` (67,48 MB), o caminho `f16` calcula em f16 e erra 1,5e-3 a 1,7e-3, e o heap cresce 50,09 MiB em 200 decisões na WebGPU do desktop.
 
