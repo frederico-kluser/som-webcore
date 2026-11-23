@@ -17,6 +17,7 @@
     li.ok, li.posted { color: #1a8a3a; }
     li.failed, li.timeout, li.interrupted, li.crashed { color: #c0392b; }
     li.skipped { opacity: .6; }
+    #aviso { border-left: 4px solid #e67e22; padding: 6px 10px; background: #e67e2214; border-radius: 6px; font-size: 15px; }
     pre { white-space: pre-wrap; font-size: 11px; max-height: 30vh; overflow: auto; background: #8881; padding: 8px; border-radius: 8px; }
   </style>
 </head>
@@ -24,7 +25,9 @@
   <h1>som-webcore · laboratório de aparelho</h1>
   <div id="session"></div>
   <div id="status">carregando…</div>
+  <p id="aviso" hidden><b>Perfil memória:</b> as etapas enchem a memória até o Safari derrubar a aba, <b>de propósito</b> — é a medição. Antes de começar, feche o Safari no seletor de apps e abra-o de novo neste endereço. Use, se puder, um perfil do Safari só para o laboratório, nunca o do dia a dia, com o iPhone na tomada e sem outros apps pesados abertos. Quando a aba cair, o Safari recarrega a página e o laboratório continua sozinho; se aparecer “ocorreu um problema repetidamente”, toque em Recarregar. Os testes de armazenamento gravam até 1,5 GB por alguns minutos e apagam tudo no fim.</p>
   <button id="start" hidden>Começar</button>
+  <button id="start2" class="secondary" hidden>Começar sem reabrir o Safari</button>
   <p id="hint">Deixe a tela ligada e o Safari aberto nesta aba até aparecer “Pronto”: cada etapa abre a página de teste e volta sozinha para cá. Use Wi-Fi. Se o laboratório pedir, feche o Safari e abra-o de novo neste endereço. Se uma etapa ficar parada mais de 10 minutos, toque em voltar.</p>
   <ol id="steps"></ol>
   <pre id="log"></pre>
