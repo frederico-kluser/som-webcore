@@ -255,6 +255,10 @@ async function handler(req, res) {
     let file = null;
     if (url.pathname.startsWith("/models/")) {
       file = inside(resolve(modelCache()), decodeURIComponent(url.pathname.slice("/models/".length)));
+    } else if (url.pathname.startsWith("/packages/")) {
+      // The library itself (packages/*/src), so a page can run on @som-web/core (engine core-*).
+      const rel = decodeURIComponent(url.pathname.slice("/packages/".length));
+      file = /^[a-z-]+\/src\//.test(rel) ? inside(join(ROOT, "packages"), rel) : null;
     } else {
       const path = decodeURIComponent(url.pathname === "/" ? "/home.html" : url.pathname);
       file = inside(HERE, path.slice(1));
