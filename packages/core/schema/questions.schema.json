@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/frederico-kluser/som-webcore/packages/core/schema/questions.schema.json",
+  "title": "DecisionModelCreateCoreOptions",
+  "description": "The question schema passed to DecisionModel.availability() and DecisionModel.create(), with the limits of the reference build (Chrome 160). RFC-0001; docs/spec/decisions-api-surface.md §3–4. JSON-serializable members only: signal and monitor are not JSON.",
+  "$comment": "Not expressible in JSON Schema and checked by the library with Chrome's errors: unique question ids, unique option labels within a question, valid BCP 47 language tags, and 'questions' being required by create() (availability() accepts it absent). Unknown members are allowed, as a WebIDL dictionary ignores them; the version-specific members 'context' (Chrome 157) and 'devTrialBackend' (Chrome 160, Dev Trial) are therefore not described here.",
+  "type": "object",
+  "properties": {
+    "expectedInputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/expectedInput" }
+    },
+    "preference": {
+      "description": "PerformancePreference; 'auto' when absent. The library uses it to pick the model tier (RFC-0001 §4).",
+      "enum": ["auto", "speed", "capability"]
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "nonBlank": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "expectedInput": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "description": "LanguageModelMessageType. Only 'text' is supported: any other gives 'unavailable' (availability) or NotSupportedError (create).",
+          "enum": ["text", "image", "audio", "tool-call", "tool-response"]
+        },
+        "languages": {
+          "description": "BCP 47 tags; an invalid tag is a RangeError, an uncovered language gives 'unavailable'.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "option": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": { "$ref": "#/$defs/nonBlank" },
+        "description": { "type": "string" }
+      }
+    },
+    "question": {
+      "type": "object",
+      "required": ["id", "prompt", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "prompt": { "$ref": "#/$defs/nonBlank" },
+        "type": { "enum": ["boolean", "choice", "score"] },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/option" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "boolean" } } },
+          "then": { "properties": { "options": { "type": "array", "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "choice" } } },
+          "then": {
+            "required": ["options"],
+            "properties": { "options": { "type": "array", "minItems": 2, "maxItems": 26 } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "score" } } },
+          "then": { "properties": { "options": { "type": "array", "minItems": 2, "maxItems": 11 } } }
+        }
+      ]
+    }
+  }
+}

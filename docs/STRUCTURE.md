@@ -30,6 +30,10 @@ som-webcore/
 │
 ├── packages/                    ✅ código JavaScript — ver seção 2
 │   ├── core/                    ✅ a API pública: DecisionModel idêntico ao do Chrome            P-03 → P-02 → K-05
+│   │   ├── src/                 ✅ conversão e validação do Chrome, decodificador, ciclo de vida, configuração  P-02
+│   │   ├── types/               ✅ tipos TypeScript da superfície, da configuração e do backend    P-02
+│   │   ├── types-check/         ✅ exemplos do explainer e do roadmap, compilados contra os tipos  P-02
+│   │   └── schema/              ✅ JSON Schema do esquema de perguntas                             P-02
 │   └── engine/                  ✅ o motor: o fork do motor leve, JavaScript + WGSL             P-03 → K-02
 │
 ├── models/
@@ -62,7 +66,7 @@ som-webcore/
 │   ├── METHODOLOGY.md           ✅ como decidimos, medimos e afirmamos
 │   ├── STRUCTURE.md             ✅ este arquivo
 │   ├── adr/                     ✅ registros de decisão de arquitetura                             DT-02
-│   ├── rfcs/                    propostas de superfície pública e de formato                     P-02
+│   ├── rfcs/                    ✅ propostas de superfície pública e de formato                     P-02
 │   ├── spec/                    ✅ especificações normativas, em inglês                            T-05
 │   ├── standards/               explainer, prior art e evidências, em inglês                     S-01
 │   ├── reports/                 ✅ relatórios de marco e de portão                                 T-06

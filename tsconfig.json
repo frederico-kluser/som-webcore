@@ -3,13 +3,25 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2023", "DOM"],
-    "types": ["node", "@webgpu/types"],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ],
+    "types": [
+      "node",
+      "@webgpu/types"
+    ],
     "allowJs": true,
     "checkJs": true,
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["packages/*/src/**/*", "packages/*/test/**/*", "scripts/**/*.mjs"]
+  "include": [
+    "packages/*/src/**/*",
+    "packages/*/test/**/*",
+    "packages/*/types/**/*",
+    "packages/*/types-check/**/*",
+    "scripts/**/*.mjs"
+  ]
 }
