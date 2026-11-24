@@ -1,0 +1,325 @@
+{
+  "session": "2026-11-23-iphone-2011",
+  "label": "iphone",
+  "profile": "memoria",
+  "mode": "local",
+  "createdAt": "2026-11-23T23:11:33.179513+00:00",
+  "apenas": null,
+  "teto": null,
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "limpa": true,
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [],
+      "startedAt": "2026-11-23T23:12:03.226Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-23T23:12:04.858Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "limpa": true,
+      "status": "ok",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda"
+      ],
+      "startedAt": "2026-11-23T23:12:04.883Z",
+      "endedAt": "2026-11-23T23:12:05.140Z"
+    },
+    {
+      "id": "vagas-ort",
+      "url": "/lab/memoria.html?exp=vagas&variante=ort",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 300,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda",
+        "ambiente"
+      ],
+      "startedAt": "2026-11-23T23:12:05.152Z",
+      "outcome": "erro",
+      "note": "ort: 3 memória(s); a 4ª deu RangeError: Out of memory",
+      "endedAt": "2026-11-23T23:13:16.669Z"
+    },
+    {
+      "id": "vagas-ort-navegacao",
+      "url": "/lab/memoria.html?exp=vagas-navegacao&variante=ort",
+      "depois": "vagas-ort",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort"
+      ],
+      "startedAt": "2026-11-23T23:13:16.691Z",
+      "outcome": "completou",
+      "note": "depois da navegação: 3 memória(s) ort (RangeError: Out of memory); 10 s e pressão depois: 3",
+      "endedAt": "2026-11-23T23:13:28.269Z"
+    },
+    {
+      "id": "gpu-rampa",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=simples",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "timeout",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao"
+      ],
+      "startedAt": "2026-11-23T23:13:28.293Z",
+      "note": "sem resultado em 300 s",
+      "endedAt": "2026-11-23T23:18:33.061Z"
+    },
+    {
+      "id": "vagas-naocompart",
+      "url": "/lab/memoria.html?exp=vagas&variante=naoCompart",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "gpu-rampa-ab256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=ab256",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "timeout",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa)"
+      },
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa"
+      ],
+      "startedAt": "2026-11-23T23:18:33.132Z",
+      "note": "sem resultado em 300 s",
+      "endedAt": "2026-11-23T23:23:39.806Z"
+    },
+    {
+      "id": "vagas-max1g",
+      "url": "/lab/memoria.html?exp=vagas&variante=max1g",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "host-rampa",
+      "url": "/lab/memoria.html?exp=host-rampa",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "running",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256)"
+      },
+      "epoch": 0,
+      "epochReason": "início: o dono fechou e reabriu o Safari",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256"
+      ],
+      "startedAt": "2026-11-23T23:23:39.876Z"
+    },
+    {
+      "id": "gpu-rampa-wasm256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=wasm256",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "vagas-minima",
+      "url": "/lab/memoria.html?exp=vagas&variante=minima",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "opfs-monolitico",
+      "url": "/lab/memoria.html?exp=opfs-monolitico",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 900,
+      "tags": [
+        "opfs"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "vagas-shim",
+      "url": "/lab/memoria.html?exp=vagas&variante=shim",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "opfs-streaming",
+      "url": "/lab/memoria.html?exp=opfs-streaming",
+      "precisa": "limpo",
+      "timeout": 1500,
+      "tags": [
+        "opfs"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "gpu-escrita",
+      "url": "/lab/memoria.html?exp=gpu-escrita",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 600,
+      "tags": [
+        "gpu-escrita"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "tags": [
+        "ort"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m-apos-wasm",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "depois": "ort-wasm-q8emb32-f16-17m",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "jh-webgpu-f32-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m",
+      "tags": [
+        "ort"
+      ],
+      "status": "pending",
+      "attempts": 0
+    }
+  ],
+  "firstEpochReason": "início: o dono fechou e reabriu o Safari",
+  "startedAt": "2026-11-23T23:12:03.225Z",
+  "epochs": [
+    {
+      "n": 0,
+      "startedAt": "2026-11-23T23:12:03.225Z",
+      "reason": "início: o dono fechou e reabriu o Safari",
+      "steps": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0
+    }
+  ]
+}

@@ -62,6 +62,13 @@ export async function getDecisionModel({ engine, model, variant, threads, optimi
     DecisionModel,
     variant: chosen,
     describe: () => ({ model: entry.id, repo: entry.repo, revision: entry.revision, variant: chosen, ...(instance?.describe() ?? {}) }),
+    // Hygiene, not part of the API: releases what the engine holds (ONNX Runtime session, @johnhenry
+    // model and WebGPU device). The page calls it at the end of every run.
+    async dispose() {
+      const engineToFree = instance;
+      instance = null;
+      await engineToFree?.dispose?.();
+    },
     // Diagnostics only (not part of the API): the token ids of one question, to compare with the reference.
     encodeForDebug(question, input) {
       if (!codecRef) return null;

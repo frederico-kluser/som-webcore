@@ -16,6 +16,9 @@
 //             which gives the page real transient user activation; then waits for a second post
 // --timeout   seconds to wait for each result (default 300)
 // --keep      leave the browser open at the end
+// --no-memory do not sample the browser's processes (by default: RSS of the browser, GPU and renderer
+//             processes of this profile every 500 ms and, on macOS, their phys_footprint every 2 s,
+//             in the result as desktopMemory — desktop-memory.mjs)
 
 import { spawn } from "node:child_process";
 import { existsSync, rmSync, statSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -23,6 +26,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeTimeoutResult } from "./timeout-result.mjs";
+import { peaks, startDesktopMemorySampler } from "./desktop-memory.mjs";
 
 const HERE = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const RESULTS = resolve(HERE, "..", "results");
@@ -148,11 +152,13 @@ async function attachConsole(collector) {
   writeFileSync(resultFile, JSON.stringify(data, null, 2));
 }
 
-// The browser and the command-line flags of the run, next to the page's own result.
-function attachBrowser() {
+// The browser and the command-line flags of the run, next to the page's own result, with the memory
+// of the browser's processes.
+function attachBrowser(desktopMemory) {
   if (!existsSync(resultFile)) return;
   const data = JSON.parse(readFileSync(resultFile, "utf8"));
   data.browser = { name: browser, executable: exe, flags: flags.filter((f) => !f.startsWith("--user-data-dir=")), headless: flag("headless") };
+  if (desktopMemory) data.desktopMemory = { ...desktopMemory, peaks: peaks(desktopMemory) };
   writeFileSync(resultFile, JSON.stringify(data, null, 2));
 }
 
@@ -185,6 +191,7 @@ console.log(`launch ${exe}\n  ${flags.join(" ")}\n  ${url}`);
 // SSH session, it inherits the session's disk access and still opens a window on the Mac's desktop.
 const child = spawn(exe, [...flags, url], { stdio: "ignore", detached: false });
 child.on("error", (e) => fail(`não foi possível abrir o navegador (${e.message})`, "confira o caminho"));
+const sampler = flag("no-memory") ? null : startDesktopMemorySampler({ rootPid: child.pid });
 
 const collector = flag("console") ? await collectConsole().catch(() => null) : null;
 let ok = await waitForResult(before, "first result");
@@ -203,6 +210,6 @@ if (!ok) {
   console.error(`wrote a failure result (timeout): ${resultFile}`);
 }
 if (collector) { await sleep(500); await attachConsole(collector); collector.cdp.close(); }
-attachBrowser();
+attachBrowser(sampler ? await sampler.stop() : null);
 if (!flag("keep")) { await closeBrowser(); await sleep(1500); try { child.kill(); } catch { /* ignore */ } }
 process.exit(ok ? 0 : 1);

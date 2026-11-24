@@ -1,13 +1,18 @@
 // T milestone test harness. Every decision goes through the Decisions API only:
 // DecisionModel.availability(), DecisionModel.create(), model.decide(), model.destroy().
-// The engine behind `DecisionModel` is chosen by the URL (engines/registry.js).
+// The engine behind `DecisionModel` is chosen by the URL (engines/registry.js); there is no default
+// engine: without ?engine= the page runs nothing (a default ONNX Runtime run on `/` took one of
+// Safari's Wasm memory slots unnoticed, docs/reports/forense-iphone-2026-11-22.md). At the end of
+// every run, the engine's dispose() releases what it holds (ONNX Runtime session, WebGPU device).
+// In the device lab, lab/hook.js adds two ledgers (GPU and Wasm) and crash-proof markers: the page
+// writes a marker before each decision and keeps the ledger of each decision in the report.
 
 import { probeEnvironment } from "./env.js";
 import { getDecisionModel } from "./engines/registry.js";
 
 const params = new URLSearchParams(location.search);
 const config = {
-  engine: params.get("engine") || "ort-wasm",
+  engine: params.get("engine") || null,
   model: params.get("model") || "ts-ettin-17m",
   variant: params.get("variant") || null,
   threads: Number(params.get("threads") || 1),
@@ -37,6 +42,22 @@ const report = {
   kind: "spike-mobile-run", schemaVersion: 1, startedAt: new Date().toISOString(), page: location.href, config,
   status: "running", failures: [], timings: {}, latency: {}, memory: [], answers: [],
 };
+// Device lab: the process epoch the lab gave this step (which steps ran before it in the same Safari
+// process), the ledgers of lab/hook.js and the markers.
+const lab = window.__somLab ?? null;
+if (params.get("epoch") !== null) report.epoch = { n: Number(params.get("epoch")), reason: params.get("epocamotivo"), before: (params.get("antes") || "").split(",").filter(Boolean) };
+report.ledger = lab ? { method: "lab/hook.js: WebGPU and WebAssembly prototypes wrapped; GPU bytes = buffer sizes and estimated texture sizes created minus destroyed or collected", start: lab.ledger.summary() } : null;
+report.ledgerTrace = lab ? [] : null;
+let binding = null;
+let decisions = 0;
+const lengths = new Map(); // item id -> longest sequence of its questions (tokens)
+function longest(item, schema) {
+  if (lengths.has(item.id)) return lengths.get(item.id);
+  let value = null;
+  try { value = Math.max(...schema.questions.map((q) => binding?.encodeForDebug?.(q, item.input)?.ids?.length ?? 0)) || null; } catch { value = null; }
+  lengths.set(item.id, value);
+  return value;
+}
 
 function describeError(error) {
   return { name: error?.name ?? typeof error, message: String(error?.message ?? error) };
@@ -116,12 +137,13 @@ function summarize() {
 async function main() {
   performance.setResourceTimingBufferSize?.(2000);
   report.timings.navigationToScriptMs = performance.now();
+  if (!config.engine) throw new Error("no engine: pass ?engine= (native, ort-wasm, ort-webgpu, ort-webgpu-jsep, jh-cpu, jh-webgpu); the page has no default engine");
   report.environment = await probeEnvironment();
+  try { report.storage = { estimate: await navigator.storage?.estimate?.() ?? null }; } catch (error) { report.storage = { error: String(error?.message ?? error) }; }
   const corpus = await (await fetch("corpus.json", { cache: "no-store" })).json();
   const items = corpus.items.filter((i) => config.lang === "all" || i.lang === config.lang);
   await memory("start");
 
-  let binding;
   progress("engine");
   try {
     binding = await getDecisionModel(config);
@@ -166,15 +188,25 @@ async function main() {
     const model = await session(item.schema);
     if (!model) return { ok: false, skipped: true };
     if (trace) log(`${phase} ${item.id}: decide`);
+    const i = ++decisions;
+    const L = lab ? longest(item, corpus.schemas[item.schema]) : null;
+    lab?.mark({ fase: phase, i, item: item.id, L }); // before the decision: a crash in it leaves this marker
     const t0 = performance.now();
+    let outcome;
     try {
       const result = await model.decide(item.input);
       const ms = performance.now() - t0;
-      return { ok: true, ms, result, at: performance.now() };
+      outcome = { ok: true, ms, result, at: performance.now() };
     } catch (error) {
       report.failures.push({ stage: phase, item: item.id, error: describeError(error) });
-      return { ok: false, ms: performance.now() - t0, error: describeError(error) };
+      outcome = { ok: false, ms: performance.now() - t0, error: describeError(error) };
     }
+    if (lab) {
+      const s = lab.ledger.summary();
+      report.ledgerTrace.push({ i, phase, item: item.id, L, ms: Math.round(outcome.ms * 100) / 100, ok: outcome.ok, gpuLiveMiB: s.gpu.liveMiB, gpuPeakMiB: s.gpu.peakMiB, buffers: s.gpu.buffers, destroyed: s.gpu.destroyed, writeMiB: s.gpu.writeMiB, devices: s.gpu.devices, lost: s.gpu.lost, wasmLive: s.wasm.live, wasmLiveMiB: s.wasm.liveMiB });
+      if (i % 10 === 0) lab.checkpoint({ kind: report.kind, config, epoch: report.epoch, decisions: i, ledgerTrace: report.ledgerTrace.slice(-120), ledger: s });
+    }
+    return outcome;
   }
 
   // Pass 1: every item once (the first call loads the engine and the model).
@@ -193,6 +225,7 @@ async function main() {
   }
   report.engineInfo = binding.describe();
   report.availability = availability;
+  if (lab) report.ledger.afterFirstPass = lab.ledger.snapshot(64);
   await memory("after-first-pass");
   report.latency.firstPass = stats(report.answers.filter((a) => a.status === "ok").map((a) => a.ms));
   const runnable = items.filter((i) => sessions.get(i.schema));
@@ -235,10 +268,29 @@ async function main() {
   report.status = report.answers.some((a) => a.status === "ok") ? "ok" : "failed";
 }
 
+// The engine's dispose() at the end of every run (forensic report 2026-11-22, X6): nothing called it,
+// so every session lived until the page died. The ledger before and after shows what it gave back.
+async function dispose() {
+  if (!binding?.dispose) return;
+  if (lab) report.ledger.beforeDispose = lab.ledger.snapshot(64);
+  const t0 = performance.now();
+  try {
+    await binding.dispose();
+    report.dispose = { ok: true, ms: Math.round((performance.now() - t0) * 100) / 100 };
+  } catch (error) {
+    report.dispose = { ok: false, ms: Math.round((performance.now() - t0) * 100) / 100, error: describeError(error) };
+  }
+  if (lab) report.ledger.afterDispose = lab.ledger.snapshot(64);
+}
+
 main()
   .catch((error) => { report.status = "failed"; report.fatal = describeError(error); log(`fatal: ${error?.stack ?? error}`); })
   .finally(async () => {
+    await dispose();
     report.bytes = bytesReport();
+    report.decisions = decisions;
+    report.outcome = report.status === "ok" ? "completou" : "erro";
+    if (lab) report.lastMarker = lab.lastMarker();
     report.finishedAt = new Date().toISOString();
     statusEl.textContent = `done: ${report.status}`;
     summarize();

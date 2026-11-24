@@ -1,0 +1,617 @@
+{
+  "session": "2026-11-23-desktop-1958",
+  "label": "desktop",
+  "profile": "memoria",
+  "mode": "local",
+  "createdAt": "2026-11-23T22:58:25.668667+00:00",
+  "auto": true,
+  "restartable": true,
+  "apenas": null,
+  "teto": null,
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "limpa": true,
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [],
+      "startedAt": "2026-11-23T22:58:33.429Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-23T22:58:34.815Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "limpa": true,
+      "status": "ok",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda"
+      ],
+      "startedAt": "2026-11-23T22:58:34.818Z",
+      "endedAt": "2026-11-23T22:58:34.974Z"
+    },
+    {
+      "id": "vagas-ort",
+      "url": "/lab/memoria.html?exp=vagas&variante=ort",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 300,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente"
+      ],
+      "startedAt": "2026-11-23T22:58:34.975Z",
+      "outcome": "completou",
+      "note": "ort: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:59:46.380Z"
+    },
+    {
+      "id": "vagas-ort-navegacao",
+      "url": "/lab/memoria.html?exp=vagas-navegacao&variante=ort",
+      "depois": "vagas-ort",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort"
+      ],
+      "startedAt": "2026-11-23T22:59:46.383Z",
+      "outcome": "completou",
+      "note": "depois da navegação: 16 memória(s) ort; 10 s e pressão depois: 16",
+      "endedAt": "2026-11-23T22:59:57.761Z"
+    },
+    {
+      "id": "gpu-rampa",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=simples",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao"
+      ],
+      "startedAt": "2026-11-23T22:59:57.765Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU sem falhar",
+      "endedAt": "2026-11-23T22:59:59.637Z"
+    },
+    {
+      "id": "vagas-naocompart",
+      "url": "/lab/memoria.html?exp=vagas&variante=naoCompart",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 1,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:00:20.327Z",
+      "outcome": "completou",
+      "note": "naoCompart: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:00:21.691Z"
+    },
+    {
+      "id": "gpu-rampa-ab256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=ab256",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa"
+      ],
+      "startedAt": "2026-11-23T22:59:59.641Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU depois de 256 MiB num ArrayBuffer sem falhar",
+      "endedAt": "2026-11-23T23:00:01.497Z"
+    },
+    {
+      "id": "vagas-max1g",
+      "url": "/lab/memoria.html?exp=vagas&variante=max1g",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 2,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:00:28.862Z",
+      "outcome": "completou",
+      "note": "max1g: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:00:30.250Z"
+    },
+    {
+      "id": "host-rampa",
+      "url": "/lab/memoria.html?exp=host-rampa",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256"
+      ],
+      "startedAt": "2026-11-23T23:00:01.499Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 2048 MiB de ArrayBuffer sem falhar",
+      "endedAt": "2026-11-23T23:00:02.881Z"
+    },
+    {
+      "id": "gpu-rampa-wasm256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=wasm256",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 3,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:00:32.458Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU depois de 256 MiB numa memória Wasm sem falhar",
+      "endedAt": "2026-11-23T23:00:34.337Z"
+    },
+    {
+      "id": "vagas-minima",
+      "url": "/lab/memoria.html?exp=vagas&variante=minima",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 4,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:00:38.541Z",
+      "outcome": "completou",
+      "note": "minima: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:00:39.950Z"
+    },
+    {
+      "id": "opfs-monolitico",
+      "url": "/lab/memoria.html?exp=opfs-monolitico",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 900,
+      "tags": [
+        "opfs"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa"
+      ],
+      "startedAt": "2026-11-23T23:00:02.885Z",
+      "outcome": "completou",
+      "note": "sobreviveu: 512 MiB: leitura inteira 2347.5 MB/s, envio 3234.2 MB/s, ponta a ponta 1360.2 MB/s · 1024 MiB: leitura inteira 2229.5 MB/s, envio 4053.4 MB/s, ponta a ponta 1438.4 MB/s",
+      "endedAt": "2026-11-23T23:00:14.753Z"
+    },
+    {
+      "id": "vagas-shim",
+      "url": "/lab/memoria.html?exp=vagas&variante=shim",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 5,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:00:47.737Z",
+      "outcome": "completou",
+      "note": "shim: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:00:49.215Z"
+    },
+    {
+      "id": "opfs-streaming",
+      "url": "/lab/memoria.html?exp=opfs-streaming",
+      "precisa": "limpo",
+      "timeout": 1500,
+      "tags": [
+        "opfs"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 5,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "vagas-shim"
+      ],
+      "startedAt": "2026-11-23T23:00:49.218Z",
+      "outcome": "completou",
+      "note": "512 MiB: escrita 51.1 MB/s (FileSystemSyncAccessHandle.write); anel 3859.6/4214.1/4224 MB/s por passada; placas 3965.1 MB/s ponta a ponta · 1024 MiB: escrita 109.2 MB/s (FileSystemSyncAccessHandle.write); anel 4070.3/4118.7/4249.1 MB/s por passada; placas 3947.6 MB/s ponta a ponta",
+      "endedAt": "2026-11-23T23:01:12.586Z"
+    },
+    {
+      "id": "gpu-escrita",
+      "url": "/lab/memoria.html?exp=gpu-escrita",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 600,
+      "tags": [
+        "gpu-escrita"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa",
+        "opfs-monolitico"
+      ],
+      "startedAt": "2026-11-23T23:00:14.770Z",
+      "outcome": "completou",
+      "note": "com espera 5716 MB/s; sem espera 2048 MiB enfileirados a 6611.7 MB/s, drenados em 4 ms; sem perda do dispositivo",
+      "endedAt": "2026-11-23T23:00:16.632Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 6,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:01:16.506Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T23:01:26.493Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:01:29.006Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T23:01:47.145Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m-apos-wasm",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "depois": "ort-wasm-q8emb32-f16-17m",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "ort-wasm-q8emb32-f16-17m"
+      ],
+      "startedAt": "2026-11-23T23:01:47.150Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T23:01:54.731Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m",
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "ort-wasm-q8emb32-f16-17m",
+        "ort-webgpu-q8emb32-f16-17m-apos-wasm"
+      ],
+      "startedAt": "2026-11-23T23:01:54.734Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T23:02:09.228Z"
+    }
+  ],
+  "startedAt": "2026-11-23T22:58:33.428Z",
+  "epochs": [
+    {
+      "n": 0,
+      "startedAt": "2026-11-23T22:58:33.428Z",
+      "reason": "início: navegador aberto pelo executor",
+      "steps": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa",
+        "opfs-monolitico",
+        "gpu-escrita"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0
+    },
+    {
+      "n": 1,
+      "startedAt": "2026-11-23T23:00:20.311Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-naocompart"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:00:16.635Z",
+        "step": "vagas-naocompart",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico, gpu-escrita)"
+      }
+    },
+    {
+      "n": 2,
+      "startedAt": "2026-11-23T23:00:28.841Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-max1g"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:00:21.708Z",
+        "step": "vagas-max1g",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-naocompart)"
+      }
+    },
+    {
+      "n": 3,
+      "startedAt": "2026-11-23T23:00:32.413Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "gpu-rampa-wasm256"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:00:30.254Z",
+        "step": "gpu-rampa-wasm256",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-max1g)"
+      }
+    },
+    {
+      "n": 4,
+      "startedAt": "2026-11-23T23:00:38.461Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-minima"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:00:34.353Z",
+        "step": "vagas-minima",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: gpu-rampa-wasm256)"
+      }
+    },
+    {
+      "n": 5,
+      "startedAt": "2026-11-23T23:00:47.668Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-shim",
+        "opfs-streaming"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:00:39.962Z",
+        "step": "vagas-shim",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-minima)"
+      }
+    },
+    {
+      "n": 6,
+      "startedAt": "2026-11-23T23:01:16.477Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "ort-webgpu-q8emb32-f16-17m"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 1,
+      "asked": {
+        "at": "2026-11-23T23:01:12.590Z",
+        "step": "ort-webgpu-q8emb32-f16-17m",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-shim, opfs-streaming)"
+      }
+    },
+    {
+      "n": 7,
+      "startedAt": "2026-11-23T23:01:28.988Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "ort-wasm-q8emb32-f16-17m",
+        "ort-webgpu-q8emb32-f16-17m-apos-wasm",
+        "jh-webgpu-f32-17m"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 2,
+      "asked": {
+        "at": "2026-11-23T23:01:26.497Z",
+        "step": "ort-wasm-q8emb32-f16-17m",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: ort-webgpu-q8emb32-f16-17m)"
+      }
+    }
+  ],
+  "restarts": [
+    {
+      "at": "2026-11-23T23:00:20.311Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-naocompart",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico, gpu-escrita)"
+    },
+    {
+      "at": "2026-11-23T23:00:28.841Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-max1g",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-naocompart)"
+    },
+    {
+      "at": "2026-11-23T23:00:32.413Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "gpu-rampa-wasm256",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-max1g)"
+    },
+    {
+      "at": "2026-11-23T23:00:38.461Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-minima",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: gpu-rampa-wasm256)"
+    },
+    {
+      "at": "2026-11-23T23:00:47.668Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-shim",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-minima)"
+    },
+    {
+      "at": "2026-11-23T23:01:16.477Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "ort-webgpu-q8emb32-f16-17m",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-shim, opfs-streaming)"
+    },
+    {
+      "at": "2026-11-23T23:01:28.988Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "ort-wasm-q8emb32-f16-17m",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: ort-webgpu-q8emb32-f16-17m)"
+    }
+  ],
+  "done": true,
+  "finishedAt": "2026-11-23T23:02:09.231Z"
+}

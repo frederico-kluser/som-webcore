@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>som-webcore · página neutra</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { color-scheme: light dark; font: 16px/1.45 -apple-system, system-ui, sans-serif; }
+    body { margin: 16px; max-width: 720px; }
+    code { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>som-webcore · página neutra</h1>
+  <p>Esta página não roda nenhum motor, não cria memória Wasm nem dispositivo WebGPU. Antes, <code>/</code> abria a página de teste, cujo motor padrão era o ONNX Runtime: uma visita a <code>/</code> gastava uma das vagas de memória Wasm do processo do Safari sem ninguém perceber (<code>docs/reports/forense-iphone-2026-11-22.md</code>, seção 2).</p>
+  <ul>
+    <li><a href="/lab/lab.html">Laboratório de aparelho</a> (sessão aberta pelo <code>start-lab.sh</code>)</li>
+    <li><a href="/probe.html">Sonda do ambiente</a> (WebGPU, WebAssembly, isolamento de origem)</li>
+    <li>Página de teste: <code>/index.html?engine=&lt;motor&gt;&amp;variant=&lt;variante&gt;</code> — o motor é obrigatório (<code>native</code>, <code>ort-wasm</code>, <code>ort-webgpu</code>, <code>ort-webgpu-jsep</code>, <code>jh-cpu</code>, <code>jh-webgpu</code>)</li>
+  </ul>
+</body>
+</html>

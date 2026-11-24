@@ -3,7 +3,10 @@
 //
 //   node bench/spike-mobile/serve.mjs [--port 8377] [--no-compress]
 //
-// - Static files from bench/spike-mobile/ (the page, the engines, node_modules).
+// - Static files from bench/spike-mobile/ (the page, the engines, node_modules). `/` is a neutral page
+//   (home.html) that runs no engine: it used to serve the test page, whose default engine is ONNX
+//   Runtime, and a visit to `/` took one of Safari's Wasm memory slots without anyone noticing
+//   (docs/reports/forense-iphone-2026-11-22.md, section 2, P3c).
 // - /models/<repo>/<revision>/<file> from the local model cache (see fetch-models.py);
 //   /models/derived/<...> from <cache>/derived (files generated from pinned weights).
 // - POST /api/results?name=<file> stores the JSON body in bench/results/<file>.json.
@@ -20,8 +23,10 @@
 // kept on the Mac across sessions, and the cookie lasts 180 days: after the first QR, a device opens
 // https://<mac>:<port>/lab/lab.html directly, in any session. Every HTML page gets
 // lab/hook.js as its first script; GET/POST /api/lab/state keeps the session state in
-// bench/results/<session>-lab.json; POST /api/lab/log appends the pages' logs to <session>-logs.jsonl;
-// each request is recorded in <session>-requests.jsonl; files other than HTML may be cached.
+// bench/results/<session>-lab.json; POST /api/lab/log appends the pages' logs to <session>-logs.jsonl
+// and keeps the last crash-proof marker of each step (lab/hook.js, mark()), which GET /api/lab/markers
+// returns: after Safari kills a tab on purpose, the lab reads where the page was; each request is
+// recorded in <session>-requests.jsonl; files other than HTML may be cached.
 
 import { createServer } from "node:http";
 import { createServer as createTlsServer } from "node:https";
@@ -48,7 +53,7 @@ const BR_CACHE = join(tmpdir(), "som-spike-br");
 const PROGRESS = new Map();
 
 const LAB = process.env.SOM_LAB_TOKEN && process.env.SOM_LAB_SESSION
-  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0, results: {} }
+  ? { token: process.env.SOM_LAB_TOKEN, session: process.env.SOM_LAB_SESSION.replace(/[^A-Za-z0-9._-]/g, ""), errors: 0, results: {}, markers: {}, guard: {} }
   : null;
 const LAB_FILE = (suffix) => join(RESULTS, `${LAB.session}-${suffix}`);
 const QUIET = new Set(["/api/lab/log", "/api/progress", "/api/log"]); // too frequent for the request log
@@ -65,6 +70,12 @@ function appendLabLogs(entries) {
   const now = new Date().toISOString();
   appendFileSync(LAB_FILE("logs.jsonl"), entries.map((e) => JSON.stringify({ receivedAt: now, ...e })).join("\n") + "\n");
   for (const e of entries) {
+    if (e.kind === "marker" && e.step) {
+      // The newest marker of each step (a page writes them in order; beacons may arrive out of order).
+      const known = LAB.markers[e.step];
+      if (!known || known.page !== e.page || (e.n ?? 0) > (known.n ?? 0)) LAB.markers[e.step] = { ...e, receivedAt: now };
+      if (e.announce) console.log(`[lab] ${LAB.session} marker ${e.step}: ${String(e.text).slice(0, 160)}`);
+    }
     if (e.level !== "error") continue;
     LAB.errors += 1;
     if (LAB.errors <= 10) console.log(`[lab] ${LAB.session} error ${e.source}: ${String(e.text).split("\n")[0].slice(0, 200)}`);
@@ -88,6 +99,12 @@ async function labState(req, res) {
     // A step that starts again (after "Out of memory" and a Safari restart) must not be settled with
     // what its previous attempt posted.
     if (step.status === "running") delete LAB.results[`${LAB.session}-${step.id}`];
+  }
+  // Process epochs and restart requests (lab.js): the owner has to act on a restart.
+  const epochs = next.epochs || [];
+  for (const epoch of epochs.slice((previous.epochs || []).length)) console.log(`[lab] ${LAB.session} process ${epoch.n}: ${epoch.reason}`);
+  if (next.needsRestart && JSON.stringify(next.needsRestart) !== JSON.stringify(previous.needsRestart)) {
+    console.log(`[lab] ${LAB.session} restart needed before ${next.needsRestart.step}: ${next.needsRestart.reason ?? "Wasm out of memory"}`);
   }
   if (next.done && !previous.done) console.log(`[lab] ${LAB.session} done`);
   return send(res, 200, { ok: true });
@@ -156,7 +173,8 @@ async function handler(req, res) {
         const token = Buffer.from(LAB.token);
         if (given.length !== token.length || !timingSafeEqual(given, token)) return send(res, 404, { ok: false, error: "not found" });
         const secure = req.headers["x-forwarded-proto"] === "https" || req.socket.encrypted;
-        res.writeHead(302, { Location: "/lab/lab.html", "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; Max-Age=${180 * 24 * 3600}; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
+        const nextPage = /^\/lab\/[a-z0-9-]+\.html$/.test(url.searchParams.get("next") || "") ? url.searchParams.get("next") : "/lab/lab.html";
+        res.writeHead(302, { Location: nextPage, "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; Max-Age=${180 * 24 * 3600}; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
         console.log(`[lab] ${LAB.session} device entered: ${String(req.headers["user-agent"] || "").slice(0, 160)}`);
         return res.end();
       }
@@ -180,6 +198,15 @@ async function handler(req, res) {
       if (url.pathname === "/api/lab/state") return await labState(req, res);
       // What each step page posted in this session; the lab reads it when the tab comes back to it.
       if (url.pathname === "/api/lab/results") return send(res, 200, LAB.results);
+      if (url.pathname === "/api/lab/markers") return send(res, 200, LAB.markers);
+      // Loop guard of the step pages (lab/hook.js): how many times this step and attempt started.
+      if (url.pathname === "/api/lab/guard") {
+        const key = String(url.searchParams.get("key") || "").slice(0, 200);
+        const navigationType = (await readBody(req, 1024)).toString("utf8").slice(0, 40);
+        const starts = (LAB.guard[key] = (LAB.guard[key] || 0) + 1);
+        if (starts > 1) console.log(`[lab] ${LAB.session} guard: ${key} started ${starts} times (navigation ${navigationType || "?"}): taken as a crash`);
+        return send(res, 200, { starts });
+      }
       if (req.method === "POST" && url.pathname === "/api/lab/log") {
         const entries = JSON.parse((await readBody(req, 4 << 20)).toString("utf8"));
         appendLabLogs(Array.isArray(entries) ? entries : [entries]);
@@ -200,8 +227,10 @@ async function handler(req, res) {
         const posted = JSON.parse(body.toString("utf8"));
         const why = posted.fatal?.message || posted.failures?.[0]?.error?.message || "";
         const firstLine = String(why).split(/\r?\n/)[0].slice(0, 160);
-        LAB.results[name] = { status: posted.status ?? null, kind: posted.kind ?? null, fatal: why ? firstLine : null };
-        console.log(`[lab] ${LAB.session} result ${name.slice(LAB.session.length + 1)} ${posted.status ?? posted.kind ?? "posted"}${why ? ` — ${firstLine}` : ""}`);
+        // Memory pages (lab/memoria.js) also say how the experiment ended and a one-line summary.
+        const resumo = posted.resumo ? String(posted.resumo).split(/\r?\n/)[0].slice(0, 300) : null;
+        LAB.results[name] = { status: posted.status ?? null, kind: posted.kind ?? null, fatal: why ? firstLine : null, outcome: posted.outcome ?? null, resumo };
+        console.log(`[lab] ${LAB.session} result ${name.slice(LAB.session.length + 1)} ${posted.status ?? posted.kind ?? "posted"}${posted.outcome ? ` (${posted.outcome})` : ""}${resumo ? ` — ${resumo.slice(0, 200)}` : why ? ` — ${firstLine}` : ""}`);
       }
       return send(res, 200, { ok: true, path: target });
     }
@@ -227,7 +256,7 @@ async function handler(req, res) {
     if (url.pathname.startsWith("/models/")) {
       file = inside(resolve(modelCache()), decodeURIComponent(url.pathname.slice("/models/".length)));
     } else {
-      const path = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+      const path = decodeURIComponent(url.pathname === "/" ? "/home.html" : url.pathname);
       file = inside(HERE, path.slice(1));
     }
     if (!file || !existsSync(file) || statSync(file).isDirectory()) return send(res, 404, { ok: false, error: "not found" });
@@ -243,7 +272,7 @@ async function handler(req, res) {
       // The log hook first, before any other script of the page. The lab's own scripts carry the
       // session in their URL: a device keeps whatever an earlier session let it cache.
       const version = `?v=${LAB.session}`;
-      const html = readFileSync(file, "utf8").replace(/(["'])\/lab\/lab\.js\1/g, `$1/lab/lab.js${version}$1`);
+      const html = readFileSync(file, "utf8").replace(/(["'])\/lab\/([a-z0-9-]+)\.js\1/g, `$1/lab/$2.js${version}$1`);
       const tag = `<script src="/lab/hook.js${version}"></script>`;
       const body = Buffer.from(/<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (head) => `${head}\n${tag}`) : `${tag}\n${html}`, "utf8");
       res.writeHead(200, { ...headers, "Content-Length": body.length });
