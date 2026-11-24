@@ -176,11 +176,11 @@ O backend CPU do fork está a 1,1e-6 da referência com os pesos publicados do T
 
 | Camada | O que cobre | Onde roda |
 |---|---|---|
-| **Unidade** | formato (ida e volta, offsets, rejeição de arquivo inválido), tokenizador (identidade de IDs), contrato (validação e renderização), cada kernel contra `som-ref` | CI, em todo PR |
-| **Integração nativa** | motor completo em wgpu nativo, sobre adaptador de software e, quando houver, GPU real | CI (software); máquinas de contribuidores (GPU) |
-| **Ponta a ponta web** | SDK no navegador: paridade, ausência de rede em `decide()`, não bloqueio da thread principal | CI com navegador automatizado; manual na matriz de dispositivos |
+| **Unidade** | contrato (validação idêntica à do Chrome, montagem das respostas), tokenização (identidade de IDs), carregador de pesos (ida e volta, offsets, rejeição de arquivo inválido) e o backend CPU do fork, em f32 | Node, `npm test` — CI em Linux, macOS e Windows, em todo PR |
+| **Paridade WebGPU** | cada kernel WGSL contra o backend CPU do fork; todo `.wgsl` compilado pelo Tint (`scripts/validate-wgsl.mjs`) | Dawn em Node, `npm run test:webgpu` — CI com adaptador de software (lavapipe) em todo PR; GPU real nas máquinas de contribuidores |
+| **Ponta a ponta web** | biblioteca no navegador: paridade, ausência de rede em `decide()`, não bloqueio da thread principal, a página de conformidade sem alteração | CI com navegador automatizado; manual e pelo laboratório na matriz de dispositivos |
 | **Conformidade** | vetores neutros de implementação — qualquer motor pode provar compatibilidade | CI; público a partir do beta |
-| **Fuzzing** | leitor de formato, validação do contrato | agendado |
+| **Fuzzing** | carregador de pesos, validação do contrato | agendado |
 | **Resistência** | 1.000 decisões por PR; 1 h antes de cada release | CI e manual |
 | **Injeção de falha** | perda de dispositivo, quota esgotada, download interrompido, arquivo corrompido | CI |
 

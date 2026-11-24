@@ -1,0 +1,30 @@
+{
+  "name": "som-webcore",
+  "private": true,
+  "version": "0.0.0",
+  "description": "SOM WebCore workspace: the Decisions API (DecisionModel) in the browser over a WebGPU engine.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/engine"
+  ],
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "lint": "eslint packages scripts eslint.config.js && tsc -p tsconfig.json",
+    "test": "npm test --workspaces",
+    "test:webgpu": "npm run test:webgpu --workspaces --if-present",
+    "validate:wgsl": "node scripts/validate-wgsl.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.20.5",
+    "@webgpu/types": "0.1.74",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
+    "typescript": "7.0.2",
+    "webgpu": "0.6.2"
+  }
+}
