@@ -1,0 +1,150 @@
+{
+  "$schema": "./catalog.schema.json",
+  "schemaVersion": 1,
+  "checked": "2026-11-23",
+  "models": [
+    {
+      "id": "ts-ettin-17m",
+      "name": "TS-Ettin-17M",
+      "repo": "typestrict/TS-Ettin-17M",
+      "revision": "026af312e41d24a1126f8d927bb6314fc2d5f592",
+      "revisionDate": "2026-10-20",
+      "architecture": {
+        "family": "modernbert",
+        "layers": 7,
+        "hidden": 256,
+        "intermediate": 384,
+        "heads": 4,
+        "vocab": 50369,
+        "maxTokens": 8192,
+        "parameters": 16869762,
+        "embeddingParameters": 12894464,
+        "source": "config.json (dinah.max_length para maxTokens); parâmetros somados das formas dos 57 tensores F32 no cabeçalho de model.safetensors (8 + 5.568 + 4 × 16.869.762 = 67.484.624 B), lido em 2026-11-23"
+      },
+      "files": {
+        "config.json": {
+          "size": 2648,
+          "sha256": "752ea5df70d202898dac926dafa70d33245030247cfd966b02c9c68296582099",
+          "role": "config"
+        },
+        "tokenizer.json": {
+          "size": 3583508,
+          "sha256": "858fe1cd418807d6c71c01e24b6d3239a224a1e3c995472fef20841e09eab056",
+          "role": "tokenizer"
+        },
+        "tokenizer_config.json": {
+          "size": 359,
+          "sha256": "161842780334b636ba99f5e8a3bf9ee9cea9bf6d70079237e63fd19017fae1c9",
+          "role": "tokenizer"
+        },
+        "special_tokens_map.json": {
+          "size": 175,
+          "sha256": "0bdfb00d5ae34dbdefe382d8d4b46f9ba5a1e2c56be66a9ed32e123926037220",
+          "role": "tokenizer"
+        },
+        "decision_ai.json": {
+          "size": 979,
+          "sha256": "12dd06969e75268e6b32d1a691cf9bcdd01e8d121c1f9d3f574e2b9504165f16",
+          "role": "config"
+        },
+        "dinah.py": {
+          "size": 13364,
+          "sha256": "ccd83f84579f4ea62737b5816e94368be7706524b989eaadd34496ba7e7b2030",
+          "role": "reference"
+        },
+        "LICENSE": {
+          "size": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "role": "license"
+        },
+        "README.md": {
+          "size": 39418,
+          "sha256": "893af095efc3118f5f0e603a972b8daa516f174c6e30ad1e4f1ea492d7712826",
+          "role": "card"
+        },
+        "model.safetensors": {
+          "size": 67484624,
+          "sha256": "c6a6876a8e7ad234454a7fe6ad44f5935c553f90968b828446ab6d4dddf57a76",
+          "role": "weights",
+          "dtype": "f32",
+          "lfs": true
+        },
+        "onnx/model_int8.onnx": {
+          "size": 17180077,
+          "sha256": "15e2a7125a016951768cf9b80c8a0d88ad1c6da3fdb81ef2d58fff9cba344be5",
+          "role": "weights",
+          "dtype": "int8",
+          "lfs": true
+        },
+        "onnx/model_8bit.onnx": {
+          "size": 17657261,
+          "sha256": "57d6916c6f09fb4860e8c9c7925a648a10081f334dc9e0953d5011e235c5d905",
+          "role": "weights",
+          "dtype": "int8",
+          "lfs": true
+        }
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "category": "permissive",
+        "file": "LICENSE",
+        "source": "cartão do modelo (README.md, metadado license) e arquivo LICENSE na revisão fixada"
+      },
+      "provenance": [
+        {
+          "repo": "cross-encoder/ettin-reranker-17m-v1",
+          "relation": "base_model",
+          "license": "Apache-2.0",
+          "revisionChecked": "9e4aa35321a6dd1a43ca313f500c4b4f7cfb5cc6",
+          "source": "cartão do TS-Ettin-17M (base_model) e API do Hugging Face, 2026-11-23"
+        },
+        {
+          "repo": "jhu-clsp/ettin-encoder-17m",
+          "relation": "base_model of cross-encoder/ettin-reranker-17m-v1",
+          "license": "MIT",
+          "revisionChecked": "987607455c61e7a5bbc85f7758e0512ea6d0ae4c",
+          "source": "cartão do cross-encoder/ettin-reranker-17m-v1 (base_model) e API do Hugging Face, 2026-11-23"
+        }
+      ],
+      "calibration": {
+        "status": "uncalibrated",
+        "detail": "temperatura 1,0 em todos os (tipo, opções) e Platt [1,0, 0,0] em config.json (dinah.calibration.note: \"NOT calibrated yet\"); o cartão avisa que a confiança não é calibrada",
+        "source": "config.json e README.md na revisão fixada"
+      },
+      "languages": {
+        "declared": ["en"],
+        "note": "o cartão declara só inglês; a mistura de treino tem conjuntos em português (traduções e alguns conjuntos nativos), sem avaliação publicada em português",
+        "source": "README.md na revisão fixada (metadado language e tabela de propriedades)"
+      },
+      "questionTypes": {
+        "boolean": "noul",
+        "choice": "choice",
+        "score": "score"
+      },
+      "quality": [
+        {
+          "metric": "acurácia em decisões tipadas reservadas, inglês, 1.000 itens (PyTorch)",
+          "value": 0.529,
+          "label": "REPORTADO",
+          "source": "README.md na revisão fixada, seção Held-out typed decisions",
+          "date": "2026-10-20"
+        },
+        {
+          "metric": "acurácia em decisões tipadas reservadas, inglês, 1.000 itens (ONNX int8)",
+          "value": 0.533,
+          "label": "REPORTADO",
+          "source": "README.md na revisão fixada, seção Held-out typed decisions",
+          "date": "2026-10-20"
+        },
+        {
+          "metric": "Decision Index 0.3, índice público, rodado pelo próprio autor (encoder sozinho); não é pontuação oficial, e a edição atual é a 0.4.1",
+          "value": 15.76,
+          "label": "REPORTADO",
+          "source": "README.md na revisão fixada, seção Decision Index 0.3",
+          "date": "2026-10-20"
+        }
+      ],
+      "attribution": "TS-Ettin-17M, de typestrict.ai (Apache-2.0), a partir de cross-encoder/ettin-reranker-17m-v1 (Apache-2.0), que parte de jhu-clsp/ettin-encoder-17m (MIT)."
+    }
+  ]
+}

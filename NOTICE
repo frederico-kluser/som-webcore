@@ -13,3 +13,16 @@ interoperability and attribution; all trademarks and licenses remain with
 their respective owners.
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Models
+------
+
+Model weights are never bundled in this repository. tools/fetch_model.py
+downloads them from the pinned revision listed in models/catalog.json and
+verifies every file by SHA-256. Each model keeps its own license:
+
+- TS-Ettin-17M (https://huggingface.co/typestrict/TS-Ettin-17M), revision
+  026af312e41d24a1126f8d927bb6314fc2d5f592, by typestrict.ai, licensed under
+  the Apache License, Version 2.0. It is derived from
+  cross-encoder/ettin-reranker-17m-v1 (Apache-2.0), which is derived from
+  jhu-clsp/ettin-encoder-17m (MIT).
