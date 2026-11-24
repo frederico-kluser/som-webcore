@@ -1,0 +1,199 @@
+{
+  "session": "2026-11-23-desktop-2057",
+  "label": "desktop",
+  "profile": "memoria",
+  "mode": "local",
+  "createdAt": "2026-11-23T23:57:39.508197+00:00",
+  "unica": {
+    "version": 1,
+    "page": "/lab/memoria-unica.html"
+  },
+  "steps": [
+    {
+      "id": "vagas-shim",
+      "exp": "vagas",
+      "variant": "shim",
+      "url": "/lab/memoria.html?exp=vagas&variante=shim",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:45.586Z",
+      "epoch": 0,
+      "epochReason": "início (página única)",
+      "before": [],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:45.639Z",
+      "note": "shim: 16 memória(s) (o máximo testado, sem erro)"
+    },
+    {
+      "id": "vagas-minima",
+      "exp": "vagas",
+      "variant": "minima",
+      "url": "/lab/memoria.html?exp=vagas&variante=minima",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:45.642Z",
+      "epoch": 0,
+      "epochReason": "início (página única)",
+      "before": [
+        "vagas-shim"
+      ],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:45.657Z",
+      "note": "minima: 16 memória(s) (o máximo testado, sem erro)"
+    },
+    {
+      "id": "vagas-naocompart",
+      "exp": "vagas",
+      "variant": "naoCompart",
+      "url": "/lab/memoria.html?exp=vagas&variante=naoCompart",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:45.661Z",
+      "epoch": 0,
+      "epochReason": "início (página única)",
+      "before": [
+        "vagas-shim",
+        "vagas-minima"
+      ],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:45.676Z",
+      "note": "naoCompart: 16 memória(s) (o máximo testado, sem erro)"
+    },
+    {
+      "id": "vagas-max1g",
+      "exp": "vagas",
+      "variant": "max1g",
+      "url": "/lab/memoria.html?exp=vagas&variante=max1g",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:45.679Z",
+      "epoch": 0,
+      "epochReason": "início (página única)",
+      "before": [
+        "vagas-shim",
+        "vagas-minima",
+        "vagas-naocompart"
+      ],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:45.692Z",
+      "note": "max1g: 16 memória(s) (o máximo testado, sem erro)"
+    },
+    {
+      "id": "opfs-streaming",
+      "exp": "opfs-streaming",
+      "url": "/lab/memoria.html?exp=opfs-streaming",
+      "status": "crashed",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:45.696Z",
+      "epoch": 0,
+      "epochReason": "início (página única)",
+      "before": [
+        "vagas-shim",
+        "vagas-minima",
+        "vagas-naocompart",
+        "vagas-max1g"
+      ],
+      "outcome": "morreu",
+      "endedAt": "2026-11-23T23:57:51.205Z",
+      "note": "morreu — último marcador: OPFS: escrevendo 1024 MiB",
+      "lastMarker": {
+        "n": 122,
+        "at": "2026-11-23T23:57:48.035Z",
+        "text": "OPFS: escrevendo 1024 MiB",
+        "data": {
+          "exp": "opfs-streaming",
+          "variante": null,
+          "fase": "escrita",
+          "mib": 1024
+        }
+      }
+    },
+    {
+      "id": "gpu-escrita",
+      "exp": "gpu-escrita",
+      "cai": true,
+      "url": "/lab/memoria.html?exp=gpu-escrita",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:54.225Z",
+      "epoch": 1,
+      "epochReason": "queda em opfs-streaming",
+      "before": [],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:55.009Z",
+      "note": "com espera 5685.7 MB/s; sem espera 2048 MiB enfileirados a 6658.9 MB/s, drenados em 70 ms; sem perda do dispositivo"
+    },
+    {
+      "id": "gpu-rampa-wasm256",
+      "exp": "gpu-rampa",
+      "variant": "wasm256",
+      "cai": true,
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=wasm256",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:55.012Z",
+      "epoch": 1,
+      "epochReason": "queda em opfs-streaming",
+      "before": [
+        "gpu-escrita"
+      ],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:57:56.062Z",
+      "note": "chegou ao teto de 3072 MiB de GPU depois de 256 MiB numa memória Wasm sem falhar"
+    },
+    {
+      "id": "opfs-monolitico",
+      "exp": "opfs-monolitico",
+      "cai": true,
+      "url": "/lab/memoria.html?exp=opfs-monolitico",
+      "status": "posted",
+      "attempts": 1,
+      "startedAt": "2026-11-23T23:57:56.063Z",
+      "epoch": 1,
+      "epochReason": "queda em opfs-streaming",
+      "before": [
+        "gpu-escrita",
+        "gpu-rampa-wasm256"
+      ],
+      "outcome": "completou",
+      "endedAt": "2026-11-23T23:58:03.005Z",
+      "note": "sobreviveu: 512 MiB: leitura inteira 2185.1 MB/s, envio 3057.4 MB/s, ponta a ponta 1274.3 MB/s · 1024 MiB: leitura inteira 2013 MB/s, envio 2539.6 MB/s, ponta a ponta 1122.9 MB/s"
+    }
+  ],
+  "epochs": [
+    {
+      "n": 0,
+      "startedAt": "2026-11-23T23:57:45.586Z",
+      "reason": "início (página única)",
+      "steps": [
+        "vagas-shim",
+        "vagas-minima",
+        "vagas-naocompart",
+        "vagas-max1g",
+        "opfs-streaming"
+      ],
+      "used": true,
+      "wasm": false,
+      "residuo": false,
+      "ort": 0
+    },
+    {
+      "n": 1,
+      "startedAt": "2026-11-23T23:57:51.205Z",
+      "reason": "queda em opfs-streaming",
+      "steps": [
+        "gpu-escrita",
+        "gpu-rampa-wasm256",
+        "opfs-monolitico"
+      ],
+      "used": true,
+      "wasm": false,
+      "residuo": false,
+      "ort": 0
+    }
+  ],
+  "done": true,
+  "started": true,
+  "updatedAt": "2026-11-23T23:58:03.006Z",
+  "finishedAt": "2026-11-23T23:58:03.006Z"
+}

@@ -1,0 +1,617 @@
+{
+  "session": "2026-11-23-desktop-1920",
+  "label": "desktop",
+  "profile": "memoria",
+  "mode": "local",
+  "createdAt": "2026-11-23T22:20:03.116353+00:00",
+  "auto": true,
+  "restartable": true,
+  "apenas": null,
+  "teto": null,
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "limpa": true,
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [],
+      "startedAt": "2026-11-23T22:20:15.042Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-23T22:20:16.434Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "limpa": true,
+      "status": "ok",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda"
+      ],
+      "startedAt": "2026-11-23T22:20:16.440Z",
+      "endedAt": "2026-11-23T22:20:16.932Z"
+    },
+    {
+      "id": "vagas-ort",
+      "url": "/lab/memoria.html?exp=vagas&variante=ort",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 300,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente"
+      ],
+      "startedAt": "2026-11-23T22:20:16.935Z",
+      "outcome": "completou",
+      "note": "ort: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:21:28.343Z"
+    },
+    {
+      "id": "vagas-ort-navegacao",
+      "url": "/lab/memoria.html?exp=vagas-navegacao&variante=ort",
+      "depois": "vagas-ort",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort"
+      ],
+      "startedAt": "2026-11-23T22:21:28.347Z",
+      "outcome": "completou",
+      "note": "depois da navegação: 16 memória(s) ort; 10 s e pressão depois: 16",
+      "endedAt": "2026-11-23T22:21:39.727Z"
+    },
+    {
+      "id": "gpu-rampa",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=simples",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao"
+      ],
+      "startedAt": "2026-11-23T22:21:39.733Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU sem falhar",
+      "endedAt": "2026-11-23T22:21:42.091Z"
+    },
+    {
+      "id": "vagas-naocompart",
+      "url": "/lab/memoria.html?exp=vagas&variante=naoCompart",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 1,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:12.495Z",
+      "outcome": "completou",
+      "note": "naoCompart: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:22:19.737Z"
+    },
+    {
+      "id": "gpu-rampa-ab256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=ab256",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa"
+      ],
+      "startedAt": "2026-11-23T22:21:42.096Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU depois de 256 MiB num ArrayBuffer sem falhar",
+      "endedAt": "2026-11-23T22:21:43.961Z"
+    },
+    {
+      "id": "vagas-max1g",
+      "url": "/lab/memoria.html?exp=vagas&variante=max1g",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 2,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:22.758Z",
+      "outcome": "completou",
+      "note": "max1g: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:22:24.129Z"
+    },
+    {
+      "id": "host-rampa",
+      "url": "/lab/memoria.html?exp=host-rampa",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256"
+      ],
+      "startedAt": "2026-11-23T22:21:43.966Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 2048 MiB de ArrayBuffer sem falhar",
+      "endedAt": "2026-11-23T22:21:45.338Z"
+    },
+    {
+      "id": "gpu-rampa-wasm256",
+      "url": "/lab/memoria.html?exp=gpu-rampa&variante=wasm256",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "timeout": 300,
+      "tags": [
+        "rampas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 3,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:26.696Z",
+      "outcome": "completou",
+      "note": "chegou ao teto de 3072 MiB de GPU depois de 256 MiB numa memória Wasm sem falhar",
+      "endedAt": "2026-11-23T22:22:28.555Z"
+    },
+    {
+      "id": "vagas-minima",
+      "url": "/lab/memoria.html?exp=vagas&variante=minima",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 4,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:29.712Z",
+      "outcome": "completou",
+      "note": "minima: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:22:31.093Z"
+    },
+    {
+      "id": "opfs-monolitico",
+      "url": "/lab/memoria.html?exp=opfs-monolitico",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 900,
+      "tags": [
+        "opfs"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa"
+      ],
+      "startedAt": "2026-11-23T22:21:45.343Z",
+      "outcome": "completou",
+      "note": "sobreviveu: 512 MiB: leitura inteira 2155.2 MB/s, envio 3230.3 MB/s, ponta a ponta 1292.7 MB/s · 1024 MiB: leitura inteira 1673.3 MB/s, envio 2525.3 MB/s, ponta a ponta 1006.4 MB/s",
+      "endedAt": "2026-11-23T22:21:54.710Z"
+    },
+    {
+      "id": "vagas-shim",
+      "url": "/lab/memoria.html?exp=vagas&variante=shim",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 5,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:32.715Z",
+      "outcome": "completou",
+      "note": "shim: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T22:22:34.098Z"
+    },
+    {
+      "id": "opfs-streaming",
+      "url": "/lab/memoria.html?exp=opfs-streaming",
+      "precisa": "limpo",
+      "timeout": 1500,
+      "tags": [
+        "opfs"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 5,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "vagas-shim"
+      ],
+      "startedAt": "2026-11-23T22:22:34.104Z",
+      "outcome": "completou",
+      "note": "512 MiB: escrita 294.8 MB/s (FileSystemSyncAccessHandle.write); anel 2644.7/4312.2/4329.6 MB/s por passada; placas 3953.4 MB/s ponta a ponta · 1024 MiB: escrita 106.2 MB/s (FileSystemSyncAccessHandle.write); anel 4099.8/4264.3/4202.5 MB/s por passada; placas 3841.7 MB/s ponta a ponta",
+      "endedAt": "2026-11-23T22:22:48.973Z"
+    },
+    {
+      "id": "gpu-escrita",
+      "url": "/lab/memoria.html?exp=gpu-escrita",
+      "precisa": "limpo",
+      "cai": true,
+      "timeout": 600,
+      "tags": [
+        "gpu-escrita"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "aheadOf": {
+        "before": "vagas-naocompart",
+        "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico)"
+      },
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa",
+        "opfs-monolitico"
+      ],
+      "startedAt": "2026-11-23T22:21:54.751Z",
+      "outcome": "completou",
+      "note": "com espera 4953.8 MB/s; sem espera 2048 MiB enfileirados a 6517.4 MB/s, drenados em 7 ms; sem perda do dispositivo",
+      "endedAt": "2026-11-23T22:21:56.720Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 6,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:22:52.305Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T22:23:01.327Z"
+    },
+    {
+      "id": "ort-wasm-q8emb32-f16-17m",
+      "url": "/index.html?engine=ort-wasm&variant=q8emb32-f16&model=ts-ettin-17m",
+      "precisa": "novo",
+      "deixa": "residuo",
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T22:23:03.804Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T22:23:22.965Z"
+    },
+    {
+      "id": "ort-webgpu-q8emb32-f16-17m-apos-wasm",
+      "url": "/index.html?engine=ort-webgpu&variant=q8emb32-f16&model=ts-ettin-17m",
+      "depois": "ort-wasm-q8emb32-f16-17m",
+      "deixa": "residuo",
+      "cai": true,
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "ort-wasm-q8emb32-f16-17m"
+      ],
+      "startedAt": "2026-11-23T22:23:22.972Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T22:23:30.487Z"
+    },
+    {
+      "id": "jh-webgpu-f32-17m",
+      "url": "/index.html?engine=jh-webgpu&variant=f32&model=ts-ettin-17m",
+      "tags": [
+        "ort"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 7,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [
+        "ort-wasm-q8emb32-f16-17m",
+        "ort-webgpu-q8emb32-f16-17m-apos-wasm"
+      ],
+      "startedAt": "2026-11-23T22:23:30.492Z",
+      "outcome": "completou",
+      "note": "",
+      "endedAt": "2026-11-23T22:23:45.451Z"
+    }
+  ],
+  "startedAt": "2026-11-23T22:20:15.042Z",
+  "epochs": [
+    {
+      "n": 0,
+      "startedAt": "2026-11-23T22:20:15.042Z",
+      "reason": "início: navegador aberto pelo executor",
+      "steps": [
+        "sonda",
+        "ambiente",
+        "vagas-ort",
+        "vagas-ort-navegacao",
+        "gpu-rampa",
+        "gpu-rampa-ab256",
+        "host-rampa",
+        "opfs-monolitico",
+        "gpu-escrita"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0
+    },
+    {
+      "n": 1,
+      "startedAt": "2026-11-23T22:22:12.480Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-naocompart"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T22:21:56.723Z",
+        "step": "vagas-naocompart",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico, gpu-escrita)"
+      }
+    },
+    {
+      "n": 2,
+      "startedAt": "2026-11-23T22:22:22.739Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-max1g"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T22:22:19.783Z",
+        "step": "vagas-max1g",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: vagas-naocompart)"
+      }
+    },
+    {
+      "n": 3,
+      "startedAt": "2026-11-23T22:22:26.685Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "gpu-rampa-wasm256"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T22:22:24.142Z",
+        "step": "gpu-rampa-wasm256",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: vagas-max1g)"
+      }
+    },
+    {
+      "n": 4,
+      "startedAt": "2026-11-23T22:22:29.700Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-minima"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T22:22:28.570Z",
+        "step": "vagas-minima",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: gpu-rampa-wasm256)"
+      }
+    },
+    {
+      "n": 5,
+      "startedAt": "2026-11-23T22:22:32.702Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-shim",
+        "opfs-streaming"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T22:22:31.107Z",
+        "step": "vagas-shim",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: vagas-minima)"
+      }
+    },
+    {
+      "n": 6,
+      "startedAt": "2026-11-23T22:22:52.295Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "ort-webgpu-q8emb32-f16-17m"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 1,
+      "asked": {
+        "at": "2026-11-23T22:22:48.977Z",
+        "step": "ort-webgpu-q8emb32-f16-17m",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: vagas-shim, opfs-streaming)"
+      }
+    },
+    {
+      "n": 7,
+      "startedAt": "2026-11-23T22:23:03.792Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "ort-wasm-q8emb32-f16-17m",
+        "ort-webgpu-q8emb32-f16-17m-apos-wasm",
+        "jh-webgpu-f32-17m"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": true,
+      "ort": 2,
+      "asked": {
+        "at": "2026-11-23T22:23:01.332Z",
+        "step": "ort-wasm-q8emb32-f16-17m",
+        "reason": "precisa de um processo novo do Safari (neste já rodaram: ort-webgpu-q8emb32-f16-17m)"
+      }
+    }
+  ],
+  "restarts": [
+    {
+      "at": "2026-11-23T22:22:12.480Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-naocompart",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-ort, vagas-ort-navegacao, gpu-rampa, gpu-rampa-ab256, host-rampa, opfs-monolitico, gpu-escrita)"
+    },
+    {
+      "at": "2026-11-23T22:22:22.739Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-max1g",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-naocompart)"
+    },
+    {
+      "at": "2026-11-23T22:22:26.685Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "gpu-rampa-wasm256",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-max1g)"
+    },
+    {
+      "at": "2026-11-23T22:22:29.700Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-minima",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: gpu-rampa-wasm256)"
+    },
+    {
+      "at": "2026-11-23T22:22:32.702Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-shim",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-minima)"
+    },
+    {
+      "at": "2026-11-23T22:22:52.295Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "ort-webgpu-q8emb32-f16-17m",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: vagas-shim, opfs-streaming)"
+    },
+    {
+      "at": "2026-11-23T22:23:03.792Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "ort-wasm-q8emb32-f16-17m",
+      "why": "precisa de um processo novo do Safari (neste já rodaram: ort-webgpu-q8emb32-f16-17m)"
+    }
+  ],
+  "done": true,
+  "finishedAt": "2026-11-23T22:23:45.456Z"
+}

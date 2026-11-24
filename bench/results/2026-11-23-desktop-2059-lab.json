@@ -1,0 +1,267 @@
+{
+  "session": "2026-11-23-desktop-2059",
+  "label": "desktop",
+  "profile": "memoria",
+  "mode": "local",
+  "createdAt": "2026-11-23T23:59:13.901269+00:00",
+  "auto": true,
+  "restartable": true,
+  "apenas": "vagas",
+  "teto": null,
+  "steps": [
+    {
+      "id": "sonda",
+      "url": "/probe.html",
+      "timeout": 90,
+      "limpa": true,
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [],
+      "startedAt": "2026-11-23T23:59:16.211Z",
+      "outcome": "environment-probe",
+      "note": "",
+      "endedAt": "2026-11-23T23:59:17.593Z"
+    },
+    {
+      "id": "ambiente",
+      "kind": "env",
+      "limpa": true,
+      "status": "ok",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda"
+      ],
+      "startedAt": "2026-11-23T23:59:17.597Z",
+      "endedAt": "2026-11-23T23:59:17.749Z"
+    },
+    {
+      "id": "vagas-ort",
+      "url": "/lab/memoria.html?exp=vagas&variante=ort",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 300,
+      "tags": [
+        "vagas"
+      ],
+      "status": "crashed",
+      "attempts": 1,
+      "epoch": 0,
+      "epochReason": "início: navegador aberto pelo executor",
+      "before": [
+        "sonda",
+        "ambiente"
+      ],
+      "startedAt": "2026-11-23T23:59:17.751Z",
+      "outcome": "morreu",
+      "endedAt": "2026-11-23T23:59:24.604Z",
+      "note": "o processo do Safari caiu; não repetida — último marcador: liberacao-1s: memória 16 de até 16 (15 criadas)",
+      "lastMarker": {
+        "n": 34,
+        "at": "2026-11-23T23:59:19.204Z",
+        "text": "liberacao-1s: memória 16 de até 16 (15 criadas)",
+        "data": {
+          "exp": "vagas",
+          "variante": "ort",
+          "fase": "liberacao-1s",
+          "k": 16
+        }
+      }
+    },
+    {
+      "id": "vagas-ort-navegacao",
+      "url": "/lab/memoria.html?exp=vagas-navegacao&variante=ort",
+      "depois": "vagas-ort",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "skipped",
+      "attempts": 0,
+      "note": "pulada: precisa rodar logo depois de vagas-ort, no mesmo processo (crashed)"
+    },
+    {
+      "id": "vagas-naocompart",
+      "url": "/lab/memoria.html?exp=vagas&variante=naoCompart",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 1,
+      "epochReason": "queda em vagas-ort",
+      "before": [],
+      "startedAt": "2026-11-23T23:59:24.619Z",
+      "outcome": "completou",
+      "note": "naoCompart: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:59:26.012Z"
+    },
+    {
+      "id": "vagas-max1g",
+      "url": "/lab/memoria.html?exp=vagas&variante=max1g",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 2,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:59:27.699Z",
+      "outcome": "completou",
+      "note": "max1g: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:59:29.092Z"
+    },
+    {
+      "id": "vagas-minima",
+      "url": "/lab/memoria.html?exp=vagas&variante=minima",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 3,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:59:30.706Z",
+      "outcome": "completou",
+      "note": "minima: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:59:32.100Z"
+    },
+    {
+      "id": "vagas-shim",
+      "url": "/lab/memoria.html?exp=vagas&variante=shim",
+      "precisa": "novo",
+      "deixa": "wasm",
+      "timeout": 120,
+      "tags": [
+        "vagas"
+      ],
+      "status": "posted",
+      "attempts": 1,
+      "epoch": 4,
+      "epochReason": "reinício: o executor fechou e reabriu o navegador",
+      "before": [],
+      "startedAt": "2026-11-23T23:59:33.715Z",
+      "outcome": "completou",
+      "note": "shim: 16 memória(s) (o máximo testado, sem erro)",
+      "endedAt": "2026-11-23T23:59:35.106Z"
+    }
+  ],
+  "startedAt": "2026-11-23T23:59:16.211Z",
+  "epochs": [
+    {
+      "n": 0,
+      "startedAt": "2026-11-23T23:59:16.211Z",
+      "reason": "início: navegador aberto pelo executor",
+      "steps": [
+        "sonda",
+        "ambiente",
+        "vagas-ort"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0
+    },
+    {
+      "n": 1,
+      "startedAt": "2026-11-23T23:59:24.613Z",
+      "reason": "queda em vagas-ort",
+      "steps": [
+        "vagas-naocompart"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "inferred": false
+    },
+    {
+      "n": 2,
+      "startedAt": "2026-11-23T23:59:27.669Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-max1g"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:59:26.017Z",
+        "step": "vagas-max1g",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-naocompart)"
+      }
+    },
+    {
+      "n": 3,
+      "startedAt": "2026-11-23T23:59:30.691Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-minima"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:59:29.095Z",
+        "step": "vagas-minima",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-max1g)"
+      }
+    },
+    {
+      "n": 4,
+      "startedAt": "2026-11-23T23:59:33.704Z",
+      "reason": "reinício: o executor fechou e reabriu o navegador",
+      "steps": [
+        "vagas-shim"
+      ],
+      "used": true,
+      "wasm": true,
+      "residuo": false,
+      "ort": 0,
+      "asked": {
+        "at": "2026-11-23T23:59:32.104Z",
+        "step": "vagas-shim",
+        "reason": "precisa de um processo novo do navegador (neste já rodaram: vagas-minima)"
+      }
+    }
+  ],
+  "restarts": [
+    {
+      "at": "2026-11-23T23:59:27.669Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-max1g",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-naocompart)"
+    },
+    {
+      "at": "2026-11-23T23:59:30.691Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-minima",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-max1g)"
+    },
+    {
+      "at": "2026-11-23T23:59:33.704Z",
+      "reason": "o executor fechou e reabriu o navegador",
+      "before": "vagas-shim",
+      "why": "precisa de um processo novo do navegador (neste já rodaram: vagas-minima)"
+    }
+  ],
+  "done": true,
+  "finishedAt": "2026-11-23T23:59:35.110Z"
+}
