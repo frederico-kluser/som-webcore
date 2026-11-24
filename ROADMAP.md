@@ -1066,7 +1066,7 @@ Cada decisão vira uma ADR em `docs/adr/` quando a atividade correspondente come
 
 | ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
 |---|---|---|---|---|:---:|---|
-| `P-01` | **Modelo fixado** — fixar o TS-Ettin-17M por revisão e hash; registrar licença e atribuição | `GT` | `models/catalog.json` (uma entrada) e o seu esquema, `tools/fetch_model.py` | download verificado por SHA-256; licença e atribuição no `NOTICE`; a entrada valida contra o esquema do catálogo, que já traz categoria de licença, estado de calibração e idiomas | S | a fazer |
+| `P-01` | **Modelo fixado** — fixar o TS-Ettin-17M por revisão e hash; registrar licença e atribuição | `GT` | `models/catalog.json` (uma entrada) e o seu esquema, `tools/fetch_model.py` | download verificado por SHA-256; licença e atribuição no `NOTICE`; a entrada valida contra o esquema do catálogo, que já traz categoria de licença, estado de calibração e idiomas | S | em curso |
 | `P-02` | **Contrato de decisão v0** — RFC-0001: a superfície pública é a da Decisions API, idêntica à fixada em `T-05`, **com o comportamento do Chrome** — validação, `availability()`, download com ativação do usuário e `monitor`, `preference`, erros e ciclo de vida da memória; por dentro, a tradução para o formato de cada modelo | `GT` | `docs/rfcs/0001-decision-contract.md`, tipos e JSON Schema | a página de conformidade roda sem alteração sobre a biblioteca e sobre a API nativa; os 72 resultados de validação de `compare_surface.py` iguais aos do Chrome; o uso de `preference` e o ponto de configuração separado definidos; tradução documentada para o formato `decision-ai/option-reader@1` e para a API `/v1/systemone`; RFC aceita | M | a fazer |
 | `P-03` | **Workspace e CI de código** — workspace npm com `packages/core` e `packages/engine`, toolchains fixadas, testes em Node e em WebGPU (ramo do fork; finais de linha já normalizados no PR #26) | `GT` | `package.json` do workspace, `packages/`, jobs de CI, `docs/STRUCTURE.md` revisto | lint e testes verdes em Linux, macOS e Windows; paridade WebGPU num adaptador de software na CI; todo WGSL validado por um compilador (Tint ou Naga); o job obrigatório continua a se chamar `build`; `docs/STRUCTURE.md` sem `crates/`, Cargo nem `wasm32`, que eram do ramo descartado | M | a fazer |
 | `P-04` | **Oráculo e corpus dourado** — rodar a referência upstream (PyTorch FP32, CPU) e exportar ativações por camada, logits e respostas | `P-01`, `P-02` | `tools/reference/`, `tests/fixtures/ts-ettin-17m/` | ≥ 300 requisições (`choice` com 2–16 opções, `boolean`, `score` com 3–10 níveis, 8–1.024 tokens, texto em pt-BR e Unicode); duas execuções geram fixtures idênticas; comando único documentado | M | a fazer |
@@ -1095,7 +1095,7 @@ Cada decisão vira uma ADR em `docs/adr/` quando a atividade correspondente come
 ```mermaid
 flowchart LR
     GT(["GT"]):::ext
-    P01["P-01 · Modelo fixado"]:::todo
+    P01["P-01 · Modelo fixado"]:::doing
     P02["P-02 · Contrato de decisão v0"]:::todo
     P03["P-03 · Workspace e CI de código"]:::todo
     DP01{"DP-01 · o motor nosso nasce de um fork do motor leve existente ou do zero?"}:::fork

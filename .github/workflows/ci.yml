@@ -4,7 +4,8 @@
 # Este repositório é, nesta fase, documentação + memória. O job `build` é o
 # status check exigido pelo ruleset de `main`; ele valida:
 #   1. o contrato de documentação (links, âncoras, tabelas, figuras, placeholders);
-#   2. as mensagens de commit (Conventional Commits) — o mecanismo portátil que
+#   2. o catálogo de modelos (esquema e o download verificado, sem rede);
+#   3. as mensagens de commit (Conventional Commits) — o mecanismo portátil que
 #      substitui a regra de metadata `commit_message_pattern` (Enterprise-only).
 #
 # Actions fixadas por SHA. Se atualizar uma action, troque o SHA e o comentário.
@@ -40,6 +41,11 @@ jobs:
 
       - name: Documentation contract
         run: python3 scripts/check-docs.py
+
+      - name: Model catalog
+        run: |
+          python3 tools/fetch_model.py --check
+          python3 -m unittest discover -s tests/tools -v
 
       - name: Conventional commits (last 25)
         run: |
