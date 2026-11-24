@@ -65,8 +65,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 95 (18 feitos, 11 descartados) · **arestas:** 160.
-- **Esforço relativo:** 31/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 95 (19 feitos, 11 descartados) · **arestas:** 160.
+- **Esforço relativo:** 34/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo até o último portão**, sem as atividades descartadas e com o ramo mais caro em cada bifurcação aberta (103 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-03` → `DT-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `K-02` → `K-04` → `K-05` → `P-13` → `P-14` → `G1` → `DA-01` → `A-03` → `A-05` → `A-10` → `G2` → `B-04` → `B-05` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -947,6 +947,8 @@ Use a skill som-webcore-device-lab (tudo roda no Mac mini). Leia antes docs/repo
 A página vai cair de propósito: avise o dono antes de cada rodada e nunca a rode no perfil do dia a dia.
 ```
 
+**Fechada em 2026-11-23** ([relatório](docs/reports/orcamento-memoria.md)): o dono dispensou a confirmação pelo `JetsamEvent` — as quedas ficam como morte sem aviso, medidas pelo marcador; o Android fica para quando houver aparelho (risco 16).
+
 **Validação:** cada número com aparelho, sistema e navegador · o ponto de queda registrado pelo marcador · o resultado do `JetsamEvent` (ou a falta dele) para as quedas de 2026-11-22 · as vazões do OPFS, do `writeBuffer` e de ponta a ponta medidas com 1 GiB · a tabela de faixas pronta para a `C-08` · o teste das vagas Wasm decidindo entre contagem e bytes.
 
 <!-- prompt:C-09 -->
@@ -1263,7 +1265,7 @@ Três leituras guiam a ordem **[REPORTADO]**. O salto que importa é de encoder 
 
 | ID | Atividade | Depende de | Entregável | Critério de aceite | Tam. | Estado |
 |---|---|---|---|---|:---:|---|
-| `C-01` | **Orçamento de memória por aparelho** — medir, pelo laboratório, quanto uma página aloca (GPU e host) antes de falhar, a vazão do OPFS e do `writeBuffer`, e quantas memórias Wasm cabem num processo; antes, arrumar o laboratório para não confundir as duas falhas do iPhone ([análise forense](docs/reports/forense-iphone-2026-11-22.md)) | `GT` | perfil `memoria` do laboratório, `docs/reports/orcamento-memoria.md` | iPhone e desktop medidos — e um Android, se houver aparelho; por aparelho: maior alocação de GPU e de host que funcionou, ponto de queda registrado por marcador, vazão de leitura do OPFS, de `writeBuffer` e de ponta a ponta com 1 GiB, limites do adaptador; o limite das memórias Wasm decidido (contagem ou bytes; o que devolve as vagas); a causa das quedas de 2026-11-22 (`JetsamEvent` ou queda); a tabela de faixas por classe de aparelho, com margem | M | em curso |
+| `C-01` | **Orçamento de memória por aparelho** — medir, pelo laboratório, quanto uma página aloca (GPU e host) antes de falhar, a vazão do OPFS e do `writeBuffer`, e quantas memórias Wasm cabem num processo; antes, arrumar o laboratório para não confundir as duas falhas do iPhone ([análise forense](docs/reports/forense-iphone-2026-11-22.md)) | `GT` | perfil `memoria` do laboratório, `docs/reports/orcamento-memoria.md` | iPhone e desktop medidos — e um Android, se houver aparelho; por aparelho: maior alocação de GPU e de host que funcionou, ponto de queda registrado por marcador, vazão de leitura do OPFS, de `writeBuffer` e de ponta a ponta com 1 GiB, limites do adaptador; o limite das memórias Wasm decidido (contagem ou bytes; o que devolve as vagas); a causa das quedas de 2026-11-22 (`JetsamEvent` ou queda); a tabela de faixas por classe de aparelho, com margem | M | feito |
 | `C-09` | **Avaliação em português e calibração** — um conjunto de decisões tipadas em pt-BR, com gabarito, para medir a qualidade e o ECE dos candidatos na implementação de referência, antes de portar | `GT` | `tools/eval-ptbr/`, `docs/reports/avaliacao-ptbr.md` | ≥ 300 decisões em pt-BR com gabarito, nos três tipos, com licença declarada; acurácia e ECE de cada candidato da escada e da `DC-01`; temperaturas por tipo e número de opções ajustadas e publicadas | M | a fazer |
 | `C-02` | **Escada ModernBERT no fork** — os checkpoints de decisão da família que o fork já executa, cada um com a sua cabeça e a sua calibração: TS-Ettin 32M, 68M e 150M, TS-moBERTo-150M e, conforme licença e cabeça, tasksource-decider-nano e jev-ettin-150m-v16 | `K-04`, `P-04` | entradas no catálogo, conversões e fixtures por modelo | paridade em cada modelo, nas tolerâncias de G1; nenhuma dimensão fixa nos shaders; cada um medido no iPhone pelo laboratório: latência, memória e 10 sessões seguidas sem `Out of memory` | L | a fazer |
 | `C-03` | **Fatias, embeddings fora da GPU e máscara no kernel** — tensores divididos no tamanho do binding concedido; tabela de embeddings no host ou no OPFS, com só as linhas ativas subindo; máscara de janela calculada no kernel | `C-02`, `C-01` | gestor de memória em `packages/engine` | o 150M roda com binding de 128 MiB e com o máximo do adaptador, com a mesma paridade; memória de GPU do modelo ≤ backbone + ativações; entrada de 8.192 tokens sem máscara densa; no iPhone, o maior modelo dentro da faixa medida na `C-01` | L | a fazer |
@@ -1284,7 +1286,7 @@ flowchart LR
     K05(["K-05"]):::ext
     G1(["G1"]):::ext
     A02(["A-02"]):::ext
-    C01["C-01 · Orçamento de memória por aparelho"]:::doing
+    C01["C-01 · Orçamento de memória por aparelho"]:::done
     C09["C-09 · Avaliação em português e calibração"]:::todo
     C02["C-02 · Escada ModernBERT no fork"]:::todo
     C03["C-03 · Fatias, embeddings fora da GPU e máscara no kernel"]:::todo
