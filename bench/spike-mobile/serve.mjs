@@ -173,7 +173,8 @@ async function handler(req, res) {
         const token = Buffer.from(LAB.token);
         if (given.length !== token.length || !timingSafeEqual(given, token)) return send(res, 404, { ok: false, error: "not found" });
         const secure = req.headers["x-forwarded-proto"] === "https" || req.socket.encrypted;
-        res.writeHead(302, { Location: "/lab/lab.html", "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; Max-Age=${180 * 24 * 3600}; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
+        const nextPage = /^\/lab\/[a-z0-9-]+\.html$/.test(url.searchParams.get("next") || "") ? url.searchParams.get("next") : "/lab/lab.html";
+        res.writeHead(302, { Location: nextPage, "Cache-Control": "no-store", "Set-Cookie": `som_lab=${LAB.token}; Path=/; Max-Age=${180 * 24 * 3600}; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` });
         console.log(`[lab] ${LAB.session} device entered: ${String(req.headers["user-agent"] || "").slice(0, 160)}`);
         return res.end();
       }
