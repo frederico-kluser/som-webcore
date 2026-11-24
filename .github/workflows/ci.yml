@@ -1,14 +1,16 @@
 # =============================================================================
 # CI — som-webcore (frederico-kluser/som-webcore)
 #
-# Este repositório é, nesta fase, documentação + memória. O job `build` é o
-# status check exigido pelo ruleset de `main`; ele valida:
-#   1. o contrato de documentação (links, âncoras, tabelas, figuras, placeholders);
-#   2. o catálogo de modelos (esquema e o download verificado, sem rede);
-#   3. as mensagens de commit (Conventional Commits) — o mecanismo portátil que
-#      substitui a regra de metadata `commit_message_pattern` (Enterprise-only).
+# O job `build` é o status check exigido pelo ruleset de `main` (o `context` é o
+# nome do job: não o renomeie). Ele valida o contrato de documentação, o catálogo
+# de modelos e as mensagens de commit, e só passa se os jobs de código passarem:
 #
-# Actions fixadas por SHA. Se atualizar uma action, troque o SHA e o comentário.
+#   code    lint (ESLint + tsc) e testes unitários em Node, em Linux, macOS e Windows;
+#   webgpu  paridade WebGPU no Dawn sobre um adaptador de software (lavapipe, Vulkan
+#           na CPU) e validação de todo WGSL pelo Tint — sem adaptador, falha.
+#
+# Actions fixadas por SHA. Se atualizar uma action, troque o SHA e o comentário
+# (bash C:/Users/kluse/.dsh/skills/opensource-project/scripts/oss-pin-actions.sh).
 # =============================================================================
 
 name: CI
@@ -29,13 +31,73 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  code:
+    name: code (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Node (versão do .nvmrc)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install (lockfile)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (Node, CPU)
+        run: npm test
+
+  webgpu:
+    name: webgpu (software adapter)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOM_REQUIRE_WEBGPU: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Node (versão do .nvmrc)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Vulkan on the CPU (lavapipe)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends mesa-vulkan-drivers libvulkan1
+
+      - name: Install (lockfile)
+        run: npm ci
+
+      - name: WGSL validation (Tint)
+        run: npm run validate:wgsl
+
+      - name: WebGPU parity (Dawn)
+        run: npm run test:webgpu
+
   build:
     name: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [code, webgpu]
+    # Roda mesmo se um job de código falhar: um check obrigatório "skipped" contaria como verde.
+    if: ${{ always() }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 25
 
@@ -78,3 +140,14 @@ jobs:
                   print("OK  :", subject)
           sys.exit(bad)
           PY
+
+      - name: Code jobs (lint, tests, WebGPU, WGSL)
+        env:
+          CODE: ${{ needs.code.result }}
+          WEBGPU: ${{ needs.webgpu.result }}
+        run: |
+          echo "code: $CODE · webgpu: $WEBGPU"
+          if [ "$CODE" != "success" ] || [ "$WEBGPU" != "success" ]; then
+            echo "Erro: um job de código não passou — Solução: veja os jobs code e webgpu deste run."
+            exit 1
+          fi

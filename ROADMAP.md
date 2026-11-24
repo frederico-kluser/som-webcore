@@ -65,8 +65,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 95 (21 feitos, 11 descartados) · **arestas:** 160.
-- **Esforço relativo:** 36/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 95 (22 feitos, 11 descartados) · **arestas:** 160.
+- **Esforço relativo:** 39/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo até o último portão**, sem as atividades descartadas e com o ramo mais caro em cada bifurcação aberta (103 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-03` → `DT-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `K-02` → `K-04` → `K-05` → `P-13` → `P-14` → `G1` → `DA-01` → `A-03` → `A-05` → `A-10` → `G2` → `B-04` → `B-05` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -1068,7 +1068,7 @@ Cada decisão vira uma ADR em `docs/adr/` quando a atividade correspondente come
 |---|---|---|---|---|:---:|---|
 | `P-01` | **Modelo fixado** — fixar o TS-Ettin-17M por revisão e hash; registrar licença e atribuição | `GT` | `models/catalog.json` (uma entrada) e o seu esquema, `tools/fetch_model.py` | download verificado por SHA-256; licença e atribuição no `NOTICE`; a entrada valida contra o esquema do catálogo, que já traz categoria de licença, estado de calibração e idiomas (`python3 tools/fetch_model.py --check`; testes em `tests/tools/`) | S | feito |
 | `P-02` | **Contrato de decisão v0** — RFC-0001: a superfície pública é a da Decisions API, idêntica à fixada em `T-05`, **com o comportamento do Chrome** — validação, `availability()`, download com ativação do usuário e `monitor`, `preference`, erros e ciclo de vida da memória; por dentro, a tradução para o formato de cada modelo | `GT` | `docs/rfcs/0001-decision-contract.md`, tipos e JSON Schema | a página de conformidade roda sem alteração sobre a biblioteca e sobre a API nativa; os 72 resultados de validação de `compare_surface.py` iguais aos do Chrome; o uso de `preference` e o ponto de configuração separado definidos; tradução documentada para o formato `decision-ai/option-reader@1` e para a API `/v1/systemone`; RFC aceita | M | a fazer |
-| `P-03` | **Workspace e CI de código** — workspace npm com `packages/core` e `packages/engine`, toolchains fixadas, testes em Node e em WebGPU (ramo do fork; finais de linha já normalizados no PR #26) | `GT` | `package.json` do workspace, `packages/`, jobs de CI, `docs/STRUCTURE.md` revisto | lint e testes verdes em Linux, macOS e Windows; paridade WebGPU num adaptador de software na CI; todo WGSL validado por um compilador (Tint ou Naga); o job obrigatório continua a se chamar `build`; `docs/STRUCTURE.md` sem `crates/`, Cargo nem `wasm32`, que eram do ramo descartado | M | a fazer |
+| `P-03` | **Workspace e CI de código** — workspace npm com `packages/core` e `packages/engine`, toolchains fixadas, testes em Node e em WebGPU (ramo do fork; finais de linha já normalizados no PR #26) | `GT` | `package.json` do workspace, `packages/`, jobs de CI, `docs/STRUCTURE.md` revisto | lint e testes verdes em Linux, macOS e Windows; paridade WebGPU num adaptador de software na CI; todo WGSL validado por um compilador (Tint ou Naga); o job obrigatório continua a se chamar `build`; `docs/STRUCTURE.md` sem `crates/`, Cargo nem `wasm32`, que eram do ramo descartado (CI: jobs `code` nos três sistemas, `webgpu` no lavapipe e `build`; um WGSL inválido de propósito derrubou o `webgpu` e o `build` no PR #38) | M | feito |
 | `P-04` | **Oráculo e corpus dourado** — rodar a referência upstream (PyTorch FP32, CPU) e exportar ativações por camada, logits e respostas | `P-01`, `P-02` | `tools/reference/`, `tests/fixtures/ts-ettin-17m/` | ≥ 300 requisições (`choice` com 2–16 opções, `boolean`, `score` com 3–10 níveis, 8–1.024 tokens, texto em pt-BR e Unicode); duas execuções geram fixtures idênticas; comando único documentado | M | a fazer |
 | `P-05` | **Tokenizador e empacotamento** — BPE do Ettin, token `[OPT]` e montagem da sequência | `P-03`, `P-04`, `DP-01` (se do zero) | crate `som-tokenizer` | IDs idênticos aos da referência em ≥ 10.000 textos (100%); posições `[OPT]` idênticas às das fixtures; erro tipado acima do limite de tokens — nada é truncado | M | descartada |
 | `P-06` | **Contêiner de pesos v0** — conversor de `safetensors` para `.sombin` v0 (FP16) e leitor | `P-01`, `P-03`, `DP-01` (se do zero) | `tools/convert/`, crate `som-format` (v0) | ida e volta de todos os tensores (FP32 exato; FP16 com erro de arredondamento ≤ 1 ULP); teste dourado com offsets explícitos em little-endian; arquivo truncado ou com assinatura errada é rejeitado | M | descartada |
@@ -1097,7 +1097,7 @@ flowchart LR
     GT(["GT"]):::ext
     P01["P-01 · Modelo fixado"]:::done
     P02["P-02 · Contrato de decisão v0"]:::todo
-    P03["P-03 · Workspace e CI de código"]:::todo
+    P03["P-03 · Workspace e CI de código"]:::done
     DP01{"DP-01 · o motor nosso nasce de um fork do motor leve existente ou do zero?"}:::fork
     P04["P-04 · Oráculo e corpus dourado"]:::todo
     P11["P-11 · Harness de benchmark"]:::todo
