@@ -65,8 +65,8 @@ Portanto não vamos propor um padrão concorrente — nem fingir que somos os ú
 **Números do grafo (gerado):**
 
 <!-- dag:begin:critical -->
-- **Nós:** 95 (19 feitos, 11 descartados) · **arestas:** 160.
-- **Esforço relativo:** 34/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
+- **Nós:** 95 (20 feitos, 11 descartados) · **arestas:** 160.
+- **Esforço relativo:** 35/302 pontos concluídos, sem contar as descartadas (S=1, M=3, L=8, XL=13; portões=0).
 - **Caminho mais longo até o último portão**, sem as atividades descartadas e com o ramo mais caro em cada bifurcação aberta (103 pontos): `F-01` → `F-02` → `F-03` → `G0` → `T-05` → `T-01` → `T-03` → `DT-02` → `T-10` → `T-04` → `GT` → `P-02` → `P-04` → `K-02` → `K-04` → `K-05` → `P-13` → `P-14` → `G1` → `DA-01` → `A-03` → `A-05` → `A-10` → `G2` → `B-04` → `B-05` → `B-07` → `B-08` → `B-09` → `G3` → `V-01` → `V-05` → `G4`.
 <!-- dag:end:critical -->
 
@@ -1079,7 +1079,7 @@ Cada decisão vira uma ADR em `docs/adr/` quando a atividade correspondente come
 | `L-01` | **Integração do motor existente** — `DecisionModel` idêntico ao do Chrome, com o motor escolhido por baixo | `GT` (se motor existente), `P-02`, `P-04` | `packages/core` | paridade com a referência; a página de conformidade roda sem alteração; não substitui a API nativa quando ela existe | M | descartada |
 | `L-02` | **Carga leve em celular** — Worker, cache dos pesos e download mínimo sobre o motor existente | `L-01` | `packages/core` | primeira visita dentro do limite de download de GT; segunda visita sem rede; decisões fora da thread principal | M | descartada |
 | `DP-01` | **Bifurcação DP-01** — o motor nosso nasce de um fork do motor leve existente ou do zero? | `GT` (se motor nosso) | ADR com a decisão | [consulta ao usuário](#bifurcacoes) feita e respondida | — | feito |
-| `K-01` | **Base do fork** — licença, o que sai, o que muda, a auditoria de memória do motor e o plano para acompanhar o upstream | `DP-01` (se fork) | `docs/reports/base-do-fork.md`, ADR, cadeia de oráculos do fork em `docs/METHODOLOGY.md` | a licença permite o fork e a redistribuição; lista do que será removido; cada trava de memória (arquivo inteiro no JS, cópias do `writeBuffer`, pool de até 1 GiB, readback de `[B, L, H]`, cálculo em f16, heap +50 MiB em 200 decisões) com evidência e a atividade que a resolve; estado do upstream e plano para acompanhá-lo | S | a fazer |
+| `K-01` | **Base do fork** — licença, o que sai, o que muda, a auditoria de memória do motor e o plano para acompanhar o upstream | `DP-01` (se fork) | `docs/reports/base-do-fork.md`, ADR, cadeia de oráculos do fork em `docs/METHODOLOGY.md` | a licença permite o fork e a redistribuição; lista do que será removido; cada trava de memória (arquivo inteiro no JS, cópias do `writeBuffer`, pool de até 1 GiB, readback de `[B, L, H]`, cálculo em f16, heap +50 MiB em 200 decisões) com evidência e a atividade que a resolve; estado do upstream e plano para acompanhá-lo ([relatório](docs/reports/base-do-fork.md), [ADR 0006](docs/adr/0006-k-01-base-do-fork.md)) | S | feito |
 | `K-02` | **Fork enxuto para modelos de decisão** — só os pacotes que a decisão usa; pesos com embeddings de 8 bits e o resto em FP16, aritmética em f32; cabeça do TS-Ettin no host | `K-01`, `P-03`, `P-04` | `packages/engine` (o fork, com os avisos de licença), conversor em `tools/convert/`, testes de paridade | paridade com a referência nas tolerâncias de G1; primeira visita — runtime, pesos e tokenizador — ≤ 25 MB com o artefato que acerta; `NOTICE` preservado e mudanças marcadas (Apache-2.0) | L | a fazer |
 | `K-03` | **Carga sem dupla residência** — pesos em streaming, da rede ou do OPFS, direto para os buffers da GPU, em blocos de 1 a 4 MiB, com integridade por bloco; no Safari, o *staging* do `writeBuffer` fica no processo de GPU, que tem orçamento próprio: blocos pequenos e espera pela fila | `K-02` | módulo de carga em `packages/engine` | pico do heap JS durante a carga ≤ 2 blocos + 16 MiB **[ALVO]**; tensores idênticos, bit a bit, aos da carga de referência; arquivo corrompido rejeitado, com tudo liberado; no iPhone, 10 cargas seguidas na mesma aba sem `Out of memory`, recarga nem `device.lost` | M | a fazer |
 | `K-04` | **Memória fixa e sem vazamento** — arena por sessão, pool limitado, coleta dos `[OPT]` na GPU, uma passada por command buffer, `destroy()` e ociosidade liberando a GPU — no Safari 26.6, a coleta não enxerga a memória de GPU, e só o `destroy()` explícito a devolve | `K-02` | gestor de memória em `packages/engine` | 1.000 decisões com heap JS em ± 1 MiB depois do aquecimento e bytes de GPU constantes; nenhum `GPUBuffer` nem bind group criado por decisão; bytes de GPU vivos = 0 depois de `destroy()`; no iPhone, 5 ciclos `create()` → 200 decisões → `destroy()` na mesma aba e 3 páginas seguidas no mesmo processo, sem `Out of memory` nem recarga | L | a fazer |
@@ -1102,7 +1102,7 @@ flowchart LR
     P04["P-04 · Oráculo e corpus dourado"]:::todo
     P11["P-11 · Harness de benchmark"]:::todo
     P06["P-06 · Contêiner de pesos v0"]:::off
-    K01["K-01 · Base do fork"]:::opt
+    K01["K-01 · Base do fork"]:::done
     P05["P-05 · Tokenizador e empacotamento"]:::off
     L01["L-01 · Integração do motor existente"]:::off
     P12["P-12 · Baseline ONNX Runtime Web"]:::todo

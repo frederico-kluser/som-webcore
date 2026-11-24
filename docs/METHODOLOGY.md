@@ -106,29 +106,31 @@ Uma atividade está `feito` quando cumpre o critério da sua linha no roadmap **
 
 A corretude do motor é definida por **concordância com a implementação de referência do modelo**, não por uma métrica de qualidade própria. Qualidade é responsabilidade do checkpoint; fidelidade é responsabilidade do runtime.
 
-**Cadeia de oráculos** — cada elo é validado contra o anterior:
+**Cadeia de oráculos do ramo do fork** ([ADR 0004](adr/0004-dp-01-fork-do-motor-leve.md), [ADR 0006](adr/0006-k-01-base-do-fork.md)) — cada elo é validado contra o anterior:
 
 ```text
 referência upstream do modelo (PyTorch FP32, CPU)        ← verdade
-        │  fixtures: ativações por camada, logits, respostas
+        │  fixtures: ativações por camada, logits, respostas (P-04)
         ▼
-som-ref (Rust, f32, sem GPU)                             ← oráculo interno; base do fallback CPU
+backend CPU do fork (JavaScript, f32, sem GPU, em Node)  ← oráculo interno; base do fallback CPU
         │  testes por kernel
         ▼
-kernels WGSL em wgpu nativo (≥ 2 backends + adaptador de software na CI)
+kernels WGSL do fork (Dawn no Node + adaptador de software na CI)
         │  suíte ponta a ponta
         ▼
-motor em wasm32 + WebGPU, por navegador
+motor (JavaScript + WGSL) por navegador: Chrome, Safari e, pelo laboratório, o iPhone
 ```
+
+O backend CPU do fork está a 1,1e-6 da referência com os pesos publicados do TS-Ettin-17M **[MEDIDO: [relatório do marco T](reports/teste-mobile.md)]**. Os pesos nunca passam pela memória do Wasm (decisão 3 da seção 6.2 do roadmap). A cadeia do motor do zero (`som-ref` em Rust, `wgpu` nativo, `wasm32`) foi descartada com a `DP-01`; os limiares abaixo valem para quem ocupa cada elo.
 
 **Tolerâncias iniciais** (`Δp` = maior diferença absoluta de probabilidade por opção). Só mudam por ADR, com dados:
 
 | Comparação | Pesos | Tolerância |
 |---|---|---|
-| `som-ref` contra o oráculo, por camada | FP32 | erro absoluto ≤ 1e-4 |
-| `som-ref` contra o oráculo, resposta | FP32 | `Δp` ≤ 1e-5 |
-| Kernel WGSL contra `som-ref` | FP32 | erro absoluto ≤ 1e-4 |
-| Motor (nativo ou web) contra o oráculo | FP16 | `Δp` ≤ 1e-3; top-1 idêntico quando a margem da referência é ≥ 0,01 |
+| Backend CPU do fork contra o oráculo, por camada | FP32 | erro absoluto ≤ 1e-4 |
+| Backend CPU do fork contra o oráculo, resposta | FP32 | `Δp` ≤ 1e-5 |
+| Kernel WGSL contra o backend CPU do fork | FP32 | erro absoluto ≤ 1e-4 |
+| Motor (Node com Dawn ou navegador) contra o oráculo | FP16 | `Δp` ≤ 1e-3; top-1 idêntico quando a margem da referência é ≥ 0,01 |
 | Variante quantizada em 8 bits | Q8 | `Δp` ≤ 0,03 e top-1 ≥ 99% no corpus — é um orçamento, e a variante declara-o no catálogo |
 
 **Corpus dourado.** Cobre os três tipos de pergunta, de 2 a 16 opções (e casos-limite acima disso quando o modelo suportar), sequências de 8 a 1.024 tokens, texto em português e inglês, Unicode fora do BMP, instruções vazias, estado estruturado (objetos renderizados como JSON compacto com chaves ordenadas, como faz a referência). Empates e quase-empates ficam marcados, porque o top-1 deles não é critério.
